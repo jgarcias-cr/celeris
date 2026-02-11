@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Celeris\Framework\Security\Auth;
+
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
+
+/**
+ * Purpose: implement cookie session strategy behavior for the Security subsystem.
+ * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
+ * Used in framework: invoked by security components when cookie session strategy functionality is required.
+ */
+final class CookieSessionStrategy implements AuthStrategyInterface
+{
+   /**
+    * Create a new instance.
+    *
+    * @param SessionStoreInterface $store
+    * @param string $cookieName
+    * @return mixed
+    */
+   public function __construct(
+      private SessionStoreInterface $store,
+      private string $cookieName = 'session_id',
+   ) {
+   }
+
+   /**
+    * Handle name.
+    *
+    * @return string
+    */
+   public function name(): string
+   {
+      return 'cookie_session';
+   }
+
+   /**
+    * Determine whether supports.
+    *
+    * @param Request $request
+    * @return bool
+    */
+   public function supports(Request $request): bool
+   {
+      $sessionId = $request->getCookies()->get($this->cookieName);
+      return is_string($sessionId) && trim($sessionId) !== '';
+   }
+
+   /**
+    * Handle authenticate.
+    *
+    * @param RequestContext $context
+    * @param Request $request
+    * @return AuthResult
+    */
+   public function authenticate(RequestContext $context, Request $request): AuthResult
+   {
+      $sessionId = $request->getCookies()->get($this->cookieName);
+      if (!is_string($sessionId) || trim($sessionId) === '') {
+         return AuthResult::rejected('Session cookie is missing.');
+      }
+
+      $credential = $this->store->find($sessionId);
+      if ($credential === null || $credential->isExpired()) {
+         return AuthResult::rejected('Invalid or expired session.');
+      }
+
+      $tokenId = $credential->tokenId() ?? $sessionId;
+      $identity = new Identity(
+         $credential->subject(),
+         $credential->roles(),
+         $credential->permissions(),
+         $credential->attributes(),
+         microtime(true),
+      );
+
+      return AuthResult::authenticated($identity, $this->name(), $tokenId);
+   }
+}
+
+
+

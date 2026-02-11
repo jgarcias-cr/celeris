@@ -1,0 +1,14 @@
+{
+   "name": "celeris/mvc",
+   "description": "Celeris MVC base application scaffold for building server-rendered web applications.",
+   "type": "project",
+   "require": {
+      "php": ">=8.4",
+      "celeris/framework": "*"
+   },
+   "autoload": {
+      "psr-4": {
+         "App\\": "app/"
+      }
+   }
+}

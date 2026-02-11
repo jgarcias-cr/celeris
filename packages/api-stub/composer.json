@@ -1,0 +1,14 @@
+{
+   "name": "celeris/api",
+   "description": "Celeris API base application scaffold for building service-oriented and REST APIs.",
+   "type": "project",
+   "require": {
+      "php": ">=8.4",
+      "celeris/framework": "*"
+   },
+   "autoload": {
+      "psr-4": {
+         "App\\": "app/"
+      }
+   }
+}

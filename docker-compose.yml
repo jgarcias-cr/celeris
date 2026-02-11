@@ -1,0 +1,47 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    image: celeris2-php:8.4
+    volumes:
+      - ./:/var/www/html
+    working_dir: /var/www/html
+    environment:
+      - COMPOSER_ALLOW_SUPERUSER=1
+    expose:
+      - "9000"
+    depends_on:
+      - db
+
+  web-mvc:
+    image: nginx:stable
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/mvc.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8082:80"
+    depends_on:
+      - app
+
+  web-api:
+    image: nginx:stable
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/api.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8081:80"
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: celeris
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:

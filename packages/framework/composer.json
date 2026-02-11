@@ -1,0 +1,16 @@
+{
+   "name": "celeris/framework",
+   "description": "Celeris framework core (minimal)",
+   "type": "library",
+   "bin": [
+      "bin/celeris"
+   ],
+   "require": {
+      "php": ">=8.4"
+   },
+   "autoload": {
+      "psr-4": {
+         "Celeris\\Framework\\": "src/"
+      }
+   }
+}

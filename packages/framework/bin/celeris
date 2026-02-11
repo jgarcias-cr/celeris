@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$bootstrap = __DIR__ . '/../src/bootstrap.php';
+if (is_file($bootstrap)) {
+   require $bootstrap;
+} else {
+   $autoload = __DIR__ . '/../../../vendor/autoload.php';
+   if (is_file($autoload)) {
+      require $autoload;
+   }
+}
+
+$projectRoot = dirname(__DIR__, 3);
+$platform = Celeris\Framework\Tooling\ToolingPlatform::fromProjectRoot($projectRoot);
+exit($platform->cli()->run($argv));

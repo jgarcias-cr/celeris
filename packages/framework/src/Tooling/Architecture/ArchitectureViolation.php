@@ -1,0 +1,73 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Celeris\Framework\Tooling\Architecture;
+
+/**
+ * Purpose: implement architecture violation behavior for the Tooling subsystem.
+ * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
+ * Used in framework: invoked by tooling components when architecture violation functionality is required.
+ */
+final class ArchitectureViolation
+{
+   /**
+    * Create a new instance.
+    *
+    * @param string $rule
+    * @param string $message
+    * @param string $severity
+    * @return mixed
+    */
+   public function __construct(
+      private string $rule,
+      private string $message,
+      private string $severity = 'error',
+   ) {
+   }
+
+   /**
+    * Handle rule.
+    *
+    * @return string
+    */
+   public function rule(): string
+   {
+      return $this->rule;
+   }
+
+   /**
+    * Handle message.
+    *
+    * @return string
+    */
+   public function message(): string
+   {
+      return $this->message;
+   }
+
+   /**
+    * Handle severity.
+    *
+    * @return string
+    */
+   public function severity(): string
+   {
+      return $this->severity;
+   }
+
+   /**
+    * @return array{rule:string,message:string,severity:string}
+    */
+   public function toArray(): array
+   {
+      return [
+         'rule' => $this->rule,
+         'message' => $this->message,
+         'severity' => $this->severity,
+      ];
+   }
+}
+
+
+

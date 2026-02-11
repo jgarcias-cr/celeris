@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Http\DTOs\CreateContactDto;
+use App\Http\DTOs\UpdateContactDto;
+use App\Models\Contact;
+use App\Repositories\ContactRepository;
+use RuntimeException;
+
+final class ContactService
+{
+   public function __construct(private ContactRepository $repository) {}
+
+   /** @return array<int, array<string, int|string>> */
+   public function list(): array
+   {
+      return array_map(
+         static fn(Contact $contact): array => $contact->toArray(),
+         $this->repository->all(),
+      );
+   }
+
+   public function getOrFail(int $id): Contact
+   {
+      $contact = $this->repository->find($id);
+      if (!$contact instanceof Contact) {
+         throw new RuntimeException('Contact not found.');
+      }
+
+      return $contact;
+   }
+
+   public function create(CreateContactDto $dto): Contact
+   {
+      $contact = new Contact(
+         $dto->id,
+         $dto->firstName,
+         $dto->lastName,
+         $dto->phone,
+         $dto->address,
+         $dto->age,
+      );
+
+      return $this->repository->save($contact);
+   }
+
+   public function update(int $id, UpdateContactDto $dto): Contact
+   {
+      $current = $this->getOrFail($id);
+
+      $updated = new Contact(
+         $current->id,
+         $dto->firstName ?? $current->firstName,
+         $dto->lastName ?? $current->lastName,
+         $dto->phone ?? $current->phone,
+         $dto->address ?? $current->address,
+         $dto->age ?? $current->age,
+      );
+
+      return $this->repository->save($updated);
+   }
+
+   public function remove(int $id): void
+   {
+      if (!$this->repository->delete($id)) {
+         throw new RuntimeException('Contact not found.');
+      }
+   }
+}

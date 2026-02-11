@@ -1,0 +1,30 @@
+// Module dependency graph (Phase 0)
+digraph modules {
+  rankdir=LR;
+  node [shape=box];
+
+  Kernel -> Container;
+  Kernel -> Router;
+  Kernel -> Middleware;
+  Kernel -> EventBus;
+  Kernel -> WorkerAdapter;
+
+  Router -> Routing;
+  Middleware -> Http;
+  EventBus -> Storage;
+  Container -> Storage;
+  WorkerAdapter -> Container;
+  WorkerAdapter -> EventBus;
+  Http -> RequestContext;
+  Router -> RequestContext;
+
+  // cross-cutting modules
+  Auth -> Container;
+  Validation -> Container;
+  Serializer -> Container;
+
+  // edges to external systems
+  Storage -> Database;
+  WorkerAdapter -> Queue;
+
+}

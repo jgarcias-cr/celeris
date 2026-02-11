@@ -1,0 +1,15 @@
+/vendor/
+/composer.phar
+/.idea/
+/.vscode/
+/.DS_Store
+*.log
+
+# Local env (keep templates tracked)
+.env
+**/.env
+!**/.env.example
+
+# SQLite runtime files
+*.sqlite
+*.db

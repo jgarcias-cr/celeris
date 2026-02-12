@@ -33,6 +33,9 @@ function assertTrue(bool $condition, string $message): void
  */
 function runUxTesting(): void
 {
+   $_ENV['APP_ENV'] = 'development';
+   $_SERVER['APP_ENV'] = 'development';
+
    $tmpRoot = '/tmp/celeris-phase10-ui-' . bin2hex(random_bytes(6));
    mkdir($tmpRoot, 0777, true);
 
@@ -81,6 +84,41 @@ function runUxTesting(): void
    assertTrue(
       str_contains((string) ($payload['files'][0]['diff'] ?? ''), '+++ b/src/Demo/Controller/PreviewUserController.php'),
       'Generator preview payload should include a visual diff.'
+   );
+
+   $summaryRequest = new Request('GET', '/__dev/tooling/api/v1/summary');
+   $summaryResponse = $controller->handle($ctx, $summaryRequest);
+   assertTrue($summaryResponse->getStatus() === 200, 'Versioned summary endpoint should return 200.');
+
+   $summaryPayload = json_decode($summaryResponse->getBody(), true);
+   assertTrue(is_array($summaryPayload), 'Versioned summary endpoint should return JSON payload.');
+   assertTrue(($summaryPayload['status'] ?? null) === 'ok', 'Versioned summary endpoint should return an ok envelope.');
+   assertTrue(
+      isset($summaryPayload['data']['generators']) && is_array($summaryPayload['data']['generators']),
+      'Versioned summary endpoint should include generators in data.'
+   );
+
+   $applyRequest = new Request(
+      'POST',
+      '/__dev/tooling/api/v1/generate/apply',
+      ['content-type' => 'application/json'],
+      [],
+      (string) json_encode([
+         'generator' => 'controller',
+         'name' => 'AppliedUser',
+         'module' => 'Demo',
+         'overwrite' => true,
+      ], JSON_UNESCAPED_SLASHES)
+   );
+   $applyResponse = $controller->handle($ctx, $applyRequest);
+   assertTrue($applyResponse->getStatus() === 200, 'Versioned apply endpoint should return 200.');
+
+   $applyPayload = json_decode($applyResponse->getBody(), true);
+   assertTrue(is_array($applyPayload), 'Versioned apply endpoint should return JSON payload.');
+   assertTrue(($applyPayload['status'] ?? null) === 'ok', 'Versioned apply endpoint should return an ok envelope.');
+   assertTrue(
+      in_array('src/Demo/Controller/AppliedUserController.php', $applyPayload['data']['written'] ?? [], true),
+      'Versioned apply endpoint should write generated controller file.'
    );
 }
 
@@ -167,4 +205,3 @@ foreach ($checks as $name => $fn) {
 }
 
 exit($failed ? 1 : 0);
-

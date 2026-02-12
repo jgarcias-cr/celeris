@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+   <meta charset="utf-8">
+   <title>{{ title|default('Contacts') }}</title>
+</head>
+
+<body>
+   <h1>{{ title|default('Contacts') }}</h1>
+   <ul>
+      {% for contact in contacts|default([]) %}
+      <li>
+         <a href="/contacts/{{ contact.id }}">
+            {{ contact.firstName }} {{ contact.lastName }}
+         </a>
+      </li>
+      {% endfor %}
+   </ul>
+</body>
+
+</html>

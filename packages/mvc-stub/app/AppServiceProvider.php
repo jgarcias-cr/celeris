@@ -6,29 +6,73 @@ namespace App;
 
 use App\Repositories\ContactRepository;
 use App\Services\ContactService;
-use App\Shared\ViewRenderer;
+use Celeris\Framework\Config\ConfigRepository;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\View\TemplateRendererFactory;
+use Celeris\Framework\View\TemplateRendererInterface;
 
 final class AppServiceProvider implements ServiceProviderInterface
 {
    public function register(ServiceRegistry $services): void
    {
       $services->singleton(
-         ViewRenderer::class,
-         static fn(ContainerInterface $c): ViewRenderer => new ViewRenderer(__DIR__ . '/Views'),
+         TemplateRendererInterface::class,
+         static fn (ContainerInterface $c): TemplateRendererInterface => self::buildRenderer($c),
+         [ConfigRepository::class],
+      );
+
+      $services->singleton(
+         'view.renderer',
+         static fn (ContainerInterface $c): TemplateRendererInterface => $c->get(TemplateRendererInterface::class),
+         [TemplateRendererInterface::class],
       );
 
       $services->singleton(
          ContactRepository::class,
-         static fn(ContainerInterface $c): ContactRepository => new ContactRepository(),
+         static fn (ContainerInterface $c): ContactRepository => new ContactRepository(),
       );
 
       $services->singleton(
          ContactService::class,
-         static fn(ContainerInterface $c): ContactService => new ContactService($c->get(ContactRepository::class)),
+         static fn (ContainerInterface $c): ContactService => new ContactService($c->get(ContactRepository::class)),
          [ContactRepository::class],
       );
+   }
+
+   private static function buildRenderer(ContainerInterface $container): TemplateRendererInterface
+   {
+      $config = [];
+      if ($container->has(ConfigRepository::class)) {
+         $repository = $container->get(ConfigRepository::class);
+         if ($repository instanceof ConfigRepository) {
+            $raw = $repository->get('app.view', []);
+            if (is_array($raw)) {
+               $config = $raw;
+            }
+         }
+      }
+
+      $twigEnvironment = self::optionalDependency($container, 'Twig\\Environment');
+      $platesEngine = self::optionalDependency($container, 'League\\Plates\\Engine');
+      $latteEngine = self::optionalDependency($container, 'Latte\\Engine');
+
+      return TemplateRendererFactory::fromConfig(
+         $config,
+         $twigEnvironment,
+         $platesEngine,
+         $latteEngine,
+      );
+   }
+
+   private static function optionalDependency(ContainerInterface $container, string $id): ?object
+   {
+      if (!$container->has($id)) {
+         return null;
+      }
+
+      $dependency = $container->get($id);
+      return is_object($dependency) ? $dependency : null;
    }
 }

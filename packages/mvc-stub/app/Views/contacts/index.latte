@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+   <meta charset="utf-8">
+   <title>{$title ?? 'Contacts'}</title>
+</head>
+
+<body>
+   <h1>{$title ?? 'Contacts'}</h1>
+   <ul>
+      {foreach ($contacts ?? []) as $contact}
+      <li>
+         <a href="/contacts/{$contact->id}">
+            {$contact->firstName} {$contact->lastName}
+         </a>
+      </li>
+      {/foreach}
+   </ul>
+</body>
+
+</html>

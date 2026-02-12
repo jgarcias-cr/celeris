@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\ContactService;
-use App\Shared\ViewRenderer;
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Framework\View\TemplateRendererInterface;
 
 #[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts UI'])]
 final class ContactPageController
 {
    public function __construct(
       private ContactService $service,
-      private ViewRenderer $views,
+      private TemplateRendererInterface $views,
    ) {}
 
    #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]

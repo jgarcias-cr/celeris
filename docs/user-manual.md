@@ -1,7 +1,92 @@
 # Celeris Framework User Manual
 
+## 0. What is Celeris?
+
+Celeris is a PHP 8.4 framework for building backend software with explicit architecture, deterministic runtime behavior, and support for both API and MVC styles.
+
+The design goal is to let teams ship high-throughput, maintainable applications without hidden state coupling, especially when running long-lived worker processes.
+
+### Goal
+
+- Provide one consistent backend programming model for `FPM` and worker runtimes (`RoadRunner`, `Swoole`).
+- Keep request handling explicit and predictable (`RequestContext`, deterministic reset, explicit DI lifetimes).
+- Enable modular application composition through service providers, middleware, and typed contracts.
+
+### Core capabilities
+
+- Runtime model with adapters: `FPMAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`, coordinated by `WorkerRunner`.
+- Central `Kernel` lifecycle for bootstrap, routing, middleware, handler dispatch, response finalization, reset, and shutdown.
+- DI container with `singleton`, `request`, and `transient` lifetimes plus provider registration/boot hooks.
+- HTTP primitives (`Request`, `Response`, cookies, streaming responses) and PSR bridge support at integration boundaries.
+- Security subsystem (auth strategies, authorization policies, CSRF protection, rate limiting, security headers).
+- Validation + DTO mapping + serialization with typed request mapping.
+- Data access stack (DBAL, ORM, migrations) and optional Active Record compatibility layer.
+- Cache engine with deterministic invalidation options and HTTP cache finalization support.
+- Tooling and distributed-service building blocks (tracing, observability hooks, service auth, message bus abstraction).
+
+### Advantages for developers
+
+- Explicit dependency and request-state flow (no hidden globals for request data).
+- Safer worker-mode operation through deterministic request cleanup and lifetime guardrails.
+- Same kernel/runtime model for API and MVC projects, reducing context switching.
+- Strong modularity via providers and middleware for incremental growth from simple CRUD to larger systems.
+- Predictable behavior that is easier to test, reason about, and operate.
+
+### What you can build
+
+- JSON APIs, internal platform services, and microservice-style backends.
+- MVC applications returning HTML with PHP templates.
+- Hybrid systems where API and HTML endpoints coexist under one kernel composition.
+- Service-oriented endpoints with trace propagation, service authentication, and messaging abstractions.
+
+### Limitations (what Celeris is not)
+
+- Not a frontend framework; no built-in SPA tooling, bundler, or client rendering stack.
+- Core HTTP contracts are not PSR-7/PSR-15-native (interop is provided through bridges).
+- No async reactor/event-loop abstraction in core; request processing is synchronous per request frame.
+- No mandatory template engine in core (MVC uses plain PHP view rendering by convention).
+- Container resolution is runtime factory-driven; there is no compiled container artifact in the current implementation.
+- Some architecture decisions in `docs/ADR` are roadmap-oriented (`Proposed`) and may be ahead of current code.
+
+Note:
+
+PSR-7 (PHP Standard Recommendation) introduces:
+ - Heavy stream abstraction.
+ - Object cloning for immutability.
+ - Interface dispatch overhead.
+ - More allocations per request.
+ - Larger memory footprint.
+
+It is architecturally clean — but not minimal.
+In worker mode especially, stream abstractions can become unnecessary overhead.
+
+By keeping custom core contracts:
+
+Celeris controls:
+
+- Memory layout
+- Immutability semantics
+- Performance characteristics
+- Simplicity of body handling
+- Internal API evolution
+
+And it still allows:
+
+- External middleware via bridges
+
+That is a layered approach:
+
+- Core optimized, ecosystem interoperable.
+
+### Where Celeris is strongest
+
+- Backend-heavy systems where correctness and maintainability matter more than framework magic.
+- Worker-runtime deployments that need memory reuse without cross-request state leaks.
+- Teams that prefer explicit DI, typed contracts, deterministic middleware/routing order, and clear module boundaries.
+
 ## Index
 
+0. [0. What is Celeris?](#0-what-is-celeris)
 1. [1. Core Concepts](#1-core-concepts)
 2. [1.1 Detailed Request Lifecycle](#11-detailed-request-lifecycle)
 3. [1.2 Worker Mode: General Introduction](#12-worker-mode-general-introduction)
@@ -13,20 +98,22 @@
 9. [4. DI Container and Service Providers](#4-di-container-and-service-providers)
 10. [5. HTTP Abstractions](#5-http-abstractions)
 11. [6. Routing, Controllers, and Middleware](#6-routing-controllers-and-middleware)
-12. [7. API Project: End-to-End Example](#7-api-project-end-to-end-example)
-13. [8. MVC Project: End-to-End Example](#8-mvc-project-end-to-end-example)
-14. [9. Database and ORM](#9-database-and-orm)
-15. [10. Optional Active Record Compatibility Layer](#10-optional-active-record-compatibility-layer)
-16. [11. Security Subsystem](#11-security-subsystem)
-17. [12. Validation and Serialization](#12-validation-and-serialization)
-18. [13. Caching and HTTP Cache Semantics](#13-caching-and-http-cache-semantics)
-19. [14. Domain Events](#14-domain-events)
-20. [15. Tooling Platform (CLI + Web)](#15-tooling-platform-cli--web)
-21. [16. Distributed Features (Microservice/SOA)](#16-distributed-features-microservicesoa)
-22. [17. Transactions, CRUD, and Connection Patterns (Decision Guide)](#17-transactions-crud-and-connection-patterns-decision-guide)
-23. [18. API vs MVC Cheat Sheet](#18-api-vs-mvc-cheat-sheet)
-24. [19. Operational Checklist](#19-operational-checklist)
-25. [20. Reference Map](#20-reference-map)
+12. [6.0 Attribute routes vs PHP routes](#60-attribute-routes-vs-php-routes)
+13. [7. API Project: End-to-End Example](#7-api-project-end-to-end-example)
+14. [8. MVC Project: End-to-End Example](#8-mvc-project-end-to-end-example)
+15. [9. Database and ORM](#9-database-and-orm)
+16. [10. Optional Active Record Compatibility Layer](#10-optional-active-record-compatibility-layer)
+17. [11. Security Subsystem](#11-security-subsystem)
+18. [12. Validation and Serialization](#12-validation-and-serialization)
+19. [13. Caching and HTTP Cache Semantics](#13-caching-and-http-cache-semantics)
+20. [14. Domain Events](#14-domain-events)
+21. [15. Tooling Platform (CLI + Web)](#15-tooling-platform-cli--web)
+22. [16. Distributed Features (Microservice/SOA)](#16-distributed-features-microservicesoa)
+23. [17. Transactions, CRUD, and Connection Patterns (Decision Guide)](#17-transactions-crud-and-connection-patterns-decision-guide)
+24. [18. API vs MVC Cheat Sheet](#18-api-vs-mvc-cheat-sheet)
+25. [19. Operational Checklist](#19-operational-checklist)
+26. [20. Reference Map](#20-reference-map)
+27. [21. Questions and Answers](#21-questions-and-answers)
 
 This manual documents the current framework implementation in `packages/framework/src`.
 
@@ -860,6 +947,38 @@ $type = ContentNegotiator::negotiate(
 
 ## 6. Routing, Controllers, and Middleware
 
+### 6.0 Attribute routes vs PHP routes
+
+Celeris does not have a config toggle for “attribute vs PHP routes”. The routing style is chosen by how you wire routes in bootstrap:
+
+- Attribute routes: call `registerController(...)` to scan `#[Route]` / `#[RouteGroup]` attributes.
+- PHP routes: call `routes()->get/post/...` (or `groupRoutes(...)`) to register route definitions directly.
+
+You can use either approach or mix both in the same app.
+
+#### Attribute route example
+
+```php
+$kernel->registerController(ContactController::class);
+// or
+$kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
+```
+
+#### PHP route example
+
+```php
+$kernel->routes()->get('/health', function (RequestContext $ctx, Request $request): Response {
+    return new Response(200, ['content-type' => 'application/json'], '{"ok":true}');
+});
+
+$kernel->routes()->post('/contacts', [ContactController::class, 'create']);
+
+$kernel->groupRoutes(new RouteGroup(prefix: '/api', middleware: ['api.auth']), function (RouteCollector $routes) {
+    $routes->get('/contacts', [ContactController::class, 'index']);
+    $routes->post('/contacts', [ContactController::class, 'create']);
+});
+```
+
 ### 6.1 Programmatic routing
 
 ```php
@@ -1020,6 +1139,8 @@ api-app/
     app.php
     database.php
     security.php
+  scripts/
+    view-smoke.php
   app/
     AppServiceProvider.php
     Models/
@@ -1441,7 +1562,7 @@ $runner->run();
 
 ## 8. MVC Project: End-to-End Example
 
-There is no mandatory template engine in core. MVC views are typically plain PHP templates rendered by a service class.
+There is no mandatory template engine in core. MVC rendering is driven by `TemplateRendererInterface`, so you can select `php`, `twig`, `plates`, or `latte` via configuration.
 
 Install an MVC project:
 
@@ -1454,6 +1575,7 @@ Set your runtime values in `.env` (or start from `.env.example`).
 
 Default `.env` keys in the MVC scaffold:
 - `APP_NAME`, `APP_ENV`, `APP_DEBUG`, `APP_URL`, `APP_TIMEZONE`, `APP_VERSION`
+- `VIEW_ENGINE`, `VIEW_PATH`, `VIEW_*_EXTENSION`, `VIEW_TWIG_*`, `VIEW_LATTE_TEMP_PATH`
 - `DB_DEFAULT`, `DB_SQLITE_PATH`
 - `MYSQL_*`, `MARIADB_*`, `PGSQL_*`, `SQLSRV_*`
 - `SECURITY_AUTH_*`, `SECURITY_CSRF_ENABLED`, `SECURITY_RATE_LIMIT_*`, `JWT_SECRET`, `JWT_LEEWAY_SECONDS`
@@ -1483,16 +1605,17 @@ mvc-app/
         ContactPageController.php
       Middleware/
         RequireAuthMiddleware.php
-    Shared/
-      ViewRenderer.php
     Views/
       layout.php
       contacts/
         index.php
+        index.twig
+        index.latte
         show.php
+        show.twig
+        show.latte
 ```
 
-Yes, this structure also includes model classes.
 In this MVC layout, model/entity classes live in `app/Models/` (for example `Contact.php`).
 
 What each folder/file is for:
@@ -1505,9 +1628,7 @@ What each folder/file is for:
 - `config/security.php`
 - Security/auth/rate-limit/CSRF settings (important for form submissions and session-based flows).
 - `app/AppServiceProvider.php`
-- Registers MVC services (renderer, domain services, controllers, and optional repositories).
-- `app/Shared/ViewRenderer.php`
-- Shared rendering service for PHP template files in `app/Views`.
+- Registers MVC services (templating contract binding, domain services, controllers, and optional repositories).
 - `app/Models/Contact.php`
 - Domain entity model (Data Mapper style) mapped to database table columns.
 - `app/Repositories/ContactRepository.php` (optional)
@@ -1524,6 +1645,10 @@ What each folder/file is for:
 - Contact listing and form page.
 - `app/Views/contacts/show.php`
 - Contact details page.
+- `app/Views/contacts/*.twig`, `app/Views/contacts/*.latte`
+- Optional alternative templates for Twig/Latte when `VIEW_ENGINE` is switched.
+- `scripts/view-smoke.php`
+- Quick renderer smoke check for configured engine (or all engines with `--all`).
 
 Recommended optional additions as the MVC module grows:
 - `app/Http/Form/`
@@ -1533,35 +1658,41 @@ Recommended optional additions as the MVC module grows:
 - `app/Database/Migration/`
 - Database migration files used by `MigrationRunner`.
 
-### 8.2 View renderer service
+### 8.2 Templating contract and engine selection
 
-`app/Shared/ViewRenderer.php`:
+Core view contract:
+- `Celeris\Framework\View\TemplateRendererInterface`
+
+Factory:
+- `Celeris\Framework\View\TemplateRendererFactory::fromConfig(...)`
+
+Supported engines:
+- `php` (default)
+- `twig` (requires `twig/twig`)
+- `plates` (requires `league/plates`)
+- `latte` (requires `latte/latte`)
+
+Minimal config shape in `config/app.php`:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Shared;
-
-final class ViewRenderer
-{
-    public function __construct(private string $viewsPath) {}
-
-    /** @param array<string, mixed> $data */
-    public function render(string $view, array $data = []): string
-    {
-        $file = rtrim($this->viewsPath, '/') . '/' . trim($view, '/') . '.php';
-        if (!is_file($file)) {
-            throw new \RuntimeException("View not found: {$file}");
-        }
-
-        extract($data, EXTR_SKIP);
-        ob_start();
-        require $file;
-        return (string) ob_get_clean();
-    }
-}
+'view' => [
+    'engine' => $env('VIEW_ENGINE', 'php'),
+    'views_path' => $toAbsolutePath($env('VIEW_PATH'), dirname(__DIR__) . '/app/Views'),
+    'extensions' => [
+        'php' => $env('VIEW_PHP_EXTENSION', 'php'),
+        'twig' => $env('VIEW_TWIG_EXTENSION', 'twig'),
+        'plates' => $env('VIEW_PLATES_EXTENSION', 'php'),
+        'latte' => $env('VIEW_LATTE_EXTENSION', 'latte'),
+    ],
+    'twig' => [
+        'cache' => $toAbsolutePath($env('VIEW_TWIG_CACHE_PATH'), dirname(__DIR__) . '/var/cache/twig'),
+        'auto_reload' => $envBool('VIEW_TWIG_AUTO_RELOAD', true),
+        'debug' => $envBool('VIEW_TWIG_DEBUG', false),
+    ],
+    'latte' => [
+        'temp_path' => $toAbsolutePath($env('VIEW_LATTE_TEMP_PATH'), dirname(__DIR__) . '/var/cache/latte'),
+    ],
+],
 ```
 
 ### 8.3 MVC controller
@@ -1576,20 +1707,20 @@ declare(strict_types=1);
 namespace App\Contacts\Http;
 
 use App\Contacts\ContactService;
-use App\Shared\ViewRenderer;
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\Http\SetCookie;
 use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Framework\View\TemplateRendererInterface;
 
 #[RouteGroup(prefix: '/contacts', version: 'v1')]
 final class ContactPageController
 {
     public function __construct(
         private ContactService $service,
-        private ViewRenderer $views,
+        private TemplateRendererInterface $views,
     ) {}
 
     #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]
@@ -1673,6 +1804,12 @@ final class ContactPageController
 </html>
 ```
 
+Equivalent sample templates also exist for:
+- `app/Views/contacts/index.twig`
+- `app/Views/contacts/show.twig`
+- `app/Views/contacts/index.latte`
+- `app/Views/contacts/show.latte`
+
 ### 8.5 MVC provider wiring
 
 `app/AppServiceProvider.php`:
@@ -1686,20 +1823,23 @@ namespace App;
 
 use App\Contacts\ContactRepository;
 use App\Contacts\ContactService;
-use App\Shared\ViewRenderer;
+use Celeris\Framework\Config\ConfigRepository;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
 use Celeris\Framework\Database\DBAL;
 use Celeris\Framework\Database\ORM\EntityManager;
+use Celeris\Framework\View\TemplateRendererFactory;
+use Celeris\Framework\View\TemplateRendererInterface;
 
 final class AppServiceProvider implements ServiceProviderInterface
 {
     public function register(ServiceRegistry $services): void
     {
         $services->singleton(
-            ViewRenderer::class,
-            static fn (ContainerInterface $c): ViewRenderer => new ViewRenderer(__DIR__ . '/Views'),
+            TemplateRendererInterface::class,
+            static fn (ContainerInterface $c): TemplateRendererInterface => self::buildRenderer($c),
+            [ConfigRepository::class],
         );
 
         $services->singleton(
@@ -1717,11 +1857,55 @@ final class AppServiceProvider implements ServiceProviderInterface
             [ContactRepository::class],
         );
     }
+
+    private static function buildRenderer(ContainerInterface $container): TemplateRendererInterface
+    {
+        $config = [];
+        if ($container->has(ConfigRepository::class)) {
+            $repository = $container->get(ConfigRepository::class);
+            if ($repository instanceof ConfigRepository) {
+                $raw = $repository->get('app.view', []);
+                if (is_array($raw)) {
+                    $config = $raw;
+                }
+            }
+        }
+
+        $twigEnvironment = self::optionalDependency($container, 'Twig\\Environment');
+        $platesEngine = self::optionalDependency($container, 'League\\Plates\\Engine');
+        $latteEngine = self::optionalDependency($container, 'Latte\\Engine');
+
+        return TemplateRendererFactory::fromConfig($config, $twigEnvironment, $platesEngine, $latteEngine);
+    }
+
+    private static function optionalDependency(ContainerInterface $container, string $id): ?object
+    {
+        if (!$container->has($id)) {
+            return null;
+        }
+
+        $dependency = $container->get($id);
+        return is_object($dependency) ? $dependency : null;
+    }
 }
 ```
 
 This provider example uses `ContactRepository`, but it is optional.
 For simple modules, inject `EntityManager`/`DBAL` directly into `ContactService` and register only the service.
+
+### 8.6 View smoke script
+
+Quick check against configured engine:
+
+```bash
+php scripts/view-smoke.php
+```
+
+Check all engines and report missing optional dependencies:
+
+```bash
+php scripts/view-smoke.php --all
+```
 
 ## 9. Database and ORM
 
@@ -2118,9 +2302,60 @@ $platform = ToolingPlatform::fromProjectRoot(__DIR__ . '/..');
 $toolingUi = $platform->webUi('/__dev/tooling');
 
 $kernel->routes()->get('/__dev/tooling', $toolingUi);
+
+// Legacy JSON endpoints (still supported)
 $kernel->routes()->get('/__dev/tooling/graph', $toolingUi);
 $kernel->routes()->get('/__dev/tooling/validate', $toolingUi);
 $kernel->routes()->get('/__dev/tooling/generate/preview', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/generate/apply', $toolingUi);
+
+// Versioned API endpoints used by the Web UI
+$kernel->routes()->get('/__dev/tooling/api/v1', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/summary', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/health', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/graph', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/validate', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/generators', $toolingUi);
+$kernel->routes()->get('/__dev/tooling/api/v1/generate/preview', $toolingUi);
+$kernel->routes()->post('/__dev/tooling/api/v1/generate/preview', $toolingUi);
+$kernel->routes()->post('/__dev/tooling/api/v1/generate/apply', $toolingUi);
+```
+
+The tooling UI is only available when `APP_ENV=development`. In other environments it returns `404`.
+
+Environment toggles:
+- `TOOLING_ENABLED=true|false` forces tooling on/off regardless of `APP_ENV`.
+- `TOOLING_ALLOWED_ENVS=development,staging` allows tooling in specific environments.
+
+Apply-operation auditing:
+- `TOOLING_AUDIT_ENABLED=true|false` enables/disables audit logging (default `true`).
+- `TOOLING_AUDIT_PATH=var/log/tooling-audit.log` sets the audit log location (defaults to `var/log/tooling-audit.log` under project root).
+
+Audit records are written as JSON lines with request metadata and generator details.
+
+Example audit record:
+
+```json
+{
+  "timestamp": "2026-02-12T10:15:30Z",
+  "env": "development",
+  "channel": "api",
+  "method": "POST",
+  "path": "/__dev/tooling/api/v1/generate/apply",
+  "request_id": "a1b2c3d4",
+  "remote_addr": "127.0.0.1",
+  "user_agent": "Mozilla/5.0",
+  "generator": "controller",
+  "name": "Contact",
+  "module": "Contacts",
+  "overwrite": false,
+  "written": [
+    "src/Contacts/Controller/ContactController.php"
+  ],
+  "skipped": [],
+  "status": "ok",
+  "error": null
+}
 ```
 
 ## 16. Distributed Features (Microservice/SOA)
@@ -2186,7 +2421,7 @@ Use these rules:
 
 - MVC:
   - return HTML responses
-  - render `app/Views/*.php` via `ViewRenderer` service
+  - render views via `TemplateRendererInterface` (`php`/`twig`/`plates`/`latte`)
   - use cookie sessions + CSRF for form routes
   - controllers orchestrate service + view model
 
@@ -2208,6 +2443,7 @@ Most-used classes by subsystem:
 - Kernel/runtime: `Kernel`, `WorkerRunner`, `FPMAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`
 - DI: `ServiceRegistry`, `Container`, `ServiceProviderInterface`, `BootableServiceProviderInterface`
 - HTTP: `Request`, `Response`, `ResponseBuilder`, `SetCookie`, `ContentNegotiator`, PSR bridges
+- View: `TemplateRendererInterface`, `TemplateRendererFactory`, `PhpTemplateRenderer`, `TwigTemplateRenderer`, `PlatesTemplateRenderer`, `LatteTemplateRenderer`
 - Routing: `Router`, `RouteCollector`, `RouteGroup`, `AttributeRouteLoader`, route attributes, `OpenApiGenerator`
 - Middleware: `Pipeline`, `MiddlewareDispatcher`, `MiddlewareInterface`
 - Config: `ConfigLoader`, `EnvironmentLoader`, `ConfigRepository`, `ConfigValidator`
@@ -2220,12 +2456,60 @@ Most-used classes by subsystem:
 - Tooling: `ToolingPlatform`, `ToolingCliApplication`, `DeveloperUiController`
 - Distributed: `MicroserviceRuntimeModel`, `ServiceAuthenticator`, tracing, observability, message bus
 
+## 21. Questions and Answers
+
+### Execution model
+
+Q: Is there a traditional FPM request-per-process?  
+A: Supported through `FPMAdapter`. The adapter exposes one request frame (`nextRequest()` once) and then returns `null`, so framework userland execution is request-bounded in FPM mode.
+
+Q: Does Celeris support persistent worker (RoadRunner/Swoole/custom)?  
+A: Supported through `RoadRunnerAdapter` and `SwooleAdapter`, both implementing `WorkerAdapterInterface`. `WorkerRunner` boots once and handles many requests in a loop, with deterministic `kernel.reset()` and adapter `reset()` between requests.
+
+Q: Is there an Event loop?  
+A: There is no async reactor/event-loop abstraction in core. The runtime loop is synchronous request iteration in `WorkerRunner`, and runtime integration happens via adapter callbacks.
+
+### Kernel philosophy
+
+Q: Is there a central Kernel class?  
+A: Yes. `Kernel` is the composition root and the main execution boundary. It wires routing, middleware, container-backed handler resolution, security checks, and response finalization behind `handle(RequestContext, Request): Response`.
+
+Q: Is bootstrapping static or runtime-built?  
+A: Runtime-built. `Kernel::boot()` runs bootstrap steps and rebuilds the service container from a `ConfigSnapshot`. Bootstrapping is composable via `BootstrapManager` (`addStep`, `addValidator`, ordered `run`).
+
+### Container
+
+Q: Does Celeris use a Custom DI container?  
+A: Yes. Celeris uses a custom container (`Container`) with provider-driven registration (`ServiceProviderInterface`) and explicit lifetimes: `singleton`, `request`, `transient`.
+
+Q: Is Celeris PSR-11 compliant?  
+A: Implementation is PSR-style but uses framework-native interfaces today (`Celeris\Framework\Container\ContainerInterface` with `has/get`). The ADR target states PSR-11 compatibility, but the current package does not depend on `psr/container` directly.
+
+Q: Compiled container or runtime reflection?  
+A: Current implementation is runtime factory-based resolution from `ServiceDefinition` callables. It validates circular dependencies and lifetime rules at rebuild time; there is no compiled container artifact in the current core implementation.
+
+### Mode separation
+
+Q: Is API mode separate from MVC at bootstrap level?  
+A: Yes, composition-wise. API and MVC stubs both use the same `Kernel` and `WorkerRunner`, and differ by bootstrap wiring (providers, controllers, route grouping such as `/api`).
+
+Q: Are there feature flags inside one kernel?  
+A: Not kernel feature flags. The separation is done through module/provider/route composition registered into the same kernel runtime model.
+
+### State model
+
+Q: Is Celeris fully stateless between requests?  
+A: Request state is isolated and cleared per request: `RequestContext` is immutable, request-scoped services are created via `forRequest(...)`, and scope is cleared after handling.
+
+Q: Is Celeris designed for persistent memory reuse?  
+A: Also yes. In worker runtimes, the process is long-lived and singleton services are intentionally reused across requests. Deterministic reset hooks and lifetime guardrails prevent cross-request leakage.
+
+### Transport abstraction
+
+Q: PSR-7/PSR-15?  
+A: Core contracts are not PSR-7/PSR-15-native. The framework uses its own `Request`/`Response` and middleware interface.
+
+Q: Custom request/response contracts?  
+A: Yes. `Celeris\Framework\Http\Request`, `Response`, and `MiddlewareInterface` are first-class contracts. Optional bridge classes (`PsrRequestBridge`, `PsrResponseBridge`) provide PSR interop at integration boundaries.
+
 ---
-
-If you want, this manual can be split next into:
-- `docs/manual/api-guide.md`
-- `docs/manual/mvc-guide.md`
-- `docs/manual/security-guide.md`
-- `docs/manual/database-guide.md`
-
-with copy-paste-ready project templates.

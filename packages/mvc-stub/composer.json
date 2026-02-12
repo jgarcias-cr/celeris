@@ -6,6 +6,11 @@
       "php": ">=8.4",
       "celeris/framework": "*"
    },
+   "suggest": {
+      "twig/twig": "Template engine support for VIEW_ENGINE=twig.",
+      "league/plates": "Template engine support for VIEW_ENGINE=plates.",
+      "latte/latte": "Template engine support for VIEW_ENGINE=latte."
+   },
    "autoload": {
       "psr-4": {
          "App\\": "app/"

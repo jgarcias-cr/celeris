@@ -8,6 +8,11 @@
    "require": {
       "php": ">=8.4"
    },
+   "suggest": {
+      "twig/twig": "Render MVC templates with Twig via TemplateRendererFactory (engine=twig).",
+      "league/plates": "Render MVC templates with Plates via TemplateRendererFactory (engine=plates).",
+      "latte/latte": "Render MVC templates with Latte via TemplateRendererFactory (engine=latte)."
+   },
    "autoload": {
       "psr-4": {
          "Celeris\\Framework\\": "src/"

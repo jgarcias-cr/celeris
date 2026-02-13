@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Query;
 
 use Celeris\Framework\Database\DatabaseException;
+use Celeris\Framework\Database\Sql\SqlDialectFactory;
+use Celeris\Framework\Database\Sql\SqlDialectInterface;
 
 /**
  * Purpose: compose query builder output from incremental inputs.
@@ -13,6 +15,7 @@ use Celeris\Framework\Database\DatabaseException;
  */
 final class QueryBuilder
 {
+   private SqlDialectInterface $dialect;
    private string $type = 'select';
    /** @var array<int, string> */
    private array $select = ['*'];
@@ -35,6 +38,14 @@ final class QueryBuilder
    private array $updateData = [];
 
    private ?string $deleteTable = null;
+
+   /**
+    * @param ?SqlDialectInterface $dialect
+    */
+   public function __construct(?SqlDialectInterface $dialect = null)
+   {
+      $this->dialect = $dialect ?? SqlDialectFactory::generic();
+   }
 
    /**
     * @param array<int, string>|string $columns
@@ -198,12 +209,7 @@ final class QueryBuilder
       if ($this->orderBy !== []) {
          $sql .= ' ORDER BY ' . implode(', ', $this->orderBy);
       }
-      if ($this->limit !== null) {
-         $sql .= ' LIMIT ' . $this->limit;
-      }
-      if ($this->offset !== null) {
-         $sql .= ' OFFSET ' . $this->offset;
-      }
+      $sql = $this->dialect->applyLimitOffset($sql, $this->limit, $this->offset, $this->orderBy !== []);
 
       return new Query($sql, $this->params);
    }
@@ -303,6 +309,5 @@ final class QueryBuilder
       return $normalized;
    }
 }
-
 
 

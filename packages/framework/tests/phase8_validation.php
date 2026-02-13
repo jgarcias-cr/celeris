@@ -126,6 +126,20 @@ final class Phase8UserAggregate
    }
 }
 
+#[Entity(table: 'p8_seq_users')]
+/**
+ * Represents a sequence-backed entity used to validate id strategy behavior.
+ */
+final class Phase8SequenceUser
+{
+   #[Id(generated: true, strategy: 'sequence', sequence: 'p8_seq_users_id_seq')]
+   #[Column('id')]
+   public int $id;
+
+   #[Column('name')]
+   public string $name;
+}
+
 /**
  * Represents the create users migration component for this file.
  */
@@ -382,11 +396,42 @@ function runMigrationDeterminismTests(): void
    );
 }
 
+/**
+ * Handle run generated id strategy tests.
+ *
+ * @return void
+ */
+function runGeneratedIdStrategyTests(): void
+{
+   $connection = new ArrayConnection('seq');
+   $connection->execute('CREATE TABLE IF NOT EXISTS p8_seq_users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
+
+   $em = new EntityManager($connection);
+
+   $alpha = new Phase8SequenceUser();
+   $alpha->name = 'Alpha';
+   $em->persist($alpha);
+   $em->flush();
+
+   $beta = new Phase8SequenceUser();
+   $beta->name = 'Beta';
+   $em->persist($beta);
+   $em->flush();
+
+   assertTrue($alpha->id === 1, 'Sequence strategy should assign the first generated id before insert.');
+   assertTrue($beta->id === 2, 'Sequence strategy should increment id on subsequent inserts.');
+
+   $rows = $connection->tables()['p8_seq_users'] ?? [];
+   assertTrue(count($rows) === 2, 'Sequence strategy inserts should persist both rows.');
+   assertTrue(($rows[0]['id'] ?? null) === 1 && ($rows[1]['id'] ?? null) === 2, 'Persisted ids should match generated sequence values.');
+}
+
 $checks = [
    'QueryTracing' => 'runQueryTracingTests',
    'ZeroHiddenQueries' => 'runZeroHiddenQueryEnforcementTests',
    'TransactionDeterminism' => 'runTransactionDeterminismTests',
    'MigrationDeterminism' => 'runMigrationDeterminismTests',
+   'GeneratedIdStrategy' => 'runGeneratedIdStrategyTests',
 ];
 
 $failed = false;
@@ -401,5 +446,4 @@ foreach ($checks as $name => $fn) {
 }
 
 exit($failed ? 1 : 0);
-
 

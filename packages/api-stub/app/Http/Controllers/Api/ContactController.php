@@ -12,6 +12,13 @@ use Celeris\Framework\Http\Response;
 use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
 
+/**
+ * API controller exposing CRUD endpoints for contacts.
+ *
+ * This class demonstrates attribute-based routing and DTO-driven
+ * request handling for JSON APIs. Extend it with your own resources
+ * or split actions into dedicated controllers as your API grows.
+ */
 #[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts'])]
 final class ContactController
 {

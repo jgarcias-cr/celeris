@@ -8,6 +8,12 @@ use App\Models\Contact;
 use App\Repositories\ContactRepository;
 use RuntimeException;
 
+/**
+ * Application service for contact-related use cases.
+ *
+ * Controllers should call this service instead of reading repositories
+ * directly, so business rules stay centralized and testable.
+ */
 final class ContactService
 {
    public function __construct(private ContactRepository $repository) {}

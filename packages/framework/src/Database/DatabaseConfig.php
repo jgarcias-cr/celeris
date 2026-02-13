@@ -20,6 +20,7 @@ final class DatabaseConfig
    public function __construct(
       private string $name,
       private DatabaseDriver $driver,
+      private ?string $dsn = null,
       private ?string $host = null,
       private ?int $port = null,
       private ?string $database = null,
@@ -50,6 +51,16 @@ final class DatabaseConfig
    public function driver(): DatabaseDriver
    {
       return $this->driver;
+   }
+
+   /**
+    * Handle dsn.
+    *
+    * @return ?string
+    */
+   public function dsn(): ?string
+   {
+      return $this->dsn;
    }
 
    /**
@@ -150,6 +161,7 @@ final class DatabaseConfig
       return new self(
          $name,
          $driver,
+         self::nullableString($spec['dsn'] ?? null),
          self::nullableString($spec['host'] ?? null),
          isset($spec['port']) && is_numeric($spec['port']) ? (int) $spec['port'] : null,
          self::nullableString($spec['database'] ?? null),
@@ -177,6 +189,5 @@ final class DatabaseConfig
       return $clean === '' ? null : $clean;
    }
 }
-
 
 

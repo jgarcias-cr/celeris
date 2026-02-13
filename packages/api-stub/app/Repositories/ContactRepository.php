@@ -6,6 +6,13 @@ namespace App\Repositories;
 
 use App\Models\Contact;
 
+/**
+ * Repository abstraction over contact persistence.
+ *
+ * The stub uses an in-memory array for zero-setup execution.
+ * Swap this implementation for DBAL/ORM queries when connecting
+ * your API to a real database.
+ */
 final class ContactRepository
 {
    /** @var array<int, Contact> */

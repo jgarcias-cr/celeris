@@ -21,7 +21,9 @@ final class ArrayConnection implements ConnectionInterface
    private array $tables = [];
    /** @var array<string, int> */
    private array $autoIncrement = [];
-   /** @var array<int, array{tables: array<string, array<int, array<string, mixed>>>, auto: array<string, int>, last: ?string}> */
+   /** @var array<string, int> */
+   private array $sequences = [];
+   /** @var array<int, array{tables: array<string, array<int, array<string, mixed>>>, auto: array<string, int>, sequences: array<string, int>, last: ?string}> */
    private array $transactionSnapshots = [];
    /** @var array<int, string> */
    private array $transactionLog = [];
@@ -171,6 +173,19 @@ final class ArrayConnection implements ConnectionInterface
       try {
          $normalized = trim($sql);
 
+         if (preg_match('/^SELECT\s+NEXTVAL\(\s*:(\w+)\s*\)\s+AS\s+([A-Za-z0-9_]+)$/i', $normalized, $sequenceMatch) === 1) {
+            $sequenceParam = $sequenceMatch[1];
+            $alias = $sequenceMatch[2];
+            $sequenceName = trim((string) ($params[$sequenceParam] ?? ''));
+            if ($sequenceName === '') {
+               throw new DatabaseException('NEXTVAL sequence parameter cannot be empty.');
+            }
+
+            $this->sequences[$sequenceName] = ($this->sequences[$sequenceName] ?? 0) + 1;
+            $successful = true;
+            return [[(string) $alias => $this->sequences[$sequenceName]]];
+         }
+
          if (preg_match('/^SELECT\s+(.+)\s+FROM\s+([A-Za-z0-9_\.]+)(?:\s+WHERE\s+([A-Za-z0-9_\.]+)\s*=\s*:(\w+))?(?:\s+ORDER\s+BY\s+([A-Za-z0-9_\.]+)\s+(ASC|DESC))?(?:\s+LIMIT\s+\d+)?/i', $normalized, $matches) === 1) {
             $columnSpec = trim($matches[1]);
             $table = $this->cleanName($matches[2]);
@@ -245,6 +260,7 @@ final class ArrayConnection implements ConnectionInterface
       $this->transactionSnapshots[] = [
          'tables' => $this->tables,
          'auto' => $this->autoIncrement,
+         'sequences' => $this->sequences,
          'last' => $this->lastInsertId,
       ];
    }
@@ -282,6 +298,7 @@ final class ArrayConnection implements ConnectionInterface
 
       $this->tables = $snapshot['tables'];
       $this->autoIncrement = $snapshot['auto'];
+      $this->sequences = $snapshot['sequences'];
       $this->lastInsertId = $snapshot['last'];
       $this->transactionLog[] = 'rollback';
    }
@@ -440,6 +457,3 @@ final class ArrayConnection implements ConnectionInterface
       ));
    }
 }
-
-
-

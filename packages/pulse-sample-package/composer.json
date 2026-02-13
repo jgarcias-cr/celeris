@@ -1,0 +1,15 @@
+{
+  "name": "celeris/pulse-sample-package",
+  "description": "Sample third-party package for Celeris that tracks request performance and usage metrics.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "celeris/framework": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Celeris\\Sample\\Pulse\\": "src/"
+    }
+  }
+}

@@ -18,12 +18,17 @@ final class Id
     * Create a new instance.
     *
     * @param bool $generated
+    * @param string $strategy
+    * @param ?string $sequence
     * @return mixed
     */
-   public function __construct(public bool $generated = true)
+   public function __construct(
+      public bool $generated = true,
+      public string $strategy = 'auto',
+      public ?string $sequence = null,
+   )
    {
    }
 }
-
 
 

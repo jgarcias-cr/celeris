@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Migration;
 
 use Celeris\Framework\Database\Connection\ConnectionInterface;
+use Throwable;
 
 /**
  * Purpose: implement database migration repository behavior for the Database subsystem.
@@ -33,10 +34,32 @@ final class DatabaseMigrationRepository implements MigrationRepositoryInterface
     */
    public function ensureStorage(): void
    {
-      $this->connection->execute(sprintf(
+      $createIfNotExists = sprintf(
          'CREATE TABLE IF NOT EXISTS %s (version VARCHAR(191) PRIMARY KEY, description VARCHAR(255) NOT NULL, applied_at BIGINT NOT NULL)',
          $this->table,
-      ));
+      );
+
+      try {
+         $this->connection->execute($createIfNotExists);
+         return;
+      } catch (Throwable) {
+         // Fallback for drivers that do not support IF NOT EXISTS.
+      }
+
+      $plainCreate = sprintf(
+         'CREATE TABLE %s (version VARCHAR(191) PRIMARY KEY, description VARCHAR(255) NOT NULL, applied_at BIGINT NOT NULL)',
+         $this->table,
+      );
+
+      try {
+         $this->connection->execute($plainCreate);
+      } catch (Throwable $exception) {
+         if ($this->isAlreadyExistsError($exception)) {
+            return;
+         }
+
+         throw $exception;
+      }
    }
 
    /**
@@ -91,7 +114,26 @@ final class DatabaseMigrationRepository implements MigrationRepositoryInterface
          ['version' => $version],
       );
    }
-}
 
+   private function isAlreadyExistsError(Throwable $exception): bool
+   {
+      $message = strtolower($exception->getMessage());
+      foreach ([
+         'already exists',
+         'already an object named',
+         'name is already used',
+         'sqlstate[42s01]',
+         'sqlstate[42710]',
+         'sqlcode=-607',
+         'ora-00955',
+      ] as $marker) {
+         if (str_contains($message, $marker)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+}
 
 

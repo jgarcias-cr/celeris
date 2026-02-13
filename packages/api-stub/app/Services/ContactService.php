@@ -10,6 +10,12 @@ use App\Models\Contact;
 use App\Repositories\ContactRepository;
 use RuntimeException;
 
+/**
+ * Application service containing contact use-case logic.
+ *
+ * Controllers delegate business operations to this service so API
+ * transport concerns stay separate from domain behavior.
+ */
 final class ContactService
 {
    public function __construct(private ContactRepository $repository) {}

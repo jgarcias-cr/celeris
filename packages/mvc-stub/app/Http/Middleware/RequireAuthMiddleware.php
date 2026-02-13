@@ -9,6 +9,13 @@ use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\Middleware\MiddlewareInterface;
 
+/**
+ * Example authentication middleware hook for MVC routes.
+ *
+ * The default implementation is pass-through so the stub works out
+ * of the box. Replace this with your own checks (session, cookie,
+ * token, ACL, redirect-to-login, etc.) before calling `$next(...)`.
+ */
 final class RequireAuthMiddleware implements MiddlewareInterface
 {
    public function handle(RequestContext $ctx, Request $request, callable $next): Response

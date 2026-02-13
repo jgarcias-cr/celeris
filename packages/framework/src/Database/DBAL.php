@@ -7,6 +7,7 @@ namespace Celeris\Framework\Database;
 use Celeris\Framework\Database\Connection\ConnectionInterface;
 use Celeris\Framework\Database\Connection\ConnectionPool;
 use Celeris\Framework\Database\Query\QueryBuilder;
+use Celeris\Framework\Database\Sql\SqlDialectResolver;
 
 /**
  * Purpose: implement d b a l behavior for the Database subsystem.
@@ -39,11 +40,12 @@ final class DBAL
    /**
     * Handle query builder.
     *
+    * @param string $connection
     * @return QueryBuilder
     */
-   public function queryBuilder(): QueryBuilder
+   public function queryBuilder(string $connection = 'default'): QueryBuilder
    {
-      return new QueryBuilder();
+      return new QueryBuilder(SqlDialectResolver::forConnection($this->connection($connection)));
    }
 
    /**
@@ -66,6 +68,5 @@ final class DBAL
       return $this->pool;
    }
 }
-
 
 

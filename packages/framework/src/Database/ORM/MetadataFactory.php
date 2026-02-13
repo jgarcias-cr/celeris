@@ -83,11 +83,19 @@ final class MetadataFactory
 
          $isId = $idAttributes !== [] || $name === $entity->primaryKey;
          $generated = true;
+         $idStrategy = IdGenerationStrategy::Auto;
+         $idSequence = null;
          if ($idAttributes !== []) {
             $id = $idAttributes[0]->newInstance();
             if ($id instanceof Id) {
                $generated = $id->generated;
+               $idStrategy = IdGenerationStrategy::fromString($id->strategy);
+               $idSequence = self::nullableString($id->sequence);
             }
+         }
+
+         if (!$generated) {
+            $idStrategy = IdGenerationStrategy::None;
          }
 
          $columnName = $column->name ?? $name;
@@ -96,6 +104,8 @@ final class MetadataFactory
             $columnName,
             $isId,
             $generated,
+            $idStrategy,
+            $idSequence,
             $column->nullable,
             $column->readOnly,
          );
@@ -122,7 +132,16 @@ final class MetadataFactory
       $this->cache[$className] = $metadata;
       return $metadata;
    }
-}
 
+   private static function nullableString(mixed $value): ?string
+   {
+      if (!is_string($value)) {
+         return null;
+      }
+
+      $clean = trim($value);
+      return $clean === '' ? null : $clean;
+   }
+}
 
 

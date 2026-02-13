@@ -63,7 +63,7 @@ final class PdoConnectionFactory
          );
       }
 
-      return new PdoConnection($config->name(), $pdo, $this->defaultTracer);
+      return new PdoConnection($config->name(), $pdo, $this->defaultTracer, $config->driver(), $config->options());
    }
 
    /**
@@ -74,6 +74,10 @@ final class PdoConnectionFactory
     */
    public function buildDsn(DatabaseConfig $config): string
    {
+      if ($config->dsn() !== null && trim($config->dsn()) !== '') {
+         return trim((string) $config->dsn());
+      }
+
       return match ($config->driver()) {
          DatabaseDriver::MySQL, DatabaseDriver::MariaDB => sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=%s',
@@ -98,9 +102,115 @@ final class PdoConnectionFactory
             $config->port() ?? 1433,
             $config->database() ?? '',
          ),
+         DatabaseDriver::Firebird => $this->buildFirebirdDsn($config),
+         DatabaseDriver::IBMDB2 => $this->buildIbmDsn($config),
+         DatabaseDriver::Oracle => $this->buildOracleDsn($config),
       };
    }
+
+   /**
+    * Handle build firebird dsn.
+    *
+    * @param DatabaseConfig $config
+    * @return string
+    */
+   private function buildFirebirdDsn(DatabaseConfig $config): string
+   {
+      $database = $config->database() ?? $config->path();
+      if ($database === null || trim($database) === '') {
+         throw new DatabaseException('Firebird DSN requires database or path when "dsn" is not provided.');
+      }
+
+      $charset = $config->charset() ?? 'UTF8';
+      if ($config->host() !== null && trim($config->host()) !== '') {
+         return sprintf(
+            'firebird:dbname=%s/%d:%s;charset=%s',
+            $config->host(),
+            $config->port() ?? 3050,
+            $database,
+            $charset,
+         );
+      }
+
+      return sprintf('firebird:dbname=%s;charset=%s', $database, $charset);
+   }
+
+   /**
+    * Handle build ibm dsn.
+    *
+    * @param DatabaseConfig $config
+    * @return string
+    */
+   private function buildIbmDsn(DatabaseConfig $config): string
+   {
+      $database = $config->database() ?? '';
+      if ($config->host() !== null && trim($config->host()) !== '') {
+         $protocol = $this->stringOption($config, 'protocol', 'TCPIP');
+
+         return sprintf(
+            'ibm:DATABASE=%s;HOSTNAME=%s;PORT=%d;PROTOCOL=%s;',
+            $database,
+            $config->host(),
+            $config->port() ?? 50000,
+            $protocol,
+         );
+      }
+
+      if ($database === '') {
+         throw new DatabaseException('IBM DB2 DSN requires database (and usually host/port) when "dsn" is not provided.');
+      }
+
+      return 'ibm:' . $database;
+   }
+
+   /**
+    * Handle build oracle dsn.
+    *
+    * @param DatabaseConfig $config
+    * @return string
+    */
+   private function buildOracleDsn(DatabaseConfig $config): string
+   {
+      $charset = $config->charset() ?? 'AL32UTF8';
+      $host = $config->host();
+      $serviceName = $this->stringOption($config, 'service_name', $config->database() ?? '');
+      $sid = $this->stringOption($config, 'sid', '');
+
+      if ($host !== null && trim($host) !== '') {
+         $port = $config->port() ?? 1521;
+         if ($sid !== '') {
+            return sprintf('oci:dbname=%s:%d/%s;charset=%s', $host, $port, $sid, $charset);
+         }
+
+         if ($serviceName !== '') {
+            return sprintf('oci:dbname=//%s:%d/%s;charset=%s', $host, $port, $serviceName, $charset);
+         }
+      }
+
+      if ($serviceName !== '') {
+         return sprintf('oci:dbname=%s;charset=%s', $serviceName, $charset);
+      }
+
+      throw new DatabaseException('Oracle DSN requires host + service_name/sid, database, or explicit "dsn".');
+   }
+
+   /**
+    * Handle string option.
+    *
+    * @param DatabaseConfig $config
+    * @param string $key
+    * @param string $default
+    * @return string
+    */
+   private function stringOption(DatabaseConfig $config, string $key, string $default = ''): string
+   {
+      $options = $config->options();
+      $value = $options[$key] ?? null;
+      if (!is_scalar($value)) {
+         return $default;
+      }
+
+      $clean = trim((string) $value);
+      return $clean !== '' ? $clean : $default;
+   }
 }
-
-
-

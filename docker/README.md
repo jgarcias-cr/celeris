@@ -12,4 +12,5 @@ Stop services:
 docker compose down
 ```
 
-App is served at http://localhost:8080 (nginx) and PHP-FPM listens on port 9000 inside the compose network.
+MVC app is served at http://localhost:8082 and API app is served at http://localhost:8081.
+PHP-FPM listens on port 9000 inside the compose network.

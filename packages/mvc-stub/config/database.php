@@ -28,8 +28,17 @@ if ($sqlitePath !== null && !str_starts_with($sqlitePath, '/')) {
 return [
     'default' => $env('DB_DEFAULT', 'main'),
 
-    // Supported drivers: mysql, mariadb, pgsql, sqlite, sqlsrv
-    // PDO extensions are required per driver (pdo_mysql, pdo_pgsql, pdo_sqlite, pdo_sqlsrv).
+    // Supported drivers: mysql, mariadb, pgsql, sqlite, sqlsrv, firebird, ibm, oci
+    // PDO extensions are required per driver:
+    // - mysql/mariadb => pdo_mysql
+    // - pgsql => pdo_pgsql
+    // - sqlite => pdo_sqlite
+    // - sqlsrv => pdo_sqlsrv
+    // - firebird => pdo_firebird
+    // - ibm => pdo_ibm
+    // - oci => pdo_oci
+    //
+    // For complex setups use explicit DSN via the connection "dsn" key.
     'connections' => [
         'main' => [
             'driver' => 'sqlite',
@@ -72,6 +81,57 @@ return [
             'database' => $env('SQLSRV_DATABASE', 'app'),
             'username' => $env('SQLSRV_USERNAME', 'sa'),
             'password' => $env('SQLSRV_PASSWORD', ''),
+        ],
+
+        'firebird' => [
+            'driver' => 'firebird',
+            'host' => $env('FIREBIRD_HOST', '127.0.0.1'),
+            'port' => $envInt('FIREBIRD_PORT', 3050),
+            'database' => $env('FIREBIRD_DATABASE', '/var/lib/firebird/data/app.fdb'),
+            'username' => $env('FIREBIRD_USERNAME', 'SYSDBA'),
+            'password' => $env('FIREBIRD_PASSWORD', 'masterkey'),
+            'charset' => $env('FIREBIRD_CHARSET', 'UTF8'),
+            'dsn' => $env('FIREBIRD_DSN'),
+            'options' => [
+                'id_strategy' => $env('FIREBIRD_ID_STRATEGY', 'auto'),
+                'id_sequence' => $env('FIREBIRD_ID_SEQUENCE'),
+                'id_sequence_pattern' => $env('FIREBIRD_ID_SEQUENCE_PATTERN'),
+            ],
+        ],
+
+        'ibm' => [
+            'driver' => 'ibm',
+            'host' => $env('IBM_HOST', '127.0.0.1'),
+            'port' => $envInt('IBM_PORT', 50000),
+            'database' => $env('IBM_DATABASE', 'SAMPLE'),
+            'username' => $env('IBM_USERNAME', 'db2inst1'),
+            'password' => $env('IBM_PASSWORD', ''),
+            'dsn' => $env('IBM_DSN'),
+            'options' => [
+                'protocol' => $env('IBM_PROTOCOL', 'TCPIP'),
+                'id_strategy' => $env('IBM_ID_STRATEGY', 'auto'),
+                'id_sequence' => $env('IBM_ID_SEQUENCE'),
+                'id_sequence_pattern' => $env('IBM_ID_SEQUENCE_PATTERN'),
+            ],
+        ],
+
+        'oci' => [
+            'driver' => 'oci',
+            'host' => $env('OCI_HOST', '127.0.0.1'),
+            'port' => $envInt('OCI_PORT', 1521),
+            // Defaults to service name when OCI_SERVICE_NAME is not set.
+            'database' => $env('OCI_DATABASE', 'XE'),
+            'username' => $env('OCI_USERNAME', 'system'),
+            'password' => $env('OCI_PASSWORD', ''),
+            'charset' => $env('OCI_CHARSET', 'AL32UTF8'),
+            'dsn' => $env('OCI_DSN'),
+            'options' => [
+                'service_name' => $env('OCI_SERVICE_NAME'),
+                'sid' => $env('OCI_SID'),
+                'id_strategy' => $env('OCI_ID_STRATEGY', 'auto'),
+                'id_sequence' => $env('OCI_ID_SEQUENCE'),
+                'id_sequence_pattern' => $env('OCI_ID_SEQUENCE_PATTERN'),
+            ],
         ],
     ],
 ];

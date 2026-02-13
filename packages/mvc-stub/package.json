@@ -1,0 +1,13 @@
+{
+   "name": "celeris-mvc-assets",
+   "version": "1.0.0",
+   "private": true,
+   "scripts": {
+      "dev": "node ./scripts/build-assets.mjs --dev",
+      "build": "node ./scripts/build-assets.mjs --prod",
+      "watch": "node ./scripts/build-assets.mjs --watch"
+   },
+   "devDependencies": {
+      "esbuild": "^0.25.0"
+   }
+}

@@ -15,6 +15,7 @@ use Celeris\Framework\Database\ORM\EntityMetadata;
 use Celeris\Framework\Database\ORM\LazyReference;
 use Celeris\Framework\Database\ORM\MetadataFactory;
 use Celeris\Framework\Database\Query\QueryBuilder;
+use Celeris\Framework\Database\Sql\SqlDialectResolver;
 use ReflectionClass;
 use ReflectionNamedType;
 
@@ -218,7 +219,7 @@ final class ActiveRecordManager
          array_values($metadata->columns())
       );
 
-      $builder = (new QueryBuilder())
+      $builder = (new QueryBuilder(SqlDialectResolver::forConnection($entityManager->connection())))
          ->select($columns)
          ->from($metadata->table());
 

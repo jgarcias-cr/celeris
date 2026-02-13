@@ -1,16 +1,9 @@
-<!doctype html>
-<html lang="en">
-
-<head>
-   <meta charset="utf-8">
-   <title>{$title ?? 'Contact'}</title>
-</head>
-
-<body>
-   <h1>{$contact->firstName} {$contact->lastName}</h1>
-   <p>Phone: {$contact->phone}</p>
-   <p>Address: {$contact->address}</p>
-   <p>Age: {$contact->age}</p>
-</body>
-
-</html>
+<h1>{$contact->firstName} {$contact->lastName}</h1>
+<article class="contact-card">
+   <p><strong>Phone:</strong> {$contact->phone}</p>
+   <p><strong>Address:</strong> {$contact->address}</p>
+   <p><strong>Age:</strong> {$contact->age}</p>
+</article>
+<p>
+   <a class="back-link" href="/contacts">Back to contacts</a>
+</p>

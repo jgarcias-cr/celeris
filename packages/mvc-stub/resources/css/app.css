@@ -1,0 +1,124 @@
+:root {
+   --bg: #f5f7fb;
+   --card: #ffffff;
+   --ink: #18202d;
+   --muted: #5e6b82;
+   --accent: #0a7ea4;
+   --accent-ink: #ffffff;
+   --line: #d9e1ee;
+}
+
+* {
+   box-sizing: border-box;
+}
+
+html,
+body {
+   margin: 0;
+   padding: 0;
+   background: var(--bg);
+   color: var(--ink);
+   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.site-header,
+.site-footer {
+   background: #fff;
+   border-bottom: 1px solid var(--line);
+}
+
+.site-footer {
+   border-top: 1px solid var(--line);
+   border-bottom: 0;
+}
+
+.site-shell {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+   padding-top: 0.9rem;
+   padding-bottom: 0.9rem;
+}
+
+.site-nav a {
+   color: var(--accent);
+   text-decoration: none;
+   font-weight: 600;
+}
+
+.site-user {
+   margin: 0;
+   color: var(--muted);
+   font-size: 0.95rem;
+}
+
+.page {
+   max-width: 760px;
+   margin: 0 auto;
+   padding: 2rem 1rem 3rem;
+}
+
+.page h1 {
+   margin: 0 0 0.75rem;
+   font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.page .lead {
+   margin: 0 0 1.5rem;
+   color: var(--muted);
+}
+
+.contacts-list {
+   list-style: none;
+   margin: 0;
+   padding: 0;
+   display: grid;
+   gap: 0.75rem;
+}
+
+.contacts-list a,
+.back-link {
+   display: block;
+   padding: 0.9rem 1rem;
+   border: 1px solid var(--line);
+   border-radius: 12px;
+   background: var(--card);
+   color: var(--ink);
+   text-decoration: none;
+}
+
+.contacts-list a:hover,
+.back-link:hover {
+   border-color: var(--accent);
+   box-shadow: 0 0 0 3px rgba(10, 126, 164, 0.12);
+}
+
+.contact-card {
+   border: 1px solid var(--line);
+   border-radius: 14px;
+   background: var(--card);
+   padding: 1rem;
+}
+
+.contact-card p {
+   margin: 0.5rem 0;
+}
+
+.contact-card strong {
+   color: var(--muted);
+}
+
+.js .contacts-list a {
+   opacity: 0;
+   transform: translateY(6px);
+   animation: rise 240ms ease forwards;
+   animation-delay: calc(var(--stagger-index, 0) * 35ms);
+}
+
+@keyframes rise {
+   to {
+      opacity: 1;
+      transform: translateY(0);
+   }
+}

@@ -10,6 +10,13 @@ use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
 
+/**
+ * Registers core application services for the API stub.
+ *
+ * Use this provider as your main composition root to bind
+ * repositories, services, and external integrations used by
+ * API controllers.
+ */
 final class AppServiceProvider implements ServiceProviderInterface
 {
    public function register(ServiceRegistry $services): void

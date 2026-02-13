@@ -6,6 +6,13 @@ namespace App\Repositories;
 
 use App\Models\Contact;
 
+/**
+ * Data access layer for contact records.
+ *
+ * The stub keeps contacts in memory so the project can run without a
+ * database. Replace this repository with DBAL/ORM queries when moving
+ * to a real persistence layer.
+ */
 final class ContactRepository
 {
    /** @return array<int, Contact> */

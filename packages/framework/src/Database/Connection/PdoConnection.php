@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Celeris\Framework\Database\Connection;
 
+use Celeris\Framework\Database\DatabaseDriver;
 use Celeris\Framework\Database\DatabaseException;
 use PDO;
 use PDOException;
@@ -22,12 +23,16 @@ final class PdoConnection implements ConnectionInterface
     * @param string $name
     * @param PDO $pdo
     * @param QueryTracerInterface $tracer
+    * @param ?DatabaseDriver $driver
+    * @param array<string, int|string|bool|null> $options
     * @return mixed
     */
    public function __construct(
       private string $name,
       private PDO $pdo,
       private QueryTracerInterface $tracer = new InMemoryQueryTracer(),
+      private ?DatabaseDriver $driver = null,
+      private array $options = [],
    ) {
       $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
       $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -41,6 +46,38 @@ final class PdoConnection implements ConnectionInterface
    public function name(): string
    {
       return $this->name;
+   }
+
+   /**
+    * Handle driver.
+    *
+    * @return ?DatabaseDriver
+    */
+   public function driver(): ?DatabaseDriver
+   {
+      return $this->driver;
+   }
+
+   /**
+    * Handle options.
+    *
+    * @return array<string, int|string|bool|null>
+    */
+   public function options(): array
+   {
+      return $this->options;
+   }
+
+   /**
+    * Handle option.
+    *
+    * @param string $key
+    * @param mixed $default
+    * @return mixed
+    */
+   public function option(string $key, mixed $default = null): mixed
+   {
+      return $this->options[$key] ?? $default;
    }
 
    /**
@@ -260,6 +297,4 @@ final class PdoConnection implements ConnectionInterface
       $this->tracer->record($entry);
    }
 }
-
-
 

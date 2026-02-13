@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+/**
+ * Contact entity/value object used by the API sample.
+ *
+ * The model includes a `toArray()` helper to normalize output for
+ * JSON responses. You can adapt this class to match ORM entities or
+ * richer domain objects in production.
+ */
 final class Contact
 {
    public int $id;

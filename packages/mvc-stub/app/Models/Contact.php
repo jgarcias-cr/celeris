@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+/**
+ * Simple contact model used by the MVC stub sample.
+ *
+ * This class acts as a lightweight read/write data object for view
+ * rendering. In production projects you can replace or evolve it into
+ * an ORM entity/value object that matches your domain rules.
+ */
 final class Contact
 {
    public function __construct(

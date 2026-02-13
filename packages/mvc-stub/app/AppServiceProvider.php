@@ -13,6 +13,15 @@ use Celeris\Framework\Container\ServiceRegistry;
 use Celeris\Framework\View\TemplateRendererFactory;
 use Celeris\Framework\View\TemplateRendererInterface;
 
+/**
+ * Registers application services for the MVC stub.
+ *
+ * This is the main place to wire container bindings for your project.
+ * In real applications you typically:
+ * - bind repositories to database-backed implementations;
+ * - register additional domain/application services;
+ * - expose optional third-party integrations required by your modules.
+ */
 final class AppServiceProvider implements ServiceProviderInterface
 {
    public function register(ServiceRegistry $services): void

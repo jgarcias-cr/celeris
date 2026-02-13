@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Celeris\Framework\Database\ORM;
 
+use Celeris\Framework\Database\Connection\PdoConnection;
 use Celeris\Framework\Database\Connection\ConnectionInterface;
+use Celeris\Framework\Database\DatabaseDriver;
 use Celeris\Framework\Database\ORM\Event\EntityPersistedEvent;
 use Celeris\Framework\Database\ORM\Event\EntityPersistingEvent;
 use Celeris\Framework\Database\ORM\Event\EntityRemovedEvent;
@@ -15,6 +17,7 @@ use Celeris\Framework\Database\ORM\Event\PersistenceEventDispatcher;
 use Celeris\Framework\Database\ORM\Event\PostFlushEvent;
 use Celeris\Framework\Database\ORM\Event\PreFlushEvent;
 use Celeris\Framework\Database\Query\QueryBuilder;
+use Celeris\Framework\Database\Sql\SqlDialectResolver;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 use Celeris\Framework\Domain\Event\DomainEventInterface as FrameworkDomainEventInterface;
 use ReflectionClass;
@@ -156,7 +159,7 @@ final class EntityManager
          array_values($metadata->columns())
       );
 
-      $query = (new QueryBuilder())
+      $query = $this->queryBuilder()
          ->select($columns)
          ->from($metadata->table())
          ->where(sprintf('%s = :id', $metadata->primaryColumn()), ['id' => $id])
@@ -271,10 +274,28 @@ final class EntityManager
       $metadata = $this->metadataFactory->metadataFor($entity::class);
       $this->persistenceEvents->dispatch(new EntityPersistingEvent($entity));
 
+      $idMeta = $metadata->column($metadata->primaryProperty());
+      $idStrategy = $idMeta instanceof ColumnMetadata
+         ? $this->effectiveIdStrategy($metadata, $idMeta)
+         : IdGenerationStrategy::None;
+
+      if ($idMeta instanceof ColumnMetadata && $idMeta->generated()) {
+         $currentId = $this->getPropertyValue($entity, $metadata->primaryProperty());
+         if ($this->isEmptyIdentifier($currentId) && $idStrategy === IdGenerationStrategy::Sequence) {
+            $sequenceName = $this->resolveSequenceName($metadata, $idMeta);
+            $nextId = $this->nextSequenceValue($sequenceName);
+            $this->setPropertyValue(
+               $entity,
+               $metadata->primaryProperty(),
+               $this->castForProperty($entity, $metadata->primaryProperty(), $nextId),
+            );
+         }
+      }
+
       $data = [];
       foreach ($metadata->columns() as $column) {
          $value = $this->getPropertyValue($entity, $column->property());
-         if ($column->isId() && $column->generated() && ($value === null || $value === '')) {
+         if ($column->isId() && $column->generated() && $this->isEmptyIdentifier($value)) {
             continue;
          }
 
@@ -285,17 +306,26 @@ final class EntityManager
          $data[$column->column()] = $value;
       }
 
-      $query = (new QueryBuilder())
+      $query = $this->queryBuilder()
          ->insert($metadata->table(), $data)
          ->build();
 
       $this->connection->execute($query->sql(), $query->params());
 
-      $idMeta = $metadata->column($metadata->primaryProperty());
-      if ($idMeta !== null && $idMeta->generated()) {
-         $id = $this->connection->lastInsertId();
-         if ($id !== null) {
-            $this->setPropertyValue($entity, $metadata->primaryProperty(), $this->castForProperty($entity, $metadata->primaryProperty(), $id));
+      if ($idMeta instanceof ColumnMetadata && $idMeta->generated()) {
+         $currentId = $this->getPropertyValue($entity, $metadata->primaryProperty());
+         if ($this->isEmptyIdentifier($currentId)) {
+            if ($idStrategy === IdGenerationStrategy::Sequence) {
+               throw new OrmException(sprintf(
+                  'Generated id for "%s" is empty after sequence strategy; verify sequence mapping.',
+                  $entity::class,
+               ));
+            }
+
+            $id = $this->connection->lastInsertId();
+            if ($id !== null && $id !== '') {
+               $this->setPropertyValue($entity, $metadata->primaryProperty(), $this->castForProperty($entity, $metadata->primaryProperty(), $id));
+            }
          }
       }
 
@@ -337,7 +367,7 @@ final class EntityManager
       }
 
       if ($data !== []) {
-         $query = (new QueryBuilder())
+         $query = $this->queryBuilder()
             ->update($metadata->table(), $data)
             ->where(sprintf('%s = :where_id', $metadata->primaryColumn()), ['where_id' => $idValue])
             ->build();
@@ -365,7 +395,7 @@ final class EntityManager
          throw new OrmException(sprintf('Cannot delete "%s" without primary key.', $entity::class));
       }
 
-      $query = (new QueryBuilder())
+      $query = $this->queryBuilder()
          ->delete($metadata->table())
          ->where(sprintf('%s = :where_id', $metadata->primaryColumn()), ['where_id' => $idValue])
          ->build();
@@ -442,7 +472,7 @@ final class EntityManager
          array_values($targetMetadata->columns())
       );
 
-      $query = (new QueryBuilder())
+      $query = $this->queryBuilder()
          ->select($columns)
          ->from($targetMetadata->table())
          ->where(sprintf('%s = :value', $targetColumn), ['value' => $localValue])
@@ -543,6 +573,195 @@ final class EntityManager
       };
    }
 
+   private function isEmptyIdentifier(mixed $value): bool
+   {
+      return $value === null || $value === '';
+   }
+
+   private function effectiveIdStrategy(EntityMetadata $metadata, ColumnMetadata $idMeta): IdGenerationStrategy
+   {
+      if (!$idMeta->generated()) {
+         return IdGenerationStrategy::None;
+      }
+
+      $declared = $idMeta->idStrategy();
+      if ($declared !== IdGenerationStrategy::Auto) {
+         return $declared;
+      }
+
+      $connectionDefault = $this->connectionDefaultIdStrategy();
+      if ($connectionDefault !== IdGenerationStrategy::Auto) {
+         return $connectionDefault;
+      }
+
+      $driver = $this->connectionDriver();
+      if (
+         $driver === DatabaseDriver::Oracle
+         || $driver === DatabaseDriver::IBMDB2
+         || $driver === DatabaseDriver::Firebird
+      ) {
+         if ($idMeta->idSequence() === null && $this->configuredSequenceName($metadata, $idMeta) === null) {
+            throw new OrmException(sprintf(
+               'Entity "%s" requires sequence-based id generation on driver "%s". Add #[Id(sequence: "...")] or connection option "id_sequence"/"id_sequence_pattern".',
+               $metadata->className(),
+               $driver->value,
+            ));
+         }
+
+         return IdGenerationStrategy::Sequence;
+      }
+
+      return IdGenerationStrategy::Identity;
+   }
+
+   private function connectionDefaultIdStrategy(): IdGenerationStrategy
+   {
+      if (!$this->connection instanceof PdoConnection) {
+         return IdGenerationStrategy::Auto;
+      }
+
+      $value = $this->connection->option('id_strategy');
+      if (!is_scalar($value)) {
+         return IdGenerationStrategy::Auto;
+      }
+
+      $clean = trim((string) $value);
+      if ($clean === '') {
+         return IdGenerationStrategy::Auto;
+      }
+
+      return IdGenerationStrategy::fromString($clean);
+   }
+
+   private function resolveSequenceName(EntityMetadata $metadata, ColumnMetadata $idMeta): string
+   {
+      $sequence = $idMeta->idSequence() ?? $this->configuredSequenceName($metadata, $idMeta);
+      if (!is_string($sequence) || trim($sequence) === '') {
+         throw new OrmException(sprintf(
+            'Entity "%s" is configured with sequence id generation but no sequence name is available.',
+            $metadata->className(),
+         ));
+      }
+
+      return $this->normalizeSequenceName($sequence);
+   }
+
+   private function configuredSequenceName(EntityMetadata $metadata, ColumnMetadata $idMeta): ?string
+   {
+      if (!$this->connection instanceof PdoConnection) {
+         return null;
+      }
+
+      $explicit = $this->connection->option('id_sequence');
+      if (is_scalar($explicit)) {
+         $clean = trim((string) $explicit);
+         if ($clean !== '') {
+            return $clean;
+         }
+      }
+
+      $pattern = $this->connection->option('id_sequence_pattern');
+      if (!is_scalar($pattern)) {
+         return null;
+      }
+
+      $template = trim((string) $pattern);
+      if ($template === '') {
+         return null;
+      }
+
+      return strtr($template, [
+         '{table}' => $metadata->table(),
+         '{column}' => $idMeta->column(),
+         '{property}' => $idMeta->property(),
+      ]);
+   }
+
+   private function nextSequenceValue(string $sequence): mixed
+   {
+      foreach ($this->sequenceSqlCandidates($sequence) as [$sql, $params]) {
+         try {
+            $row = $this->connection->fetchOne($sql, $params);
+            if (!is_array($row) || $row === []) {
+               continue;
+            }
+
+            if (array_key_exists('celeris_id', $row)) {
+               return $row['celeris_id'];
+            }
+
+            foreach ($row as $value) {
+               return $value;
+            }
+         } catch (\Throwable) {
+            // Try next vendor syntax.
+         }
+      }
+
+      throw new OrmException(sprintf('Unable to fetch next sequence value for "%s".', $sequence));
+   }
+
+   /**
+    * @return array<int, array{0: string, 1: array<string, mixed>}>
+    */
+   private function sequenceSqlCandidates(string $sequence): array
+   {
+      $driver = $this->connectionDriver();
+
+      return match ($driver) {
+         DatabaseDriver::Oracle => [
+            [sprintf('SELECT %s.NEXTVAL AS celeris_id FROM DUAL', $sequence), []],
+         ],
+         DatabaseDriver::IBMDB2 => [
+            [sprintf('SELECT NEXT VALUE FOR %s AS celeris_id FROM SYSIBM.SYSDUMMY1', $sequence), []],
+            [sprintf('VALUES NEXT VALUE FOR %s', $sequence), []],
+         ],
+         DatabaseDriver::Firebird => [
+            [sprintf('SELECT NEXT VALUE FOR %s AS celeris_id FROM RDB$DATABASE', $sequence), []],
+            [sprintf('SELECT GEN_ID(%s, 1) AS celeris_id FROM RDB$DATABASE', $sequence), []],
+         ],
+         DatabaseDriver::PostgreSQL => [
+            ['SELECT NEXTVAL(:sequence) AS celeris_id', ['sequence' => $sequence]],
+         ],
+         default => [
+            ['SELECT NEXTVAL(:sequence) AS celeris_id', ['sequence' => $sequence]],
+         ],
+      };
+   }
+
+   private function connectionDriver(): ?DatabaseDriver
+   {
+      if ($this->connection instanceof PdoConnection) {
+         return $this->connection->driver();
+      }
+
+      return null;
+   }
+
+   private function normalizeSequenceName(string $sequence): string
+   {
+      $clean = trim($sequence);
+      if ($clean === '') {
+         throw new OrmException('Sequence name cannot be empty.');
+      }
+
+      if (preg_match('/^[A-Za-z_][A-Za-z0-9_$#]*(?:\.[A-Za-z_][A-Za-z0-9_$#]*)*$/', $clean) !== 1) {
+         throw new OrmException(sprintf('Invalid sequence identifier "%s".', $sequence));
+      }
+
+      return $clean;
+   }
+
+   /**
+    * Handle query builder.
+    *
+    * @return QueryBuilder
+    */
+   private function queryBuilder(): QueryBuilder
+   {
+      return new QueryBuilder(SqlDialectResolver::forConnection($this->connection));
+   }
+
    /**
     * @return array<int, FrameworkDomainEventInterface>
     */
@@ -570,6 +789,3 @@ final class EntityManager
       return $filtered;
    }
 }
-
-
-

@@ -114,6 +114,7 @@ That is a layered approach:
 25. [19. Operational Checklist](#19-operational-checklist)
 26. [20. Reference Map](#20-reference-map)
 27. [21. Questions and Answers](#21-questions-and-answers)
+28. [22. Third-Party Package Author Guide](#22-third-party-package-author-guide)
 
 This manual documents the current framework implementation in `packages/framework/src`.
 
@@ -725,6 +726,26 @@ The framework container supports lifetimes:
 - `request`
 - `transient`
 
+Provider lifecycle (high-level):
+
+```mermaid
+flowchart TD
+    A[public/index.php] --> B[new Kernel(...)]
+    B --> C[$kernel->registerProvider(new AppServiceProvider())]
+    C --> D[WorkerRunner::run()]
+    D --> E[Kernel::boot()]
+    E --> F[Kernel::rebuildContainer(snapshot)]
+    F --> G[Copy core ServiceRegistry]
+    G --> H[ProviderRegistry::registerProviders()]
+    H --> I[Build Container and validate dependencies]
+    I --> J[ProviderRegistry::bootProviders()<br/>only BootableServiceProviderInterface]
+    J --> K[Kernel handles requests]
+```
+
+Notes:
+- Provider registration is explicit in bootstrap (`registerProvider(...)`).
+- There is no provider auto-discovery list in this flow.
+
 ### 4.1 Lifetime semantics
 
 Use lifetime intentionally, especially in worker mode where one process handles many requests.
@@ -876,6 +897,30 @@ $kernel->registerProvider(new \App\AppServiceProvider());
 `Kernel::handle()` creates a request-scoped container and stores it in `RequestContext`.
 Services registered with request lifetime are isolated per request and cleared at the end of that request.
 
+```mermaid
+sequenceDiagram
+    participant W as Worker Process
+    participant K as Kernel
+    participant R as Request Scope
+    participant C as Root Container
+
+    W->>K: handle(request #1)
+    K->>C: resolve singleton ContactService
+    C-->>K: create once, cache in root container
+    K->>R: resolve request RequestAuditContext
+    R-->>K: create for request #1
+    K-->>W: response #1
+    K->>R: clear scope
+
+    W->>K: handle(request #2)
+    K->>C: resolve singleton ContactService
+    C-->>K: reuse cached singleton
+    K->>R: resolve request RequestAuditContext
+    R-->>K: create new instance for request #2
+    K-->>W: response #2
+    K->>R: clear scope
+```
+
 ## 5. HTTP Abstractions
 
 ### 5.1 Request
@@ -942,8 +987,54 @@ $type = ContentNegotiator::negotiate(
 
 ### 5.6 PSR bridges (optional)
 
-- `PsrRequestBridge::fromPsrRequest($psrRequest)`
-- `PsrResponseBridge::toPsrResponse($response, $responseFactory, $streamFactory)`
+PSR bridges let Celeris stay framework-native at the core (`Request`/`Response`) while still interoperating with PSR-based ecosystems at integration boundaries.
+
+In the current implementation:
+- `PsrRequestBridge::fromPsrRequest($psrRequest)` converts an incoming PSR request object into `Celeris\Framework\Http\Request`.
+- `PsrResponseBridge::toPsrResponse($response, $responseFactory, $streamFactory)` converts `Celeris\Framework\Http\Response` into a PSR response object.
+
+This means package/application internals can use Celeris contracts for deterministic behavior, and only adapt at the edge where a PSR stack is involved.
+
+Example boundary adapter used by a third-party package:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Vendor\Package\Interop;
+
+use Celeris\Framework\Http\Psr\PsrRequestBridge;
+use Celeris\Framework\Http\Psr\PsrResponseBridge;
+use Vendor\Package\Http\PackageHttpHandler;
+
+final class PsrBoundaryAdapter
+{
+    public function __construct(
+        private readonly PackageHttpHandler $handler,
+        private readonly object $responseFactory, // PSR-17 ResponseFactoryInterface
+        private readonly object $streamFactory,   // PSR-17 StreamFactoryInterface
+    ) {
+    }
+
+    public function handle(object $psrRequest): object
+    {
+        $request = PsrRequestBridge::fromPsrRequest($psrRequest);
+        $response = $this->handler->handle($request);
+
+        return PsrResponseBridge::toPsrResponse(
+            $response,
+            fn (int $status): object => $this->responseFactory->createResponse($status),
+            fn (string $body): object => $this->streamFactory->createStream($body),
+        );
+    }
+}
+```
+
+Notes:
+- Keep conversion at boundaries only; avoid converting back and forth inside business logic.
+- If your package depends on PSR interfaces, make them optional Composer dependencies when possible.
+- Current bridges are directional (PSR request -> Celeris request, Celeris response -> PSR response).
 
 ## 6. Routing, Controllers, and Middleware
 
@@ -1586,12 +1677,28 @@ Default `.env` keys in the MVC scaffold:
 mvc-app/
   .env
   .env.example
+  package.json
   public/
     index.php
+    assets/
+      css/
+        app.min.css
+      js/
+        app.min.js
+      images/
   config/
     app.php
     database.php
     security.php
+  scripts/
+    view-smoke.php
+    build-assets.mjs
+  resources/
+    css/
+      app.css
+    js/
+      app.js
+    images/
   app/
     AppServiceProvider.php
     Models/
@@ -1607,6 +1714,15 @@ mvc-app/
         RequireAuthMiddleware.php
     Views/
       layout.php
+      layout.twig
+      layout.latte
+      partials/
+        header.php
+        footer.php
+        header.twig
+        footer.twig
+        header.latte
+        footer.latte
       contacts/
         index.php
         index.twig
@@ -1621,6 +1737,8 @@ In this MVC layout, model/entity classes live in `app/Models/` (for example `Con
 What each folder/file is for:
 - `public/index.php`
 - Front controller entrypoint. Boots kernel + runtime adapter and serves MVC routes.
+- `public/assets/*`
+- Compiled/minified frontend output served directly by web server (`css`, `js`, and copied images).
 - `config/app.php`
 - Application metadata and app-level configuration.
 - `config/database.php`
@@ -1640,15 +1758,25 @@ What each folder/file is for:
 - `app/Http/Middleware/RequireAuthMiddleware.php`
 - Middleware layer for auth/session checks and request-level guards.
 - `app/Views/layout.php`
-- Optional shared layout/chrome template used by page views.
+- Shared layout/chrome template for PHP engine.
+- `app/Views/layout.twig`, `app/Views/layout.latte`
+- Shared layout/chrome templates for Twig/Latte engines.
+- `app/Views/partials/*`
+- Reusable header/footer (or other blocks) included by layouts.
 - `app/Views/contacts/index.php`
-- Contact listing and form page.
+- Contact listing page content block (rendered inside layout).
 - `app/Views/contacts/show.php`
-- Contact details page.
+- Contact details page content block (rendered inside layout).
 - `app/Views/contacts/*.twig`, `app/Views/contacts/*.latte`
-- Optional alternative templates for Twig/Latte when `VIEW_ENGINE` is switched.
+- Alternative content templates for Twig/Latte when `VIEW_ENGINE` is switched.
 - `scripts/view-smoke.php`
 - Quick renderer smoke check for configured engine (or all engines with `--all`).
+- `scripts/build-assets.mjs`
+- Asset compiler entrypoint (bundles + minifies JS/CSS and copies `resources/images` to `public/assets/images`).
+- `package.json`
+- Frontend toolchain metadata (`npm run dev`, `npm run build`, `npm run watch`).
+- `resources/css`, `resources/js`, `resources/images`
+- Source tree for frontend assets before compilation.
 
 Recommended optional additions as the MVC module grows:
 - `app/Http/Form/`
@@ -1697,25 +1825,22 @@ Minimal config shape in `config/app.php`:
 
 ### 8.3 MVC controller
 
-`app/Contacts/Http/ContactPageController.php`:
+`app/Http/Controllers/ContactPageController.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts\Http;
+namespace App\Http\Controllers;
 
-use App\Contacts\ContactService;
-use Celeris\Framework\Http\Request;
-use Celeris\Framework\Http\RequestContext;
+use App\Services\ContactService;
 use Celeris\Framework\Http\Response;
-use Celeris\Framework\Http\SetCookie;
 use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
 use Celeris\Framework\View\TemplateRendererInterface;
 
-#[RouteGroup(prefix: '/contacts', version: 'v1')]
+#[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts UI'])]
 final class ContactPageController
 {
     public function __construct(
@@ -1724,93 +1849,274 @@ final class ContactPageController
     ) {}
 
     #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]
-    public function index(RequestContext $ctx, Request $request): Response
+    public function index(): Response
     {
-        $rows = $this->service->list(50, 0);
-        $csrf = bin2hex(random_bytes(16));
-
-        $html = $this->views->render('contacts/index', [
-            'contacts' => $rows,
-            'csrfToken' => $csrf,
+        $html = $this->renderPage('Contacts', 'contacts/index', [
+            'contacts' => $this->service->list(),
         ]);
 
-        $response = new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
-
-        return $response->withCookie(
-            (new SetCookie('csrf_token', $csrf))
-                ->withHttpOnly(false)
-                ->withSecure(false)
-                ->withSameSite('Lax')
-        );
+        return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
     }
 
     #[Route(methods: ['GET'], path: '/{id}', summary: 'Contact details page')]
     public function show(int $id): Response
     {
-        $contact = $this->service->getOrFail($id);
+        $html = $this->renderPage('Contact', 'contacts/show', [
+            'contact' => $this->service->getOrFail($id),
+        ]);
 
-        $html = $this->views->render('contacts/show', ['contact' => $contact]);
         return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function renderPage(string $title, string $template, array $data = []): string
+    {
+        $content = $this->views->render($template, $data);
+
+        return $this->views->render('layout', [
+            'title' => $title,
+            'content' => $content,
+            'username' => $data['username'] ?? 'Guest',
+        ]);
     }
 }
 ```
 
-### 8.4 MVC views
+### 8.4 MVC views, layouts, and partials
 
-`app/Views/contacts/index.php`:
+In the MVC stub, page templates are content fragments, not full HTML documents.
+The controller renders page content first, then wraps it with a shared layout.
+
+`app/Views/contacts/index.php` (content fragment):
+
+```php
+<h1 data-page-title><?= htmlspecialchars((string) ($title ?? 'Contacts'), ENT_QUOTES, 'UTF-8') ?></h1>
+<p class="lead">Choose a contact to open details.</p>
+<ul class="contacts-list">
+  <?php foreach (($contacts ?? []) as $contact): ?>
+    <li>
+      <a data-contact-link href="/contacts/<?= (int) $contact->id ?>">
+        <?= htmlspecialchars($contact->firstName . ' ' . $contact->lastName, ENT_QUOTES, 'UTF-8') ?>
+      </a>
+    </li>
+  <?php endforeach; ?>
+</ul>
+```
+
+`app/Views/layout.php` (shared layout + partial includes):
 
 ```php
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Contacts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= htmlspecialchars((string) ($title ?? 'Celeris MVC'), ENT_QUOTES, 'UTF-8') ?></title>
+  <link rel="stylesheet" href="/assets/css/app.min.css">
 </head>
 <body>
-  <h1>Contacts</h1>
-
-  <form method="post" action="/contacts" accept-charset="utf-8">
-    <input type="hidden" name="_csrf" value="<?= htmlspecialchars((string) $csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-    <input type="text" name="first_name" placeholder="First name">
-    <input type="text" name="last_name" placeholder="Last name">
-    <button type="submit">Create</button>
-  </form>
-
-  <ul>
-    <?php foreach ($contacts as $row): ?>
-      <li>
-        <a href="/contacts/<?= (int) $row['id'] ?>">
-          <?= htmlspecialchars((string) $row['first_name'] . ' ' . (string) $row['last_name'], ENT_QUOTES, 'UTF-8') ?>
-        </a>
-      </li>
-    <?php endforeach; ?>
-  </ul>
+  <?php require __DIR__ . '/partials/header.php'; ?>
+  <main class="page">
+    <?= $content ?? '' ?>
+  </main>
+  <?php require __DIR__ . '/partials/footer.php'; ?>
+  <script src="/assets/js/app.min.js" defer></script>
 </body>
 </html>
 ```
 
-`app/Views/contacts/show.php`:
+`app/Views/partials/header.php` (reusable partial):
 
 ```php
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Contact</title></head>
-<body>
-  <h1><?= htmlspecialchars($contact->firstName . ' ' . $contact->lastName, ENT_QUOTES, 'UTF-8') ?></h1>
-  <p>Phone: <?= htmlspecialchars($contact->phone, ENT_QUOTES, 'UTF-8') ?></p>
-  <p>Address: <?= htmlspecialchars($contact->address, ENT_QUOTES, 'UTF-8') ?></p>
-  <p>Age: <?= (int) $contact->age ?></p>
-</body>
-</html>
+<header class="site-header">
+  <div class="page site-shell">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="/contacts">Contacts</a>
+    </nav>
+    <p class="site-user">
+      Welcome, <?= htmlspecialchars((string) ($username ?? 'Guest'), ENT_QUOTES, 'UTF-8') ?>
+    </p>
+  </div>
+</header>
 ```
 
-Equivalent sample templates also exist for:
-- `app/Views/contacts/index.twig`
-- `app/Views/contacts/show.twig`
-- `app/Views/contacts/index.latte`
-- `app/Views/contacts/show.latte`
+Equivalent files exist for Twig/Latte:
+- `app/Views/layout.twig`, `app/Views/layout.latte`
+- `app/Views/partials/*.twig`, `app/Views/partials/*.latte`
+- `app/Views/contacts/*.twig`, `app/Views/contacts/*.latte`
 
-### 8.5 MVC provider wiring
+Recommended usage flow:
+1. Put full document structure (`html/head/body`, asset tags, global chrome) in layout.
+2. Put reusable blocks (header/footer/sidebar/nav) in partial files.
+3. Keep page templates focused on page-specific content.
+4. Render page template first and pass its HTML into layout via `content`.
+5. For custom page families, render a different layout template name (for example `layouts/admin` vs `layout`).
+
+### 8.5 Frontend assets (JS/CSS/images)
+
+The MVC scaffold ships with a source/output split for frontend assets:
+- Sources:
+  - `resources/js/app.js`
+  - `resources/css/app.css`
+  - `resources/images/*`
+- Build outputs:
+  - `public/assets/js/app.min.js`
+  - `public/assets/css/app.min.css`
+  - `public/assets/images/*`
+
+Install asset tooling once:
+
+```bash
+npm install
+```
+
+Compile assets for production (minified):
+
+```bash
+npm run build
+```
+
+Build with source maps (development):
+
+```bash
+npm run dev
+```
+
+Watch files during local frontend work:
+
+```bash
+npm run watch
+```
+
+Composer script aliases are also available:
+
+```bash
+composer assets:build
+composer assets:dev
+composer assets:watch
+```
+
+Bundle/compile files at will:
+
+1. Create or edit source files under:
+- `resources/js/*.js`
+- `resources/css/*.css`
+- `resources/images/*`
+
+2. Add entries in `scripts/build-assets.mjs` (`entries` array), mapping each source to its output file in `public/assets/*`.
+
+Example (additional admin bundle):
+
+```js
+const entries = [
+  { entry: path.join(sourceRoot, 'js', 'app.js'), outfile: path.join(outputRoot, 'js', 'app.min.js') },
+  { entry: path.join(sourceRoot, 'css', 'app.css'), outfile: path.join(outputRoot, 'css', 'app.min.css') },
+  { entry: path.join(sourceRoot, 'js', 'admin.js'), outfile: path.join(outputRoot, 'js', 'admin.min.js') },
+  { entry: path.join(sourceRoot, 'css', 'admin.css'), outfile: path.join(outputRoot, 'css', 'admin.min.css') },
+];
+```
+
+3. Rebuild:
+
+```bash
+npm run build
+```
+
+4. Load each generated bundle from the relevant view:
+
+```html
+<link rel="stylesheet" href="/assets/css/admin.min.css">
+<script src="/assets/js/admin.min.js" defer></script>
+```
+
+Recommended pattern:
+- Keep source files separated by feature/page.
+- Emit a small number of intentional output bundles.
+- Load only bundles needed by each page.
+
+### 8.5.1 Install a CSS framework (Bootstrap, Tailwind, etc.)
+
+You can use any frontend CSS framework in Celeris MVC. The framework is frontend-agnostic.
+
+Option A: CDN (quick start)
+1. Add framework `<link>` and optional `<script>` tags to your layout file (`layout.php`/`layout.twig`/`layout.latte`).
+2. Keep your app-specific styles in `resources/css/app.css`.
+
+Option B: NPM package (recommended)
+1. Install the package:
+
+```bash
+npm install <framework-package>
+```
+
+2. Import it from your source assets:
+- CSS import in `resources/css/app.css`
+- JS import in `resources/js/app.js` (only if framework ships JS behavior)
+
+Example (`bootstrap`):
+
+```bash
+npm install bootstrap
+```
+
+```css
+/* resources/css/app.css */
+@import "bootstrap/dist/css/bootstrap.min.css";
+```
+
+```js
+// resources/js/app.js
+import "bootstrap";
+```
+
+3. Build:
+
+```bash
+npm run build
+```
+
+4. Use framework classes in your view fragments/layout/partials as needed.
+
+### 8.5.2 Install a CSS preprocessor (Sass/Less/Stylus)
+
+The default stub builds plain CSS with esbuild. For preprocessors, add a pre-build step that compiles to a normal CSS file inside `resources/css/`, then run the normal asset build.
+
+Sass example:
+
+1. Install Sass:
+
+```bash
+npm install --save-dev sass
+```
+
+2. Create a source file such as `resources/scss/app.scss`.
+
+3. Add scripts in `package.json`:
+
+```json
+{
+  "scripts": {
+    "css:compile": "sass resources/scss/app.scss resources/css/app.css --no-source-map",
+    "build": "npm run css:compile && node ./scripts/build-assets.mjs --prod",
+    "dev": "npm run css:compile && node ./scripts/build-assets.mjs --dev"
+  }
+}
+```
+
+4. Build as usual:
+
+```bash
+npm run build
+```
+
+Notes:
+- The same pattern applies to `less` or `stylus` (compile to `resources/css/app.css` first).
+- Keep the Celeris output target unchanged (`public/assets/css/*.min.css`).
+- Use `npm run watch` (or a custom watch script) while editing framework/preprocessor sources.
+
+### 8.6 MVC provider wiring
 
 `app/AppServiceProvider.php`:
 
@@ -1893,7 +2199,7 @@ final class AppServiceProvider implements ServiceProviderInterface
 This provider example uses `ContactRepository`, but it is optional.
 For simple modules, inject `EntityManager`/`DBAL` directly into `ContactService` and register only the service.
 
-### 8.6 View smoke script
+### 8.7 View smoke script
 
 Quick check against configured engine:
 
@@ -1917,6 +2223,105 @@ Supported `DatabaseDriver` values:
 - `pgsql`
 - `sqlite`
 - `sqlsrv`
+- `firebird`
+- `ibm` (DB2 via `pdo_ibm`)
+- `oci` (Oracle via `pdo_oci`)
+
+### 9.1.1 DSN notes for Firebird, IBM DB2, and Oracle
+
+These new drivers support two modes:
+
+1. Auto DSN from structured config (`host`, `port`, `database`, `charset`, optional `options`).
+2. Explicit DSN override via connection key `dsn` (recommended when vendor/client setup is complex).
+
+Connection aliases in config:
+
+- Firebird: `driver => firebird` (`firebird`, `ibase`, `interbase` aliases accepted)
+- IBM DB2: `driver => ibm` (`ibm`, `db2`, `ibmdb2` aliases accepted)
+- Oracle: `driver => oci` (`oci`, `oracle`, `oci8` aliases accepted)
+
+Example connection entries:
+
+```php
+'connections' => [
+    'firebird' => [
+        'driver' => 'firebird',
+        'host' => '127.0.0.1',
+        'port' => 3050,
+        'database' => '/var/lib/firebird/data/app.fdb',
+        'username' => 'SYSDBA',
+        'password' => 'masterkey',
+        'charset' => 'UTF8',
+        'options' => [
+            'id_strategy' => 'sequence',
+            'id_sequence_pattern' => '{table}_{column}_seq',
+        ],
+        // Optional explicit DSN:
+        // 'dsn' => 'firebird:dbname=127.0.0.1/3050:/var/lib/firebird/data/app.fdb;charset=UTF8',
+    ],
+    'ibm' => [
+        'driver' => 'ibm',
+        'host' => '127.0.0.1',
+        'port' => 50000,
+        'database' => 'SAMPLE',
+        'username' => 'db2inst1',
+        'password' => '',
+        'options' => [
+            'protocol' => 'TCPIP',
+            'id_strategy' => 'sequence',
+            'id_sequence_pattern' => '{table}_{column}_seq',
+        ],
+        // Optional explicit DSN:
+        // 'dsn' => 'ibm:DATABASE=SAMPLE;HOSTNAME=127.0.0.1;PORT=50000;PROTOCOL=TCPIP;',
+    ],
+    'oci' => [
+        'driver' => 'oci',
+        'host' => '127.0.0.1',
+        'port' => 1521,
+        'database' => 'XE', // service fallback
+        'username' => 'system',
+        'password' => '',
+        'charset' => 'AL32UTF8',
+        'options' => [
+            'service_name' => 'XE',
+            'sid' => null,
+            'id_strategy' => 'sequence',
+            'id_sequence_pattern' => '{table}_{column}_seq',
+        ],
+        // Optional explicit DSN:
+        // 'dsn' => 'oci:dbname=//127.0.0.1:1521/XE;charset=AL32UTF8',
+    ],
+],
+```
+
+### 9.1.2 Troubleshooting connection problems (PHP PDO recommendations)
+
+If connection fails with the new drivers, check in this order:
+
+1. Verify extension is loaded for the active SAPI:
+- CLI check: `php -m`
+- Driver list check: `php -r "print_r(PDO::getAvailableDrivers());"`
+- Ensure the same extension is enabled for FPM/web SAPI, not only CLI.
+
+2. Confirm base PDO and driver extension installation:
+- Core PDO install notes: https://www.php.net/manual/en/pdo.installation.php
+- Firebird extension docs: https://www.php.net/manual/en/ref.pdo-firebird.php
+- IBM DB2 extension docs: https://www.php.net/manual/en/ref.pdo-ibm.php
+- Oracle extension docs: https://www.php.net/manual/en/ref.pdo-oci.php
+
+3. Validate DSN format against the target driver docs:
+- If auto DSN is failing for your topology, set explicit `dsn` in connection config.
+- For Oracle, prefer explicit service name or explicit DSN when `SID`/`service_name` ambiguity exists.
+
+4. Ensure client libraries are reachable by PHP runtime:
+- DB2/Oracle/Firebird often require vendor client libraries in runtime library path.
+- On Linux/macOS, verify loader path/env (`LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`) and service user.
+- On Windows, ensure DLL/client architecture matches PHP build (x64 vs x86, TS vs NTS).
+
+5. Reduce config to a known minimal connection first:
+- Disable custom PDO options.
+- Use direct host/port/database credentials.
+- Switch to explicit DSN once minimal connectivity is confirmed.
 
 ### 9.2 Connection management
 
@@ -1971,6 +2376,68 @@ $em->flush();
 $em->remove($loaded);
 $em->flush();
 ```
+
+### 9.4.1 Generated primary keys (identity vs sequence)
+
+`#[Id]` supports:
+
+- `generated`: `true|false`
+- `strategy`: `auto|identity|sequence|none`
+- `sequence`: explicit sequence name (required for many Oracle/DB2/Firebird schemas)
+
+Accepted strategy aliases:
+
+- `identity`: `identity|increment|autoincrement`
+- `sequence`: `sequence|seq`
+- `none`: `none|manual`
+
+Example entity-level configuration:
+
+```php
+#[Entity(table: 'contacts')]
+final class Contact
+{
+    #[Id(generated: true, strategy: 'sequence', sequence: 'CONTACTS_ID_SEQ')]
+    #[Column('id')]
+    public int $id;
+}
+```
+
+Connection-level defaults can be set in `database.php` options and are used when `strategy: 'auto'`:
+
+```php
+'oci' => [
+    'driver' => 'oci',
+    // ...
+    'options' => [
+        'id_strategy' => 'sequence',
+        'id_sequence_pattern' => '{table}_{column}_seq',
+    ],
+],
+```
+
+Resolution order is:
+
+1. Entity `#[Id(...)]` declaration.
+2. Connection options (`id_strategy`, `id_sequence`, `id_sequence_pattern`).
+3. Driver fallback.
+
+`auto` fallback by driver:
+
+- `mysql`, `mariadb`, `pgsql`, `sqlite`, `sqlsrv` => `identity`
+- `firebird`, `ibm`, `oci` => `sequence`
+
+Important failure mode:
+
+- If effective strategy is `sequence` but no sequence can be resolved (entity `sequence`, connection `id_sequence`, or `id_sequence_pattern`), flush fails with ORM error.
+- For `firebird`, `ibm`, and `oci`, define sequence mapping explicitly in production configs.
+
+Sequence name format constraints:
+
+- Valid format: `SCHEMA.SEQ_NAME` or `SEQ_NAME`
+- Allowed characters per segment: letters, digits, `_`, `$`, `#`
+- Segment must start with a letter or `_`
+- Quoted identifiers or arbitrary SQL expressions are rejected
 
 ### 9.5 Lazy relations
 
@@ -2513,3 +2980,172 @@ Q: Custom request/response contracts?
 A: Yes. `Celeris\Framework\Http\Request`, `Response`, and `MiddlewareInterface` are first-class contracts. Optional bridge classes (`PsrRequestBridge`, `PsrResponseBridge`) provide PSR interop at integration boundaries.
 
 ---
+
+## 22. Third-Party Package Author Guide
+
+This section is for external developers who want to build a package that integrates with Celeris.
+
+### 22.1 What package authors must know first
+
+- Celeris integration is composition-based: packages should register services, routes, and middleware through providers.
+- `Kernel` owns runtime lifecycle (`boot`, `handle`, `reset`, `shutdown`); do not bypass it with globals.
+- Request state must stay request-scoped (`RequestContext` + request lifetime services), especially in worker mode.
+- Service lifetimes matter:
+- `singleton`: shared across many requests in workers
+- `request`: isolated per request
+- `transient`: new instance on each resolution
+- HTTP contracts are framework-native (`Request`, `Response`, `MiddlewareInterface`), with PSR bridges available for interop.
+- Routing style is a wiring choice (`registerController(...)` for attributes, or `RouteCollector` for PHP routes).
+
+### 22.2 Recommended package layout
+
+```text
+vendor-package/
+  src/
+    VendorPackageServiceProvider.php
+    VendorPackage.php
+    Http/
+      Controllers/
+      Middleware/
+    Routes/
+      VendorPackageRoutes.php
+    Config/
+      VendorPackageConfig.php (optional helper)
+  config/
+    vendor_package.php (optional published config shape)
+  tests/
+  composer.json
+  README.md
+```
+
+### 22.3 Integration workflow
+
+1. Create a Composer package that requires `celeris/framework`.
+2. Add a `ServiceProviderInterface` implementation for registrations.
+3. Register services with explicit lifetimes and declared dependencies.
+4. Add optional route registration (attribute controllers and/or PHP route registrar).
+5. Add optional middleware registration and document required IDs.
+6. Use namespaced config keys (example: `vendor_package.*`) through `ConfigRepository`.
+7. Add tests for both normal request flow and repeated-request worker safety.
+8. Document bootstrap integration (`$kernel->registerProvider(...)`) in `README.md`.
+
+### 22.4 Minimal provider example
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Vendor\Package;
+
+use Celeris\Framework\Config\ConfigRepository;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Container\ServiceProviderInterface;
+use Celeris\Framework\Container\ServiceRegistry;
+
+final class VendorPackageServiceProvider implements ServiceProviderInterface
+{
+    public function register(ServiceRegistry $services): void
+    {
+        $services->singleton(
+            VendorPackage::class,
+            static fn (ContainerInterface $c): VendorPackage => new VendorPackage(
+                $c->get(ConfigRepository::class)->get('vendor_package', [])
+            ),
+            [ConfigRepository::class],
+        );
+    }
+}
+```
+
+### 22.5 PHP route registrar example
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Vendor\Package\Routes;
+
+use Celeris\Framework\Routing\RouteCollector;
+use Celeris\Framework\Routing\RouteGroup;
+
+final class VendorPackageRoutes
+{
+    public static function register(RouteCollector $routes): void
+    {
+        $routes->group(new RouteGroup(prefix: '/vendor-package'), static function (RouteCollector $r): void {
+            $r->get('/health', [\Vendor\Package\Http\Controllers\HealthController::class, 'show']);
+        });
+    }
+}
+```
+
+### 22.6 Application-side wiring example
+
+```php
+use Vendor\Package\VendorPackageServiceProvider;
+use Vendor\Package\Routes\VendorPackageRoutes;
+
+$kernel->registerProvider(new VendorPackageServiceProvider());
+VendorPackageRoutes::register($kernel->routes());
+
+// Optional attribute-based route loading:
+// $kernel->registerController(\Vendor\Package\Http\Controllers\HealthController::class);
+```
+
+Package provider lifecycle in host app:
+
+```mermaid
+flowchart LR
+    A[Host app bootstrap] --> B[$kernel->registerProvider(new VendorPackageServiceProvider())]
+    B --> C[Kernel boot or rebuildContainer()]
+    C --> D[provider register() adds package services]
+    D --> E[provider boot() runs if bootable]
+    E --> F[Host app wires routes and middleware]
+    F --> G[Package services available to controllers and handlers]
+```
+
+### 22.7 Worker-safety checklist for package authors
+
+- Do not store per-user or per-request mutable data in singleton properties.
+- Use request-scoped services for request-bound caches/context wrappers.
+- Ensure middleware and hooks are idempotent across repeated requests.
+- Avoid static mutable state unless you also provide deterministic reset strategy.
+
+### 22.8 Package quality checklist
+
+- Include integration tests for:
+- service registration and resolution
+- route registration and handler invocation
+- middleware behavior
+- repeated request handling in one process (worker-style)
+- Validate package behavior with strict typing and predictable exceptions.
+- Document required env/config keys and defaults.
+
+### 22.9 PSR bridge interop pattern for package authors
+
+When your package must integrate with a PSR-based HTTP stack, keep Celeris contracts inside your package and adapt only at the edge:
+
+1. Convert incoming PSR request to Celeris request with `PsrRequestBridge`.
+2. Execute your package's Celeris-native handler.
+3. Convert resulting Celeris response to PSR response with `PsrResponseBridge`.
+
+Practical guidance:
+- Design your core handler APIs around `Celeris\Framework\Http\Request` and `Response`.
+- Place bridge code in an `Interop` or `Bridge` namespace/module.
+- Test both flows: native Celeris usage and PSR-adapted usage.
+
+### 22.10 Sample package reference: Pulse-style monitoring
+
+A demonstrative third-party package scaffold is available in:
+
+- `packages/pulse-sample-package`
+
+It shows how to implement and wire:
+
+- Provider-based service registration (`PulseServiceProvider`)
+- Global request instrumentation middleware (`RequestMetricsMiddleware`)
+- Environment/token access gate for package endpoints (`PulseAccessMiddleware`)
+- Package route registrar (`PulseRoutes`)
+- In-memory metrics store + task recorder extension point (`MetricStoreInterface`, `PulseRecorderInterface`)

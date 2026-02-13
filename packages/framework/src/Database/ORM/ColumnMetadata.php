@@ -18,6 +18,8 @@ final class ColumnMetadata
     * @param string $column
     * @param bool $id
     * @param bool $generated
+    * @param IdGenerationStrategy $idStrategy
+    * @param ?string $idSequence
     * @param bool $nullable
     * @param bool $readOnly
     * @return mixed
@@ -27,6 +29,8 @@ final class ColumnMetadata
       private string $column,
       private bool $id,
       private bool $generated,
+      private IdGenerationStrategy $idStrategy,
+      private ?string $idSequence,
       private bool $nullable,
       private bool $readOnly,
    ) {
@@ -73,6 +77,26 @@ final class ColumnMetadata
    }
 
    /**
+    * Handle id strategy.
+    *
+    * @return IdGenerationStrategy
+    */
+   public function idStrategy(): IdGenerationStrategy
+   {
+      return $this->idStrategy;
+   }
+
+   /**
+    * Handle id sequence.
+    *
+    * @return ?string
+    */
+   public function idSequence(): ?string
+   {
+      return $this->idSequence;
+   }
+
+   /**
     * Handle nullable.
     *
     * @return bool
@@ -92,6 +116,5 @@ final class ColumnMetadata
       return $this->readOnly;
    }
 }
-
 
 

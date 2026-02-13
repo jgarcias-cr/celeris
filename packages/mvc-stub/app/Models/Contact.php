@@ -4,21 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Base\ContactBase;
+
 /**
- * Simple contact model used by the MVC stub sample.
+ * User-editable contact model.
  *
- * This class acts as a lightweight read/write data object for view
- * rendering. In production projects you can replace or evolve it into
- * an ORM entity/value object that matches your domain rules.
+ * Extend this class with domain behavior. Regeneration updates only
+ * `App\Models\Base\ContactBase`.
  */
-final class Contact
+final class Contact extends ContactBase
 {
-   public function __construct(
-      public int $id,
-      public string $firstName,
-      public string $lastName,
-      public string $phone,
-      public string $address,
-      public int $age,
-   ) {}
 }

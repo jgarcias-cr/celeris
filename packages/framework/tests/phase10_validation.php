@@ -81,8 +81,14 @@ function runUxTesting(): void
    $payload = json_decode($previewResponse->getBody(), true);
    assertTrue(is_array($payload), 'Generator preview endpoint should return JSON payload.');
    assertTrue(isset($payload['files'][0]['path']), 'Generator preview payload should include files.');
+   $previewFiles = is_array($payload['files'] ?? null) ? $payload['files'] : [];
+   $joinedDiffs = implode("\n", array_map(
+      static fn (mixed $row): string => is_array($row) && is_string($row['diff'] ?? null) ? $row['diff'] : '',
+      $previewFiles,
+   ));
    assertTrue(
-      str_contains((string) ($payload['files'][0]['diff'] ?? ''), '+++ b/src/Demo/Controller/PreviewUserController.php'),
+      str_contains($joinedDiffs, '+++ b/src/Demo/Controller/Base/PreviewUserControllerBase.php')
+      && str_contains($joinedDiffs, '+++ b/src/Demo/Controller/PreviewUserController.php'),
       'Generator preview payload should include a visual diff.'
    );
 
@@ -116,9 +122,42 @@ function runUxTesting(): void
    $applyPayload = json_decode($applyResponse->getBody(), true);
    assertTrue(is_array($applyPayload), 'Versioned apply endpoint should return JSON payload.');
    assertTrue(($applyPayload['status'] ?? null) === 'ok', 'Versioned apply endpoint should return an ok envelope.');
+   $written = is_array($applyPayload['data']['written'] ?? null) ? $applyPayload['data']['written'] : [];
    assertTrue(
-      in_array('src/Demo/Controller/AppliedUserController.php', $applyPayload['data']['written'] ?? [], true),
-      'Versioned apply endpoint should write generated controller file.'
+      in_array('src/Demo/Controller/Base/AppliedUserControllerBase.php', $written, true)
+      && in_array('src/Demo/Controller/AppliedUserController.php', $written, true),
+      'Versioned apply endpoint should write base and user controller files.'
+   );
+
+   $userControllerPath = $tmpRoot . '/src/Demo/Controller/AppliedUserController.php';
+   file_put_contents($userControllerPath, (string) file_get_contents($userControllerPath) . "\n// custom change\n");
+
+   $regenRequest = new Request(
+      'POST',
+      '/__dev/tooling/api/v1/generate/apply',
+      ['content-type' => 'application/json'],
+      [],
+      (string) json_encode([
+         'generator' => 'controller',
+         'name' => 'AppliedUser',
+         'module' => 'Demo',
+         'overwrite' => true,
+      ], JSON_UNESCAPED_SLASHES)
+   );
+   $regenResponse = $controller->handle($ctx, $regenRequest);
+   assertTrue($regenResponse->getStatus() === 200, 'Regeneration endpoint should return 200.');
+
+   $regenPayload = json_decode($regenResponse->getBody(), true);
+   assertTrue(is_array($regenPayload), 'Regeneration endpoint should return JSON payload.');
+   $regenWritten = is_array($regenPayload['data']['written'] ?? null) ? $regenPayload['data']['written'] : [];
+
+   assertTrue(
+      !in_array('src/Demo/Controller/AppliedUserController.php', $regenWritten, true),
+      'Regeneration should preserve user controller wrapper file.'
+   );
+   assertTrue(
+      str_contains((string) file_get_contents($userControllerPath), '// custom change'),
+      'Regeneration should not remove custom edits from user controller wrapper.'
    );
 }
 

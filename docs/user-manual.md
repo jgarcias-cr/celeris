@@ -1235,14 +1235,22 @@ api-app/
   app/
     AppServiceProvider.php
     Models/
+      Base/
+        ContactBase.php
       Contact.php
     Services/
+      Base/
+        ContactServiceBase.php
       ContactService.php
     Repositories/ (optional)
+      Base/
+        ContactRepositoryBase.php
       ContactRepository.php
     Http/
       Controllers/
         Api/
+          Base/
+            ContactControllerBase.php
           ContactController.php
       Middleware/
         RequireAuthMiddleware.php
@@ -1256,6 +1264,11 @@ api-app/
 Yes, this structure includes model classes.
 In this API layout, model/entity classes live in `app/Models/` (for example `Contact.php`).
 
+Generated code convention in stubs:
+- `app/**/Base/*Base.php` contains generated scaffolding.
+- Non-base classes (`app/Models/*`, `app/Services/*`, `app/Repositories/*`, `app/Http/Controllers/*`) are user-editable wrappers.
+- Wrappers extend base classes so regeneration can update base files without overwriting handwritten code.
+
 What each folder/file is for:
 - `public/index.php`
 - Front controller entrypoint. Boots kernel + runtime adapter and handles requests.
@@ -1268,17 +1281,25 @@ What each folder/file is for:
 - `app/AppServiceProvider.php`
 - Composition root for your app services. Registers service/controller dependencies, and repositories only if you use that pattern.
 - `app/Models/Contact.php`
-- Domain entity model (Data Mapper style). Maps PHP object properties to table columns via ORM attributes.
+- User-editable domain model. Extends generated base class.
+- `app/Models/Base/*Base.php`
+- Generated model scaffolds. Safe to regenerate; do not edit manually.
 - `app/Http/DTOs/CreateContactDto.php`
 - Input contract for create operations. Used for request mapping + validation.
 - `app/Http/DTOs/UpdateContactDto.php`
 - Input contract for update operations.
 - `app/Http/Controllers/Api/ContactController.php`
-- HTTP transport layer for Contacts endpoints (routing, request/response orchestration).
+- User-editable HTTP transport layer. Typically keeps route-group metadata and custom endpoints.
+- `app/Http/Controllers/Api/Base/*Base.php`
+- Generated controller actions. Safe to regenerate; do not edit manually.
 - `app/Repositories/ContactRepository.php` (optional)
-- Persistence access layer (EntityManager/DBAL queries) when you choose the repository pattern.
+- User-editable persistence access layer.
+- `app/Repositories/Base/*Base.php`
+- Generated repository scaffolds. Safe to regenerate; do not edit manually.
 - `app/Services/ContactService.php`
-- Business use-case layer. Coordinates validation-ready DTOs, persistence operations (directly or via repository), and transaction boundaries.
+- User-editable business use-case layer.
+- `app/Services/Base/*Base.php`
+- Generated service scaffolds. Safe to regenerate; do not edit manually.
 - `app/Http/Middleware/RequireAuthMiddleware.php`
 - Shared HTTP middleware layer for auth guards and request preprocessing.
 
@@ -1702,13 +1723,21 @@ mvc-app/
   app/
     AppServiceProvider.php
     Models/
+      Base/
+        ContactBase.php
       Contact.php
     Services/
+      Base/
+        ContactServiceBase.php
       ContactService.php
     Repositories/ (optional)
+      Base/
+        ContactRepositoryBase.php
       ContactRepository.php
     Http/
       Controllers/
+        Base/
+          ContactPageControllerBase.php
         ContactPageController.php
       Middleware/
         RequireAuthMiddleware.php
@@ -1734,6 +1763,11 @@ mvc-app/
 
 In this MVC layout, model/entity classes live in `app/Models/` (for example `Contact.php`).
 
+Generated code convention in stubs:
+- `app/**/Base/*Base.php` contains generated scaffolding.
+- Non-base classes stay user-editable and extend base classes.
+- Regeneration updates base files while preserving handwritten wrapper code.
+
 What each folder/file is for:
 - `public/index.php`
 - Front controller entrypoint. Boots kernel + runtime adapter and serves MVC routes.
@@ -1748,13 +1782,21 @@ What each folder/file is for:
 - `app/AppServiceProvider.php`
 - Registers MVC services (templating contract binding, domain services, controllers, and optional repositories).
 - `app/Models/Contact.php`
-- Domain entity model (Data Mapper style) mapped to database table columns.
+- User-editable model class. Extends generated base class.
+- `app/Models/Base/*Base.php`
+- Generated model scaffolds. Safe to regenerate; do not edit manually.
 - `app/Repositories/ContactRepository.php` (optional)
-- Persistence/data access for contacts when you choose the repository pattern.
+- User-editable persistence/data-access class.
+- `app/Repositories/Base/*Base.php`
+- Generated repository scaffolds. Safe to regenerate; do not edit manually.
 - `app/Services/ContactService.php`
-- Business/use-case orchestration between controller and persistence (direct DBAL/EntityManager or repository).
+- User-editable business/use-case class.
+- `app/Services/Base/*Base.php`
+- Generated service scaffolds. Safe to regenerate; do not edit manually.
 - `app/Http/Controllers/ContactPageController.php`
-- MVC controller that prepares view models and returns HTML responses.
+- User-editable MVC controller. Typically keeps route-group metadata and custom endpoints/actions.
+- `app/Http/Controllers/Base/*Base.php`
+- Generated controller actions. Safe to regenerate; do not edit manually.
 - `app/Http/Middleware/RequireAuthMiddleware.php`
 - Middleware layer for auth/session checks and request-level guards.
 - `app/Views/layout.php`
@@ -1834,60 +1876,23 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\ContactService;
-use Celeris\Framework\Http\Response;
-use Celeris\Framework\Routing\Attribute\Route;
+use App\Http\Controllers\Base\ContactPageControllerBase;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
-use Celeris\Framework\View\TemplateRendererInterface;
 
 #[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts UI'])]
-final class ContactPageController
+final class ContactPageController extends ContactPageControllerBase
 {
-    public function __construct(
-        private ContactService $service,
-        private TemplateRendererInterface $views,
-    ) {}
-
-    #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]
-    public function index(): Response
-    {
-        $html = $this->renderPage('Contacts', 'contacts/index', [
-            'contacts' => $this->service->list(),
-        ]);
-
-        return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
-    }
-
-    #[Route(methods: ['GET'], path: '/{id}', summary: 'Contact details page')]
-    public function show(int $id): Response
-    {
-        $html = $this->renderPage('Contact', 'contacts/show', [
-            'contact' => $this->service->getOrFail($id),
-        ]);
-
-        return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function renderPage(string $title, string $template, array $data = []): string
-    {
-        $content = $this->views->render($template, $data);
-
-        return $this->views->render('layout', [
-            'title' => $title,
-            'content' => $content,
-            'username' => $data['username'] ?? 'Guest',
-        ]);
-    }
 }
 ```
+
+The generated implementation lives in `app/Http/Controllers/Base/ContactPageControllerBase.php`.
+Regeneration updates the base class only, preserving custom code in `ContactPageController.php`.
 
 ### 8.4 MVC views, layouts, and partials
 
 In the MVC stub, page templates are content fragments, not full HTML documents.
-The controller renders page content first, then wraps it with a shared layout.
+The generated base controller renders page content first, then wraps it with a shared layout.
+Your user controller extends that base class and remains safe from regeneration.
 
 `app/Views/contacts/index.php` (content fragment):
 
@@ -2757,6 +2762,11 @@ php packages/framework/bin/celeris validate
 php packages/framework/bin/celeris generate controller Contact --module=Contacts
 php packages/framework/bin/celeris generate module Billing --write
 ```
+
+Generator output safety pattern:
+- Generated files are written under `Base/*Base.php`.
+- User-editable wrapper classes are created once (if missing) and extend base classes.
+- On regeneration, only base classes are updated, so handwritten wrapper code is preserved.
 
 ### 15.2 Web tooling endpoint
 

@@ -117,6 +117,7 @@ That is a layered approach:
 26. [20. Reference Map](#20-reference-map)
 27. [21. Questions and Answers](#21-questions-and-answers)
 28. [22. Third-Party Package Author Guide](#22-third-party-package-author-guide)
+29. [23. Notification Subsystem (Step-by-Step)](#23-notification-subsystem-step-by-step)
 
 This manual documents the current framework implementation in `packages/framework/src`.
 
@@ -3161,3 +3162,583 @@ It shows how to implement and wire:
 - Environment/token access gate for package endpoints (`PulseAccessMiddleware`)
 - Package route registrar (`PulseRoutes`)
 - In-memory metrics store + task recorder extension point (`MetricStoreInterface`, `PulseRecorderInterface`)
+
+---
+
+## 23. Notification Subsystem (Step-by-Step)
+
+This section explains how to use notifications in a real application flow.
+
+Current architecture:
+1. Core framework provides `NotificationManager`, `NotificationChannelInterface`, `EmailMessage`, `NotificationEnvelope`, `DeliveryResult`, and `NullNotificationChannel`.
+2. Transport adapters are external packages.
+3. Official adapter packages currently available:
+   - `celeris/notification-smtp`
+   - `celeris/notification-in-app`
+   - `celeris/notification-outbox`
+   - `celeris/notification-realtime-gateway-websocket`
+   - `celeris/notification-dispatch-worker`
+
+### 23.1 Step 1: Configure notification defaults
+
+In API and MVC stubs, notification config lives in:
+- `packages/api-stub/config/notifications.php`
+- `packages/mvc-stub/config/notifications.php`
+
+By default:
+1. `default_channel` is `null`.
+2. `null` channel is enabled.
+3. `smtp` channel exists in config but is disabled unless enabled in env.
+
+Recommended `.env` for SMTP delivery:
+
+```env
+NOTIFICATIONS_DEFAULT_CHANNEL=smtp
+NOTIFICATIONS_NULL_ENABLED=true
+
+NOTIFICATIONS_SMTP_ENABLED=true
+NOTIFICATIONS_SMTP_HOST=127.0.0.1
+NOTIFICATIONS_SMTP_PORT=587
+NOTIFICATIONS_SMTP_USERNAME=
+NOTIFICATIONS_SMTP_PASSWORD=
+NOTIFICATIONS_SMTP_ENCRYPTION=tls
+NOTIFICATIONS_SMTP_TIMEOUT_SECONDS=10
+NOTIFICATIONS_SMTP_EHLO_DOMAIN=localhost
+NOTIFICATIONS_FROM_ADDRESS=no-reply@example.com
+NOTIFICATIONS_FROM_NAME=Celeris
+```
+
+### 23.2 Step 2: Install SMTP adapter package
+
+Install in your app:
+
+```bash
+composer require celeris/notification-smtp
+```
+
+The package contributes:
+1. `SmtpNotificationChannel`
+2. `SmtpNotificationServiceProvider` (registers `smtp` channel at boot when enabled in config)
+
+### 23.3 Step 3: Register provider in bootstrap
+
+Register the SMTP provider in your front controller.
+
+API stub (`packages/api-stub/public/index.php`):
+
+```php
+$kernel->registerProvider(new AppServiceProvider());
+
+if (class_exists(\Celeris\Notification\Smtp\SmtpNotificationServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\Smtp\SmtpNotificationServiceProvider());
+}
+```
+
+MVC stub (`packages/mvc-stub/public/index.php`) uses the same pattern.
+
+### 23.4 Step 4: Create a service that sends an email
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use Celeris\Framework\Notification\DeliveryResult;
+use Celeris\Framework\Notification\EmailMessage;
+use Celeris\Framework\Notification\NotificationManager;
+
+final class WelcomeNotificationService
+{
+    public function __construct(private NotificationManager $notifications)
+    {
+    }
+
+    public function sendWelcome(string $email, string $name): DeliveryResult
+    {
+        $message = new EmailMessage(
+            to: $email,
+            subject: 'Welcome to Celeris',
+            textBody: "Hello {$name}, your account is ready.",
+            htmlBody: "<p>Hello <strong>{$name}</strong>, your account is ready.</p>",
+        );
+
+        return $this->notifications->sendEmail($message);
+    }
+}
+```
+
+### 23.5 Step 5: Expose an API endpoint that uses the service
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api;
+
+use App\Services\WelcomeNotificationService;
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
+use Celeris\Framework\Routing\Attribute\RouteGroup;
+
+#[RouteGroup(prefix: '/notifications', version: 'v1', tags: ['Notifications'])]
+final class NotificationDemoController
+{
+    public function __construct(private WelcomeNotificationService $service)
+    {
+    }
+
+    #[Route(methods: ['POST'], path: '/welcome', summary: 'Send welcome email')]
+    public function sendWelcome(Request $request): Response
+    {
+        $body = $request->getParsedBody();
+        $payload = is_array($body) ? $body : [];
+
+        $email = trim((string) ($payload['email'] ?? ''));
+        $name = trim((string) ($payload['name'] ?? 'User'));
+
+        if ($email === '') {
+            return $this->json(422, ['error' => 'email_required']);
+        }
+
+        $result = $this->service->sendWelcome($email, $name);
+
+        return $this->json($result->isDelivered() ? 200 : 502, [
+            'delivered' => $result->isDelivered(),
+            'channel' => $result->channel(),
+            'provider_message_id' => $result->providerMessageId(),
+            'error' => $result->error(),
+            'metadata' => $result->metadata(),
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function json(int $status, array $payload): Response
+    {
+        return new Response(
+            $status,
+            ['content-type' => 'application/json; charset=utf-8'],
+            (string) json_encode($payload, JSON_UNESCAPED_SLASHES),
+        );
+    }
+}
+```
+
+### 23.6 Step 6: Register controller route group
+
+In API bootstrap (`packages/api-stub/public/index.php`):
+
+```php
+$kernel->registerController(NotificationDemoController::class, new RouteGroup(prefix: '/api'));
+```
+
+Call endpoint:
+
+```bash
+curl -X POST http://localhost/api/v1/notifications/welcome \
+  -H 'content-type: application/json' \
+  -d '{"email":"user@example.com","name":"Ada"}'
+```
+
+### 23.7 Step 7: Understand fallback and channel overrides
+
+1. If SMTP package is not installed or SMTP is disabled, `smtp` channel is not registered.
+2. Keep `default_channel=null` in local/test to avoid accidental external sends.
+3. You can force a specific channel at call site:
+
+```php
+$result = $notifications->sendEmail($message, 'smtp');
+```
+
+If requested channel is missing, the `DeliveryResult` is failed with channel metadata instead of throwing transport errors by default.
+
+### 23.8 Create another notification adapter package (Twilio/Telegram/Slack/in_app)
+
+Use this pattern for every new provider package.
+
+Step 1: Create package skeleton
+
+```text
+packages/notification-twilio/
+  composer.json
+  src/
+    TwilioNotificationChannel.php
+    TwilioNotificationServiceProvider.php
+```
+
+`composer.json` (minimum):
+
+```json
+{
+  "name": "celeris/notification-twilio",
+  "type": "library",
+  "require": {
+    "php": ">=8.4",
+    "celeris/framework": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Celeris\\Notification\\Twilio\\": "src/"
+    }
+  }
+}
+```
+
+Step 2: Implement channel class
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Celeris\Notification\Twilio;
+
+use Celeris\Framework\Notification\DeliveryResult;
+use Celeris\Framework\Notification\NotificationChannelInterface;
+use Celeris\Framework\Notification\NotificationEnvelope;
+
+final class TwilioNotificationChannel implements NotificationChannelInterface
+{
+    public function __construct(private string $accountSid, private string $authToken, private string $fromNumber)
+    {
+    }
+
+    public function name(): string
+    {
+        return 'twilio';
+    }
+
+    public function send(NotificationEnvelope $envelope): DeliveryResult
+    {
+        $payload = $envelope->payload();
+        if (!is_array($payload)) {
+            return DeliveryResult::failed('twilio', 'Expected array payload.');
+        }
+
+        $to = trim((string) ($payload['to'] ?? ''));
+        $text = trim((string) ($payload['text'] ?? ''));
+        if ($to === '' || $text === '') {
+            return DeliveryResult::failed('twilio', 'Both to and text are required.');
+        }
+
+        // Call Twilio API here. Parse provider message id from response.
+        $providerMessageId = 'replace-with-twilio-sid';
+
+        return DeliveryResult::delivered('twilio', $providerMessageId, ['to' => $to]);
+    }
+}
+```
+
+Step 3: Implement provider class and register channel from config
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Celeris\Notification\Twilio;
+
+use Celeris\Framework\Config\ConfigRepository;
+use Celeris\Framework\Container\BootableServiceProviderInterface;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\Notification\NotificationManager;
+
+final class TwilioNotificationServiceProvider implements BootableServiceProviderInterface
+{
+    public function register(ServiceRegistry $services): void {}
+
+    public function boot(ContainerInterface $container): void
+    {
+        $config = $container->get(ConfigRepository::class);
+        $manager = $container->get(NotificationManager::class);
+        if (!$config instanceof ConfigRepository || !$manager instanceof NotificationManager) {
+            return;
+        }
+
+        if (!(bool) $config->get('notifications.channels.twilio.enabled', false)) {
+            return;
+        }
+
+        $manager->registerChannel(new TwilioNotificationChannel(
+            (string) $config->get('notifications.channels.twilio.account_sid', ''),
+            (string) $config->get('notifications.channels.twilio.auth_token', ''),
+            (string) $config->get('notifications.channels.twilio.from_number', ''),
+        ), 'twilio');
+    }
+}
+```
+
+Step 4: Add channel config in host app (`config/notifications.php`)
+
+```php
+'channels' => [
+    'null' => ['enabled' => true],
+    'twilio' => [
+        'enabled' => $envBool('NOTIFICATIONS_TWILIO_ENABLED', false),
+        'account_sid' => $env('NOTIFICATIONS_TWILIO_ACCOUNT_SID', ''),
+        'auth_token' => $env('NOTIFICATIONS_TWILIO_AUTH_TOKEN', ''),
+        'from_number' => $env('NOTIFICATIONS_TWILIO_FROM_NUMBER', ''),
+    ],
+],
+```
+
+Step 5: Register provider in bootstrap
+
+```php
+if (class_exists(\Celeris\Notification\Twilio\TwilioNotificationServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\Twilio\TwilioNotificationServiceProvider());
+}
+```
+
+Step 6: Send with explicit channel
+
+```php
+use Celeris\Framework\Notification\NotificationEnvelope;
+
+$result = $notifications->send(new NotificationEnvelope(
+    type: 'sms',
+    payload: ['to' => '+15551234567', 'text' => 'Transaction approved'],
+    channel: 'twilio',
+));
+```
+
+Channel naming guidance:
+1. Generic channel intent examples: `email`, `sms`, `chat`, `in_app`.
+2. Package/provider channel examples: `smtp`, `twilio`, `telegram`, `slack`.
+3. Keep `type` for business intent and `channel` for transport adapter.
+
+`in_app` channel guidance:
+1. Implement as another package/channel that stores notifications in your database.
+2. Return `DeliveryResult::delivered('in_app', <record-id>)` after persistence.
+3. Expose API endpoints to list unread/read notifications for the signed-in user.
+4. Optionally publish an event to a websocket gateway for realtime UI updates.
+
+### 23.9 Step 9: In-app + realtime delivery end-to-end (outbox + worker)
+
+Use this flow when you need durable in-app notifications plus async websocket push.
+
+Step 1: Enable channels and worker in `.env`
+
+```env
+NOTIFICATIONS_DEFAULT_CHANNEL=in_app
+NOTIFICATIONS_IN_APP_ENABLED=true
+NOTIFICATIONS_OUTBOX_ENABLED=true
+NOTIFICATIONS_REALTIME_ENABLED=true
+NOTIFICATIONS_REALTIME_ENDPOINT=http://websocket-gateway.internal/publish
+NOTIFICATIONS_REALTIME_SERVICE_ID=notification-service
+NOTIFICATIONS_REALTIME_SERVICE_SECRET=replace-me
+NOTIFICATIONS_DISPATCH_WORKER_ENABLED=true
+```
+
+Step 2: Keep providers registered in bootstrap
+
+```php
+if (class_exists(\Celeris\Notification\InApp\InAppNotificationServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\InApp\InAppNotificationServiceProvider());
+}
+if (class_exists(\Celeris\Notification\Outbox\OutboxServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\Outbox\OutboxServiceProvider());
+}
+if (class_exists(\Celeris\Notification\RealtimeGateway\RealtimeGatewayServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\RealtimeGateway\RealtimeGatewayServiceProvider());
+}
+if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider::class)) {
+    $kernel->registerProvider(new \Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider());
+}
+```
+
+Step 3: Persist in-app notification and enqueue outbox event in one transaction
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use Celeris\Notification\InApp\Contracts\NotificationStoreInterface;
+use Celeris\Notification\InApp\InAppNotification;
+use Celeris\Notification\Outbox\OutboxMessage;
+use Celeris\Notification\Outbox\OutboxWriter;
+
+final class TransactionNotificationService
+{
+    public function __construct(
+        private NotificationStoreInterface $store,
+        private OutboxWriter $outboxWriter,
+    ) {
+    }
+
+    public function notifyApproved(string $userId, string $transactionId): string
+    {
+        return (string) $this->outboxWriter->transactional(function () use ($userId, $transactionId): string {
+            $notification = InAppNotification::createNew(
+                userId: $userId,
+                type: 'transaction.approved',
+                title: 'Transaction approved',
+                body: "Transaction {$transactionId} was approved.",
+                data: ['transaction_id' => $transactionId],
+            );
+
+            $notificationId = $this->store->save($notification);
+
+            $this->outboxWriter->enqueue(OutboxMessage::create(
+                eventName: 'notification.created',
+                aggregateType: 'user',
+                aggregateId: $userId,
+                payload: [
+                    'user_id' => $userId,
+                    'notification_id' => $notificationId,
+                    'type' => 'transaction.approved',
+                    'title' => 'Transaction approved',
+                    'body' => "Transaction {$transactionId} was approved.",
+                    'data' => ['transaction_id' => $transactionId],
+                ],
+            ));
+
+            return $notificationId;
+        });
+    }
+}
+```
+
+Step 4: Expose notification read endpoints (API sample)
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api;
+
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
+use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Notification\InApp\Contracts\NotificationStoreInterface;
+
+#[RouteGroup(prefix: '/me/notifications', version: 'v1', tags: ['Notifications'])]
+final class MeNotificationsController
+{
+    public function __construct(private NotificationStoreInterface $store)
+    {
+    }
+
+    #[Route(methods: ['GET'], path: '', summary: 'List notifications for signed-in user')]
+    public function list(RequestContext $ctx, Request $request): Response
+    {
+        $auth = $ctx->getAuth() ?? [];
+        $userId = trim((string) ($auth['sub'] ?? ''));
+        if ($userId === '') {
+            return $this->json(401, ['error' => 'unauthenticated']);
+        }
+
+        $onlyUnread = (bool) filter_var($request->getQueryParam('unread', false), FILTER_VALIDATE_BOOLEAN);
+        $rows = $this->store->listForUser($userId, 50, $onlyUnread);
+        $items = array_map(static fn ($row) => $row->toArray(), $rows);
+
+        return $this->json(200, ['items' => $items]);
+    }
+
+    #[Route(methods: ['POST'], path: '/{id}/read', summary: 'Mark one notification as read')]
+    public function markRead(RequestContext $ctx, string $id): Response
+    {
+        $auth = $ctx->getAuth() ?? [];
+        $userId = trim((string) ($auth['sub'] ?? ''));
+        if ($userId === '') {
+            return $this->json(401, ['error' => 'unauthenticated']);
+        }
+
+        $owned = false;
+        foreach ($this->store->listForUser($userId, 500, false) as $notification) {
+            if ($notification->id() === $id) {
+                $owned = true;
+                break;
+            }
+        }
+
+        if (!$owned) {
+            return $this->json(404, ['error' => 'notification_not_found']);
+        }
+
+        $changed = $this->store->markRead($id);
+        return $this->json($changed ? 200 : 404, ['updated' => $changed]);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function json(int $status, array $payload): Response
+    {
+        return new Response(
+            $status,
+            ['content-type' => 'application/json; charset=utf-8'],
+            (string) json_encode($payload, JSON_UNESCAPED_SLASHES),
+        );
+    }
+}
+```
+
+Step 5: Run dispatch worker in a separate process
+
+Use `OutboxDispatchWorker::runLoop()` from a dedicated worker entrypoint, not from request handlers.
+
+Provided scripts:
+1. API stub:
+   - `packages/api-stub/bin/notifications-dispatch-worker.php`
+   - `packages/api-stub/bin/notifications-replay-dead-letter.php`
+2. MVC stub:
+   - `packages/mvc-stub/bin/notifications-dispatch-worker.php`
+   - `packages/mvc-stub/bin/notifications-replay-dead-letter.php`
+
+Run worker examples:
+
+```bash
+php packages/api-stub/bin/notifications-dispatch-worker.php --once
+php packages/api-stub/bin/notifications-dispatch-worker.php --max-loops=100
+```
+
+Replay dead-letter examples:
+
+```bash
+php packages/api-stub/bin/notifications-replay-dead-letter.php --dry-run --limit=50
+php packages/api-stub/bin/notifications-replay-dead-letter.php --id=<dead_letter_id>
+```
+
+Step 6: React (`Axios`) integration notes
+
+1. Use API as source of truth for notification state (`GET /api/v1/me/notifications`).
+2. Treat websocket events as low-latency hints only.
+3. When websocket receives `notification.created`, refresh list through Axios.
+4. Use `POST /api/v1/me/notifications/{id}/read` to mark read.
+5. Keep backend validation authoritative; frontend validation is optional UX.
+
+Step 7: Operations and security references
+
+1. Security review: `docs/security/notification-realtime-security-review.md`
+2. Operations runbook: `docs/runbooks/realtime-notification-operations.md`
+
+Step 8: Troubleshooting quick checks
+
+1. `Composer detected issues in your platform`:
+   - Cause: PHP CLI version is below project requirement (`php >= 8.4`).
+   - Fix: run scripts with PHP 8.4+ and reinstall dependencies with that runtime.
+2. `OutboxDispatchWorker class is unavailable` or `Outbox classes are unavailable`:
+   - Cause: required package is not installed in the target stub.
+   - Fix: install missing package (`celeris/notification-dispatch-worker` and/or `celeris/notification-outbox`).
+3. Replay script warns `notifications.outbox.enabled=false`:
+   - Cause: outbox repository is disabled and falls back to in-memory behavior.
+   - Fix: set `NOTIFICATIONS_OUTBOX_ENABLED=true` and configure DB connection/table.
+4. Worker runs but nothing is published:
+   - Cause: no claimable outbox rows or realtime publish disabled.
+   - Fix: verify outbox rows exist and `NOTIFICATIONS_REALTIME_ENABLED=true`.
+5. Frequent terminal failures (`401`/`403`):
+   - Cause: realtime gateway credentials or signature validation mismatch.
+   - Fix: verify `NOTIFICATIONS_REALTIME_SERVICE_ID`, `NOTIFICATIONS_REALTIME_SERVICE_SECRET`, and gateway clock skew policy.

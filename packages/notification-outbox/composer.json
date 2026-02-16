@@ -1,0 +1,15 @@
+{
+  "name": "celeris/notification-outbox",
+  "description": "Transactional outbox package for Celeris notifications.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "celeris/framework": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Celeris\\Notification\\Outbox\\": "src/"
+    }
+  }
+}

@@ -31,6 +31,21 @@ $kernel = new Kernel(
    ),
 );
 $kernel->registerProvider(new AppServiceProvider());
+if (class_exists(\Celeris\Notification\Smtp\SmtpNotificationServiceProvider::class)) {
+   $kernel->registerProvider(new \Celeris\Notification\Smtp\SmtpNotificationServiceProvider());
+}
+if (class_exists(\Celeris\Notification\InApp\InAppNotificationServiceProvider::class)) {
+   $kernel->registerProvider(new \Celeris\Notification\InApp\InAppNotificationServiceProvider());
+}
+if (class_exists(\Celeris\Notification\Outbox\OutboxServiceProvider::class)) {
+   $kernel->registerProvider(new \Celeris\Notification\Outbox\OutboxServiceProvider());
+}
+if (class_exists(\Celeris\Notification\RealtimeGateway\RealtimeGatewayServiceProvider::class)) {
+   $kernel->registerProvider(new \Celeris\Notification\RealtimeGateway\RealtimeGatewayServiceProvider());
+}
+if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider::class)) {
+   $kernel->registerProvider(new \Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider());
+}
 $kernel->registerController(ContactPageController::class);
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());

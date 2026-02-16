@@ -9,6 +9,11 @@
       "php": ">=8.4"
    },
    "suggest": {
+      "celeris/notification-in-app": "In-app notification channel adapter with durable user notification persistence.",
+      "celeris/notification-dispatch-worker": "Outbox dispatcher worker to publish realtime events with retry and dead-letter handling.",
+      "celeris/notification-outbox": "Transactional outbox primitives for durable asynchronous notification delivery.",
+      "celeris/notification-realtime-gateway-websocket": "Realtime gateway client adapter for websocket push publishing.",
+      "celeris/notification-smtp": "SMTP notification delivery adapter registered through SmtpNotificationServiceProvider.",
       "twig/twig": "Render MVC templates with Twig via TemplateRendererFactory (engine=twig).",
       "league/plates": "Render MVC templates with Plates via TemplateRendererFactory (engine=plates).",
       "latte/latte": "Render MVC templates with Latte via TemplateRendererFactory (engine=latte)."

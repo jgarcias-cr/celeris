@@ -1,0 +1,15 @@
+{
+  "name": "celeris/notification-in-app",
+  "description": "Official in-app notification adapter for Celeris.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "celeris/framework": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Celeris\\Notification\\InApp\\": "src/"
+    }
+  }
+}

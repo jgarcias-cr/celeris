@@ -1,0 +1,17 @@
+{
+  "name": "celeris/notification-dispatch-worker",
+  "description": "Outbox dispatch worker for realtime notification delivery in Celeris.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "celeris/framework": "*",
+    "celeris/notification-outbox": "*",
+    "celeris/notification-realtime-gateway-websocket": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Celeris\\Notification\\DispatchWorker\\": "src/"
+    }
+  }
+}

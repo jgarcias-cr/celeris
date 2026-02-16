@@ -7,6 +7,11 @@
       "celeris/framework": "*"
    },
    "suggest": {
+      "celeris/notification-dispatch-worker": "Enable outbox dispatch worker services via NotificationDispatchWorkerServiceProvider.",
+      "celeris/notification-in-app": "Enable durable in-app user notifications via InAppNotificationServiceProvider.",
+      "celeris/notification-outbox": "Enable transactional outbox services via OutboxServiceProvider.",
+      "celeris/notification-realtime-gateway-websocket": "Enable realtime websocket gateway client via RealtimeGatewayServiceProvider.",
+      "celeris/notification-smtp": "Enable the SMTP notification channel provider for outbound email delivery.",
       "twig/twig": "Template engine support for VIEW_ENGINE=twig.",
       "league/plates": "Template engine support for VIEW_ENGINE=plates.",
       "latte/latte": "Template engine support for VIEW_ENGINE=latte."

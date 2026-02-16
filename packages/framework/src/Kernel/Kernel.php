@@ -38,6 +38,7 @@ use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\RequestContextContainer;
 use Celeris\Framework\Middleware\MiddlewareDispatcher;
 use Celeris\Framework\Middleware\Pipeline;
+use Celeris\Framework\Notification\NotificationManager;
 use Celeris\Framework\Routing\AttributeRouteLoader;
 use Celeris\Framework\Routing\OpenApiGenerator;
 use Celeris\Framework\Routing\RouteCollector;
@@ -95,6 +96,8 @@ final class Kernel implements KernelInterface
    private bool $hotReloadEnabled;
    private SecurityKernelGuard $securityGuard;
    private bool $securityGuardManagedByConfig;
+   private NotificationManager $notificationManager;
+   private bool $notificationManagerManagedByConfig;
    private ValidatorEngine $validator;
    private Serializer $serializer;
    private DtoMapper $dtoMapper;
@@ -129,6 +132,7 @@ final class Kernel implements KernelInterface
       ?OpenApiGenerator $openApiGenerator = null,
       ?MiddlewareDispatcher $middlewareDispatcher = null,
       ?SecurityKernelGuard $securityGuard = null,
+      ?NotificationManager $notificationManager = null,
       ?ValidatorEngine $validator = null,
       ?Serializer $serializer = null,
       ?DtoMapper $dtoMapper = null,
@@ -148,6 +152,8 @@ final class Kernel implements KernelInterface
       $this->hotReloadEnabled = $hotReloadEnabled;
       $this->securityGuardManagedByConfig = $securityGuard === null;
       $this->securityGuard = $securityGuard ?? SecurityKernelGuard::fromConfig($this->config);
+      $this->notificationManagerManagedByConfig = $notificationManager === null;
+      $this->notificationManager = $notificationManager ?? NotificationManager::fromConfig($this->config);
       $this->validator = $validator ?? new ValidatorEngine();
       $this->serializer = $serializer ?? new Serializer();
       $this->dtoMapper = $dtoMapper ?? new DtoMapper($this->validator);
@@ -389,6 +395,29 @@ final class Kernel implements KernelInterface
    {
       $this->securityGuard = $securityGuard;
       $this->securityGuardManagedByConfig = $managedByConfig;
+   }
+
+   /**
+    * Get the notification manager.
+    *
+    * @return NotificationManager
+    */
+   public function getNotificationManager(): NotificationManager
+   {
+      return $this->notificationManager;
+   }
+
+   /**
+    * Set the notification manager.
+    *
+    * @param NotificationManager $notificationManager
+    * @param bool $managedByConfig
+    * @return void
+    */
+   public function setNotificationManager(NotificationManager $notificationManager, bool $managedByConfig = false): void
+   {
+      $this->notificationManager = $notificationManager;
+      $this->notificationManagerManagedByConfig = $managedByConfig;
    }
 
    /**
@@ -1078,6 +1107,12 @@ final class Kernel implements KernelInterface
          true
       );
       $this->coreServices->singleton(
+         NotificationManager::class,
+         fn (ContainerInterface $container): NotificationManager => $this->notificationManager,
+         [],
+         true
+      );
+      $this->coreServices->singleton(
          AuthEngine::class,
          fn (ContainerInterface $container): AuthEngine => $this->securityGuard->authEngine(),
          [SecurityKernelGuard::class],
@@ -1390,6 +1425,9 @@ final class Kernel implements KernelInterface
       if ($this->securityGuardManagedByConfig) {
          $this->securityGuard = SecurityKernelGuard::fromConfig($this->config);
       }
+      if ($this->notificationManagerManagedByConfig) {
+         $this->notificationManager = NotificationManager::fromConfig($this->config);
+      }
       $this->connectionPool = null;
       $this->dbal = null;
       $this->entityManager = null;
@@ -1491,6 +1529,3 @@ final class Kernel implements KernelInterface
       );
    }
 }
-
-
-

@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App;
 
 use App\Repositories\ContactRepository;
+use App\Services\AuthService;
 use App\Services\ContactService;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\Config\ConfigRepository;
+use Celeris\Framework\Security\Password\PasswordHasher;
 
 /**
  * Registers core application services for the API stub.
@@ -21,6 +24,15 @@ final class AppServiceProvider implements ServiceProviderInterface
 {
    public function register(ServiceRegistry $services): void
    {
+      $services->singleton(
+         AuthService::class,
+         static fn(ContainerInterface $c): AuthService => new AuthService(
+            $c->get(ConfigRepository::class),
+            $c->get(PasswordHasher::class),
+         ),
+         [ConfigRepository::class, PasswordHasher::class],
+      );
+
       $services->singleton(
          ContactRepository::class,
          static fn(ContainerInterface $c): ContactRepository => new ContactRepository(),

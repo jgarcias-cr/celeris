@@ -6,6 +6,8 @@ Celeris is a PHP 8.4 framework for building backend software with explicit archi
 
 The design goal is to let teams ship high-throughput, maintainable applications without hidden state coupling, especially when running long-lived worker processes.
 
+The name Celeris is a form of the Latin adjective celer, which simply means "swift," "fast," or "quick."
+
 ### Goal
 
 - Provide one consistent backend programming model for `FPM` and worker runtimes (`RoadRunner`, `Swoole`).

@@ -42,6 +42,13 @@ return [
         'secret' => $env('JWT_SECRET', ''),
         'algorithms' => ['HS256'],
         'leeway_seconds' => $envInt('JWT_LEEWAY_SECONDS', 30),
+        'ttl_seconds' => $envInt('JWT_TTL_SECONDS', 3600),
+    ],
+    'demo_user' => [
+        'username' => $env('DEMO_AUTH_USERNAME', 'demo'),
+        'password_hash' => $env('DEMO_AUTH_PASSWORD_HASH', '$2y$12$9GK/vlsIdSj5KeClYZyTu.ZDgGUdh0PsyNprCZsHo37ykuPQ4AWfS'),
+        'roles' => ['user'],
+        'permissions' => ['contacts:read', 'contacts:write'],
     ],
     'csrf' => [
         'enabled' => $envBool('SECURITY_CSRF_ENABLED', false),

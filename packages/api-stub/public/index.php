@@ -10,6 +10,7 @@ if (is_file($autoload)) {
 }
 
 use App\AppServiceProvider;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ContactController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
@@ -32,6 +33,7 @@ $kernel = new Kernel(
     ),
 );
 $kernel->registerProvider(new AppServiceProvider());
+$kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
 $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());

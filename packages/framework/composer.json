@@ -14,6 +14,7 @@
       "celeris/notification-outbox": "Transactional outbox primitives for durable asynchronous notification delivery.",
       "celeris/notification-realtime-gateway-websocket": "Realtime gateway client adapter for websocket push publishing.",
       "celeris/notification-smtp": "SMTP notification delivery adapter registered through SmtpNotificationServiceProvider.",
+      "celeris/queue-manager": "Queue manager with due-job workers, future task scheduling, and queue monitoring snapshots.",
       "twig/twig": "Render MVC templates with Twig via TemplateRendererFactory (engine=twig).",
       "league/plates": "Render MVC templates with Plates via TemplateRendererFactory (engine=plates).",
       "latte/latte": "Render MVC templates with Latte via TemplateRendererFactory (engine=latte)."

@@ -10,6 +10,7 @@
   },
   "repositories": [
     { "type": "path", "url": "packages/framework", "options": { "symlink": true } },
+    { "type": "path", "url": "packages/queue-manager", "options": { "symlink": true } },
     { "type": "path", "url": "packages/notification-smtp", "options": { "symlink": true } },
     { "type": "path", "url": "packages/notification-in-app", "options": { "symlink": true } },
     { "type": "path", "url": "packages/notification-outbox", "options": { "symlink": true } },

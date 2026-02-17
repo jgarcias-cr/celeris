@@ -1,8 +1,13 @@
 # celeris/queue-manager
 
-Queue manager package for Celeris with two core capabilities:
-- Execute due jobs using a worker-style manager.
-- Schedule tasks to run in the future and monitor queue health.
+Queue manager package for Celeris with scheduling, retries, and queue health snapshots.
+
+## Purpose
+
+This package provides an application-level queue runner for background tasks.
+It can enqueue immediate jobs, schedule future jobs, run worker passes, and expose queue health metrics.
+
+Current default repository is in-memory.
 
 ## Install
 
@@ -18,7 +23,9 @@ if (class_exists(\Celeris\QueueManager\QueueManagerServiceProvider::class)) {
 }
 ```
 
-## Configuration
+## Configure In App Config
+
+`celeris/queue-manager` reads `queue.manager.*` from `ConfigRepository`:
 
 ```php
 return [
@@ -34,6 +41,23 @@ return [
         ],
     ],
 ];
+```
+
+## `.env` Integration
+
+This package does not require fixed env variable names by itself.
+If your app prefers env-driven config, map your own keys in your `config/queue.php`.
+
+Example app-level env keys:
+
+```dotenv
+QUEUE_MANAGER_ENABLED=true
+QUEUE_MANAGER_ID=main-queue-worker
+QUEUE_MANAGER_CLAIM_BATCH_SIZE=100
+QUEUE_MANAGER_CLAIM_LOCK_SECONDS=30
+QUEUE_MANAGER_DEFAULT_MAX_ATTEMPTS=5
+QUEUE_MANAGER_RETRY_BACKOFF_MS=500
+QUEUE_MANAGER_IDLE_SLEEP_MS=250
 ```
 
 ## Register task handlers
@@ -71,69 +95,16 @@ $report = $queue->runOnce();
 $stats = $queue->monitor()->toArray();
 ```
 
-## Production recommendation
+## When To Use It
 
-Run queue processing in a dedicated worker process (CLI/daemon/supervisor), not inside HTTP request handlers.
+Use this package when:
 
-- HTTP/API requests should only enqueue or schedule tasks.
-- Worker process should execute `runLoop()` or periodic `runOnce()`.
-- This keeps queue execution, retries, and idle sleeps out of the request lifecycle and avoids user-facing latency spikes.
+- Dependency specification: requires `celeris/framework` only (no additional native Celeris package dependency).
+- You need async task execution with retry/dead-letter behavior.
+- You need delayed scheduling and periodic worker execution.
+- You want queue health counters for operations visibility.
 
-## Correct vs incorrect usage
+You may skip it when:
 
-Correct in HTTP request handlers (enqueue/schedule only):
-
-```php
-use Celeris\QueueManager\QueueManager;
-
-final class ReportController
-{
-    public function generate(QueueManager $queue): array
-    {
-        $jobId = $queue->schedule(
-            'reports.generate',
-            ['report' => 'monthly', 'requested_by' => 'u-42'],
-            delayMs: 0,
-        );
-
-        return ['accepted' => true, 'job_id' => $jobId];
-    }
-}
-```
-
-Correct in worker entrypoint (dedicated process):
-
-```php
-<?php
-
-declare(strict_types=1);
-
-// bootstrap app + container
-$queue = $container->get(\Celeris\QueueManager\QueueManager::class);
-
-while (true) {
-    $queue->runOnce();
-    usleep(250_000); // 250ms polling interval
-}
-```
-
-Incorrect in HTTP request handlers (blocks request lifecycle):
-
-```php
-use Celeris\QueueManager\QueueManager;
-
-final class BadController
-{
-    public function syncNow(QueueManager $queue): array
-    {
-        // Do not run looped processing inside web requests.
-        $queue->runLoop();
-        return ['ok' => true];
-    }
-}
-```
-
-`monitor()` returns:
-- due, scheduled, pending, processing, retry
-- succeeded, failed, dead_letter
-- oldest due lag and next run timestamp
+- All work is synchronous and short-lived.
+- Your app already uses another queue system.

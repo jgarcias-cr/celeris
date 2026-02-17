@@ -10,13 +10,13 @@ The name Celeris is a form of the Latin adjective celer, which simply means "swi
 
 ### Goal
 
-- Provide one consistent backend programming model for `FPM` and worker runtimes (`RoadRunner`, `Swoole`).
+- Provide one consistent backend programming model for `FPM` and worker runtimes (`Native`, `RoadRunner`, `Swoole`).
 - Keep request handling explicit and predictable (`RequestContext`, deterministic reset, explicit DI lifetimes).
 - Enable modular application composition through service providers, middleware, and typed contracts.
 
 ### Core capabilities
 
-- Runtime model with adapters: `FPMAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`, coordinated by `WorkerRunner`.
+- Runtime model with adapters: `FPMAdapter`, `NativeHttpWorkerAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`, coordinated by `WorkerRunner`.
 - Central `Kernel` lifecycle for bootstrap, routing, middleware, handler dispatch, response finalization, reset, and shutdown.
 - DI container with `singleton`, `request`, and `transient` lifetimes plus provider registration/boot hooks.
 - HTTP primitives (`Request`, `Response`, cookies, streaming responses) and PSR bridge support at integration boundaries.
@@ -138,7 +138,7 @@ Celeris is built around these rules:
 - Routing and middleware order are deterministic
 
 Key runtime flow:
-1. `WorkerRunner` obtains `RuntimeRequest` from an adapter (`FPMAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`)
+1. `WorkerRunner` obtains `RuntimeRequest` from an adapter (`FPMAdapter`, `NativeHttpWorkerAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`)
 2. `Kernel::handle(RequestContext, Request)` executes security pre-checks, routing, middleware, handler invocation, and response finalizers
 3. `Kernel::reset()` clears request-scoped state and applies hot-reload snapshot logic when enabled
 4. Worker adapter resets runtime-level state
@@ -150,7 +150,7 @@ This is the full request lifecycle as implemented by `WorkerRunner + Kernel`.
 ```text
 +---------------------------+
 | Runtime Adapter           |
-| (FPM/RoadRunner/Swoole)   |
+| (FPM/Native/RoadRunner/Swoole) |
 +------------+--------------+
              |
              v
@@ -379,10 +379,25 @@ Practical consequence:
 
 `FPMAdapter` is the bridge for traditional PHP-FPM execution.
 
+Let us remember first what a Common Gateway Interface (CGI) service is: 
+  It's a standard protocol that allows a web server to execute external programs (scripts, binaries) to generate dynamic content, such as processing user form data, accessing databases, or providing real-time updates. It functions as a bridge, or "gateway," between a web browser and application logic running on the server.
+
 What PHP-FPM is (conceptually):
-- `FPM` stands for `FastCGI Process Manager` for PHP.
+- `FPM` stands for `FastCGI Process Manager` for PHP. PHP-FPM is a Server API (SAPI) implementation.
 - A web server (typically Nginx, sometimes Apache via proxy) receives HTTP requests and forwards dynamic PHP requests to PHP-FPM using the FastCGI protocol.
 - PHP-FPM maintains a pool of PHP worker processes (`pm = static|dynamic|ondemand`) and distributes incoming requests among them.
+
+PHP has multiple SAPIs:
+
+   SAPI	            Use Case
+   -----------------------------------------
+   CLI	            Command-line scripts
+   FPM	            Web server via FastCGI
+   Apache module	   Embedded in Apache
+   CGI	            Legacy web execution
+   Built-in server	php -S dev server
+
+So PHP-FPM is one specific way to run PHP in a web server context.
 
 How FPM request processing works:
 1. Web server accepts HTTP request.
@@ -398,7 +413,7 @@ Important implications:
 - Shared process-level resources can still exist (for example OPcache bytecode cache), but request data itself must be treated as ephemeral.
 
 How this differs from explicit worker runtimes:
-- In RoadRunner/Swoole worker mode, one application bootstrap can intentionally serve many requests in a single userland runtime loop.
+- In native/RoadRunner/Swoole worker mode, one application bootstrap can intentionally serve many requests in a single userland runtime loop.
 - In FPM mode, the web server/FPM lifecycle already provides request boundaries, so the framework adapter exposes one request frame and exits.
 
 Behavior in this framework:
@@ -415,7 +430,7 @@ Why this design:
 - So the adapter exposes one request frame to `WorkerRunner`, then exits cleanly.
 
 Contrast with worker adapters:
-- `RoadRunnerAdapter` and `SwooleAdapter` are loop-driven and can yield many request frames in one process.
+- `NativeHttpWorkerAdapter`, `RoadRunnerAdapter`, and `SwooleAdapter` are loop-driven and can yield many request frames in one process.
 - Their `reset()` stage is operationally important because process memory is reused across many requests.
 
 ### 1.5 Canonical Worker Mode Lifecycle
@@ -548,7 +563,7 @@ $runner = new WorkerRunner($kernel, new FPMAdapter());
 $runner->run();
 ```
 
-### 2.2 Worker runtimes (RoadRunner/Swoole)
+### 2.2 External worker runtimes (RoadRunner/Swoole)
 
 `RoadRunnerAdapter` and `SwooleAdapter` use callback-based transport integration. You provide receiver/responder callbacks and run through `WorkerRunner`.
 
@@ -561,6 +576,84 @@ $adapter = new RoadRunnerAdapter(
 $runner = new WorkerRunner($kernel, $adapter);
 $runner->run();
 ```
+
+### 2.3 Native worker runtime (no third-party runtime dependency)
+
+`NativeHttpWorkerAdapter` is a first-party socket-based worker adapter. It runs a lightweight HTTP/1.1 loop directly through `WorkerRunner`.
+
+```php
+use Celeris\Framework\Runtime\NativeHttpWorkerAdapter;
+use Celeris\Framework\Runtime\WorkerRunner;
+
+$adapter = new NativeHttpWorkerAdapter(
+    host: '127.0.0.1',
+    port: 8080,
+    maxRequests: null, // optional hard limit for graceful rolling restarts
+);
+
+$runner = new WorkerRunner($kernel, $adapter);
+$runner->run();
+```
+
+### 2.4 Runtime mode selection (how to switch when needed)
+
+You can keep one bootstrap entrypoint and switch runtime mode with environment variables.
+
+`public/index.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Celeris\Framework\Kernel\Kernel;
+use Celeris\Framework\Runtime\FPMAdapter;
+use Celeris\Framework\Runtime\NativeHttpWorkerAdapter;
+use Celeris\Framework\Runtime\WorkerAdapterInterface;
+use Celeris\Framework\Runtime\WorkerRunner;
+use RuntimeException;
+
+$kernel = new Kernel();
+
+$mode = strtolower((string) (getenv('CELERIS_RUNTIME_MODE') ?: 'fpm'));
+$maxRequestsRaw = getenv('CELERIS_NATIVE_MAX_REQUESTS');
+$maxRequests = ($maxRequestsRaw !== false && $maxRequestsRaw !== '')
+    ? (int) $maxRequestsRaw
+    : null;
+
+/** @var WorkerAdapterInterface $adapter */
+$adapter = match ($mode) {
+    'fpm' => new FPMAdapter(),
+    'native' => new NativeHttpWorkerAdapter(
+        host: (string) (getenv('CELERIS_NATIVE_HOST') ?: '127.0.0.1'),
+        port: (int) (getenv('CELERIS_NATIVE_PORT') ?: 8080),
+        maxRequests: $maxRequests,
+    ),
+    default => throw new RuntimeException(sprintf('Unsupported CELERIS_RUNTIME_MODE "%s".', $mode)),
+};
+
+$runner = new WorkerRunner($kernel, $adapter);
+$runner->run();
+```
+
+Typical usage:
+- FPM mode (default): do not set `CELERIS_RUNTIME_MODE` and run through your web server + PHP-FPM.
+- Native worker mode: `CELERIS_RUNTIME_MODE=native CELERIS_NATIVE_HOST=0.0.0.0 CELERIS_NATIVE_PORT=8080 php public/index.php`
+- External worker mode: use dedicated RoadRunner/Swoole entrypoints and provide adapter callbacks (section `2.2`).
+
+### 2.5 Runtime recommendation guide (including microservices)
+
+Use this as a practical default:
+- Choose `fpm` for simple apps, standard hosting, and lowest operational complexity.
+- Choose `native` for internal APIs/microservices when you want worker mode without RoadRunner/Swoole dependency.
+- Choose `roadrunner` or `swoole` when you need runtime-specific capabilities beyond the native adapter contract.
+
+Current native adapter characteristics to plan for:
+- Synchronous request loop (parallelism comes from multiple worker processes/replicas).
+- Request `Transfer-Encoding: chunked` is not implemented.
+- Responses are emitted with `Connection: close` by default.
 
 ## 3. Configuration, Environment, and Bootstrap
 
@@ -1217,9 +1310,11 @@ Set your runtime values in `.env` (or start from `.env.example`).
 
 Default `.env` keys in the API scaffold:
 - `APP_NAME`, `APP_ENV`, `APP_DEBUG`, `APP_URL`, `APP_TIMEZONE`, `APP_VERSION`
-- `DB_DEFAULT`, `DB_SQLITE_PATH`
-- `MYSQL_*`, `MARIADB_*`, `PGSQL_*`, `SQLSRV_*`
+- `DB_DEFAULT` (defaults to `pgsql`)
+- `PGSQL_*` (PostgreSQL is the default scaffold engine)
 - `SECURITY_AUTH_*`, `SECURITY_CSRF_ENABLED`, `SECURITY_RATE_LIMIT_*`, `JWT_SECRET`, `JWT_LEEWAY_SECONDS`
+
+For SQLite/MySQL/MariaDB/SQL Server/Firebird/IBM DB2/Oracle keys, see `docs/database-engines.md`.
 
 ### 7.1 Suggested structure
 
@@ -1691,9 +1786,11 @@ Set your runtime values in `.env` (or start from `.env.example`).
 Default `.env` keys in the MVC scaffold:
 - `APP_NAME`, `APP_ENV`, `APP_DEBUG`, `APP_URL`, `APP_TIMEZONE`, `APP_VERSION`
 - `VIEW_ENGINE`, `VIEW_PATH`, `VIEW_*_EXTENSION`, `VIEW_TWIG_*`, `VIEW_LATTE_TEMP_PATH`
-- `DB_DEFAULT`, `DB_SQLITE_PATH`
-- `MYSQL_*`, `MARIADB_*`, `PGSQL_*`, `SQLSRV_*`
+- `DB_DEFAULT` (defaults to `pgsql`)
+- `PGSQL_*` (PostgreSQL is the default scaffold engine)
 - `SECURITY_AUTH_*`, `SECURITY_CSRF_ENABLED`, `SECURITY_RATE_LIMIT_*`, `JWT_SECRET`, `JWT_LEEWAY_SECONDS`
+
+For SQLite/MySQL/MariaDB/SQL Server/Firebird/IBM DB2/Oracle keys, see `docs/database-engines.md`.
 
 ### 8.1 Suggested structure
 
@@ -2234,6 +2331,10 @@ Supported `DatabaseDriver` values:
 - `firebird`
 - `ibm` (DB2 via `pdo_ibm`)
 - `oci` (Oracle via `pdo_oci`)
+
+Note for API/MVC app scaffolds:
+- `.env` / `.env.example` ship compact PostgreSQL defaults (`DB_DEFAULT=pgsql` + `PGSQL_*`).
+- Engine-specific key sets for other drivers are documented in `docs/database-engines.md`.
 
 ### 9.1.1 DSN notes for Firebird, IBM DB2, and Oracle
 
@@ -2880,6 +2981,22 @@ For messaging:
 $runtime->publishMessage($ctx, 'contacts.events', 'contact.created', ['id' => 100]);
 ```
 
+### 16.2 Runtime choice for SOA/microservices
+
+Recommended baseline for internal service-to-service APIs:
+- Start with `native` worker mode if you want a first-party runtime stack with no external worker runtime dependency.
+- Run behind a reverse proxy or service mesh and scale horizontally (replicas/processes) for concurrency.
+- Keep handlers stateless and idempotent; rely on request-scoped services for per-request data.
+
+When to prefer other modes:
+- Use `fpm` if your platform already standardizes on Nginx/Apache + PHP-FPM and performance targets are already met.
+- Use `RoadRunner`/`Swoole` when your service requires runtime-specific transport/concurrency capabilities outside native adapter behavior.
+
+Operational minimum for worker-mode microservices:
+- Configure health/readiness endpoints and restart policy.
+- Set explicit resource limits and rolling restart strategy (for example `CELERIS_NATIVE_MAX_REQUESTS`).
+- Validate reset-hook correctness under load to prevent cross-request state leakage.
+
 ## 17. Transactions, CRUD, and Connection Patterns (Decision Guide)
 
 Use these rules:
@@ -2920,7 +3037,7 @@ Before production:
 ## 20. Reference Map
 
 Most-used classes by subsystem:
-- Kernel/runtime: `Kernel`, `WorkerRunner`, `FPMAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`
+- Kernel/runtime: `Kernel`, `WorkerRunner`, `FPMAdapter`, `NativeHttpWorkerAdapter`, `RoadRunnerAdapter`, `SwooleAdapter`
 - DI: `ServiceRegistry`, `Container`, `ServiceProviderInterface`, `BootableServiceProviderInterface`
 - HTTP: `Request`, `Response`, `ResponseBuilder`, `SetCookie`, `ContentNegotiator`, PSR bridges
 - View: `TemplateRendererInterface`, `TemplateRendererFactory`, `PhpTemplateRenderer`, `TwigTemplateRenderer`, `PlatesTemplateRenderer`, `LatteTemplateRenderer`
@@ -2943,8 +3060,17 @@ Most-used classes by subsystem:
 Q: Is there a traditional FPM request-per-process?  
 A: Supported through `FPMAdapter`. The adapter exposes one request frame (`nextRequest()` once) and then returns `null`, so framework userland execution is request-bounded in FPM mode.
 
-Q: Does Celeris support persistent worker (RoadRunner/Swoole/custom)?  
-A: Supported through `RoadRunnerAdapter` and `SwooleAdapter`, both implementing `WorkerAdapterInterface`. `WorkerRunner` boots once and handles many requests in a loop, with deterministic `kernel.reset()` and adapter `reset()` between requests.
+Q: Does Celeris support persistent worker (native/RoadRunner/Swoole/custom)?  
+A: Supported through `NativeHttpWorkerAdapter`, `RoadRunnerAdapter`, and `SwooleAdapter`, all implementing `WorkerAdapterInterface`. `WorkerRunner` boots once and handles many requests in a loop, with deterministic `kernel.reset()` and adapter `reset()` between requests.
+
+Q: How do I enable worker mode only when needed?  
+A: Use runtime mode selection in bootstrap (`CELERIS_RUNTIME_MODE=fpm|native|...`) and instantiate the corresponding adapter. See section `2.4` for a complete example.
+
+Q: Is native worker mode overkill?  
+A: For small/standard deployments, `fpm` is usually simpler. For internal APIs and microservices where process reuse and dependency reduction matter, `native` is a practical default.
+
+Q: Which mode is recommended for SOA/microservices?  
+A: Start with `native` for internal services if you want no external worker runtime dependency; move to `RoadRunner`/`Swoole` when runtime-specific features are required. See section `16.2`.
 
 Q: Is there an Event loop?  
 A: There is no async reactor/event-loop abstraction in core. The runtime loop is synchronous request iteration in `WorkerRunner`, and runtime integration happens via adapter callbacks.

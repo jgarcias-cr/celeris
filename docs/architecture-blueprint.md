@@ -3,7 +3,7 @@
 See also: `docs/user-manual.md` for end-to-end implementation guidance and examples.
 
 Summary
-  - API-first, stateless-by-default, strict-typing, DI-centric framework that runs on both PHP-FPM and worker runtimes (RoadRunner, Swoole).
+  - API-first, stateless-by-default, strict-typing, DI-centric framework that runs on both PHP-FPM and worker runtimes (native, RoadRunner, Swoole).
 
 Kernel
   - Composition root that wires the container, module service providers, router, middleware pipeline, and event bus.

@@ -3,7 +3,7 @@
 Status: Proposed
 
 Context
-  - Framework targets PHP 8.4 and must support both traditional FPM and worker runtimes (RoadRunner, Swoole).
+  - Framework targets PHP 8.4 and must support both traditional FPM and worker runtimes (native, RoadRunner, Swoole).
   - API-first, stateless-by-default design; one process should be able to serve many requests.
 
 Decision

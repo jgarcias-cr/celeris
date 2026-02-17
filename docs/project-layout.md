@@ -9,7 +9,7 @@ Root
     - `Middleware/` — builtin middleware implementations
     - `Container/` — DI container, service providers
     - `Event/` — event bus and subscribers
-    - `Worker/` — adapters for RoadRunner/Swoole
+    - `Worker/` — adapters for native/RoadRunner/Swoole
     - `Auth/`, `Validation/`, `Serializer/`, `Storage/` — cross-cutting modules
   - `config/` — environment and service configs (php config, container definitions)
   - `scripts/` — helper scripts

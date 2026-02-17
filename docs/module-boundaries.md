@@ -4,7 +4,7 @@ Kernel
   - Composition root only; orchestrates lifetime and wires modules. No business logic.
 
 Http
-  - Request and response representations, adapters converting runtime-specific requests (Swoole/RR/FPM) into framework `Request`.
+  - Request and response representations, adapters converting runtime-specific requests (native/Swoole/RR/FPM) into framework `Request`.
 
 Routing
   - Route definitions, matching algorithms, and route metadata. Should not perform DI resolution of handlers directly; only return metadata needed to resolve handler from container.
@@ -19,7 +19,7 @@ Event
   - Event definitions and subscribers; async queue adapters live in `Worker` or `Queue` modules.
 
 Worker
-  - Adapters for RoadRunner/Swoole and worker-specific utilities (reset hooks, job processors).
+  - Adapters for native/RoadRunner/Swoole and worker-specific utilities (reset hooks, job processors).
 
 Storage
   - Database, cache, and storage abstractions. Only expose typed repos/clients via container.

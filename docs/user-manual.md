@@ -647,8 +647,8 @@ Typical usage:
 
 Use this as a practical default:
 - Choose `fpm` for simple apps, standard hosting, and lowest operational complexity.
-- Choose `native` for internal APIs/microservices when you want worker mode without RoadRunner/Swoole dependency.
-- Choose `roadrunner` or `swoole` when you need runtime-specific capabilities beyond the native adapter contract.
+- Choose `native` as the default worker mode for internal APIs/microservices when you want first-party high-throughput processing without RoadRunner/Swoole dependency.
+- Choose `roadrunner` or `swoole` only when you need runtime-specific capabilities beyond the native adapter contract.
 
 Current native adapter characteristics to plan for:
 - Synchronous request loop (parallelism comes from multiple worker processes/replicas).
@@ -2985,6 +2985,7 @@ $runtime->publishMessage($ctx, 'contacts.events', 'contact.created', ['id' => 10
 
 Recommended baseline for internal service-to-service APIs:
 - Start with `native` worker mode if you want a first-party runtime stack with no external worker runtime dependency.
+- For many workloads, `native` is enough to achieve high-throughput request handling with lower operational surface area.
 - Run behind a reverse proxy or service mesh and scale horizontally (replicas/processes) for concurrency.
 - Keep handlers stateless and idempotent; rely on request-scoped services for per-request data.
 
@@ -3070,7 +3071,7 @@ Q: Is native worker mode overkill?
 A: For small/standard deployments, `fpm` is usually simpler. For internal APIs and microservices where process reuse and dependency reduction matter, `native` is a practical default.
 
 Q: Which mode is recommended for SOA/microservices?  
-A: Start with `native` for internal services if you want no external worker runtime dependency; move to `RoadRunner`/`Swoole` when runtime-specific features are required. See section `16.2`.
+A: Start with `native` as the default worker mode for internal services; it avoids external worker runtime dependencies and is sufficient for many high-throughput workloads. Move to `RoadRunner`/`Swoole` when runtime-specific features are required. See section `16.2`.
 
 Q: Is there an Event loop?  
 A: There is no async reactor/event-loop abstraction in core. The runtime loop is synchronous request iteration in `WorkerRunner`, and runtime integration happens via adapter callbacks.

@@ -1,30 +1,52 @@
-// Module dependency graph (Phase 0)
-digraph modules {
-  rankdir=LR;
-  node [shape=box];
-
-  Kernel -> Container;
-  Kernel -> Router;
-  Kernel -> Middleware;
-  Kernel -> EventBus;
-  Kernel -> WorkerAdapter;
-
-  Router -> Routing;
-  Middleware -> Http;
-  EventBus -> Storage;
-  Container -> Storage;
-  WorkerAdapter -> Container;
-  WorkerAdapter -> EventBus;
-  Http -> RequestContext;
-  Router -> RequestContext;
-
-  // cross-cutting modules
-  Auth -> Container;
-  Validation -> Container;
-  Serializer -> Container;
-
-  // edges to external systems
-  Storage -> Database;
-  WorkerAdapter -> Queue;
-
+// Generated from: php packages/framework/bin/celeris graph --format=dot
+digraph celeris_dependencies {
+  Cache [label="Cache [module]"];
+  Config [label="Config [module]"];
+  Container [label="Container [module]"];
+  Database [label="Database [module]"];
+  Distributed [label="Distributed [module]"];
+  Domain [label="Domain [module]"];
+  Http [label="Http [module]"];
+  Kernel [label="Kernel [module]"];
+  Middleware [label="Middleware [module]"];
+  Notification [label="Notification [module]"];
+  Routing [label="Routing [module]"];
+  Runtime [label="Runtime [module]"];
+  Security [label="Security [module]"];
+  Serialization [label="Serialization [module]"];
+  Tooling [label="Tooling [module]"];
+  Validation [label="Validation [module]"];
+  View [label="View [module]"];
+  Cache -> Config [label="module_dep"];
+  Cache -> Http [label="module_dep"];
+  Container -> Http [label="module_dep"];
+  Database -> Config [label="module_dep"];
+  Database -> Container [label="module_dep"];
+  Database -> Domain [label="module_dep"];
+  Distributed -> Database [label="module_dep"];
+  Distributed -> Http [label="module_dep"];
+  Distributed -> Middleware [label="module_dep"];
+  Kernel -> Cache [label="module_dep"];
+  Kernel -> Config [label="module_dep"];
+  Kernel -> Container [label="module_dep"];
+  Kernel -> Database [label="module_dep"];
+  Kernel -> Domain [label="module_dep"];
+  Kernel -> Http [label="module_dep"];
+  Kernel -> Middleware [label="module_dep"];
+  Kernel -> Notification [label="module_dep"];
+  Kernel -> Routing [label="module_dep"];
+  Kernel -> Security [label="module_dep"];
+  Kernel -> Serialization [label="module_dep"];
+  Kernel -> Validation [label="module_dep"];
+  Middleware -> Http [label="module_dep"];
+  Notification -> Config [label="module_dep"];
+  Runtime -> Http [label="module_dep"];
+  Runtime -> Kernel [label="module_dep"];
+  Runtime -> Security [label="module_dep"];
+  Security -> Config [label="module_dep"];
+  Security -> Http [label="module_dep"];
+  Serialization -> Validation [label="module_dep"];
+  Tooling -> Container [label="module_dep"];
+  Tooling -> Http [label="module_dep"];
+  Tooling -> Routing [label="module_dep"];
 }

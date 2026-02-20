@@ -1,29 +1,52 @@
-# Architectural Blueprint — Phase 0
+# Architectural Blueprint — Current
 
 See also: `docs/user-manual.md` for end-to-end implementation guidance and examples.
 
 Summary
-  - API-first, stateless-by-default, strict-typing, DI-centric framework that runs on both PHP-FPM and worker runtimes (native, RoadRunner, Swoole).
+  - API-first, stateless-by-default, strict-typing, DI-centric framework.
+  - One programming model for `FPM` and worker runtimes through a shared `Kernel + WorkerRunner` lifecycle.
+  - Native worker mode is first-party (`NativeHttpWorkerAdapter`) and external runtimes (`RoadRunner`/`Swoole`) are optional integrations.
+
+Repository Shape
+  - Monorepo with core framework in `packages/framework`.
+  - First-party app stubs in `packages/api-stub` and `packages/mvc-stub`.
+  - Optional capability packages (notifications, queue manager, realtime gateway, pulse sample) in `packages/*`.
 
 Kernel
-  - Composition root that wires the container, module service providers, router, middleware pipeline, and event bus.
-  - Exposes a single `handle(RequestContext, Request): Response` entrypoint.
+  - `Kernel` is the composition root and orchestrates container, providers, routing, middleware, security gates, handler dispatch, and response finalization.
+  - Primary entrypoint: `handle(RequestContext, Request): Response`.
+  - Domain events are handled via `DomainEventDispatcher` (not a standalone EventBus module).
+
+Runtime Model
+  - `WorkerRunner` orchestrates process lifecycle:
+    1. `kernel.boot()` once
+    2. `adapter.start()` once
+    3. request loop (`nextRequest -> handle -> send`)
+    4. deterministic per-request reset (`kernel.reset()`, `adapter.reset()`)
+    5. `adapter.stop()` and `kernel.shutdown()` on exit
+  - Runtime adapters:
+    - `FPMAdapter` (single request frame per invocation)
+    - `NativeHttpWorkerAdapter` (first-party socket HTTP/1.1 worker loop)
+    - `RoadRunnerAdapter` (callback bridge)
+    - `SwooleAdapter` (callback bridge)
 
 Request Flow
-  1. Worker/FPM receives raw request
-  2. Adapter normalizes into `Request` and the kernel creates `RequestContext`
-  3. Router resolves handler metadata
-  4. Middleware pipeline executes in registered order
-  5. Handler resolved from container and executed
-  6. Response finalizers run (headers, instrumentation)
-  7. Response serialized and returned
+  1. Runtime receives raw request.
+  2. Adapter creates `RequestContext` and `Request`, yielding `RuntimeRequest`.
+  3. `WorkerRunner` invokes `Kernel::handle(ctx, request)`.
+  4. Security pre-checks, routing, and middleware pipeline execute in deterministic order.
+  5. Handler is resolved from container and executed.
+  6. Response finalizers run (security and HTTP cache headers, other configured finalizers).
+  7. Adapter emits response and reset hooks run before next request.
 
-Worker Runtime
-  - Adapter layer abstracts differences between PHP-FPM and worker runtimes. Adapters implement lightweight reset hooks used between requests.
+Core Modules (`packages/framework/src`)
+  - `Cache`, `Config`, `Container`, `Database`, `Distributed`, `Domain`, `Http`, `Kernel`, `Middleware`, `Notification`, `Routing`, `Runtime`, `Security`, `Serialization`, `Tooling`, `Validation`, `View`.
 
 Extensibility
-  - Modules register `ServiceProviders` to add services, middleware, routes, and event subscribers.
-  - No hidden globals: explicit dependency injection and request context passing.
+  - Service providers register optional services, middleware, routes, and package integrations.
+  - Optional packages extend capabilities without forcing dependencies into `celeris/framework`.
+  - Runtime-specific integrations remain adapter-driven and explicit.
 
 Observability
-  - Core hooks for metrics, tracing, and logging are provided as services and can be swapped.
+  - Distributed and tooling modules provide tracing/observability hooks and dependency graph tooling.
+  - Operational guidance and security/runbook material live under `docs/runbooks` and `docs/security`.

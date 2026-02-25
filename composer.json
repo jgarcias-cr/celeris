@@ -24,5 +24,7 @@
       "App\\": "src/",
       "Celeris\\Framework\\": "packages/framework/src/"
     }
-  }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }

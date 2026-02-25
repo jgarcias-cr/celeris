@@ -1,0 +1,137 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "81939b530c0a3a8758b83c174f1c5388",
+    "packages": [
+        {
+            "name": "celeris/api",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "packages/api-stub",
+                "reference": "d8be0bdff704fe86c16180b9fc5820519e0e6a59"
+            },
+            "require": {
+                "celeris/framework": "*",
+                "php": ">=8.4"
+            },
+            "suggest": {
+                "celeris/notification-dispatch-worker": "Enable outbox dispatch worker services via NotificationDispatchWorkerServiceProvider.",
+                "celeris/notification-in-app": "Enable durable in-app user notifications via InAppNotificationServiceProvider.",
+                "celeris/notification-outbox": "Enable transactional outbox services via OutboxServiceProvider.",
+                "celeris/notification-realtime-gateway-websocket": "Enable realtime websocket gateway client via RealtimeGatewayServiceProvider.",
+                "celeris/notification-smtp": "Enable the SMTP notification channel provider for outbound email delivery."
+            },
+            "type": "project",
+            "autoload": {
+                "psr-4": {
+                    "App\\": "app/"
+                }
+            },
+            "description": "Celeris API base application scaffold for building service-oriented and REST APIs.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "celeris/framework",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "packages/framework",
+                "reference": "abe00822c6e4074b2667c4e6850c0926ac952c35"
+            },
+            "require": {
+                "php": ">=8.4"
+            },
+            "suggest": {
+                "celeris/notification-dispatch-worker": "Outbox dispatcher worker to publish realtime events with retry and dead-letter handling.",
+                "celeris/notification-in-app": "In-app notification channel adapter with durable user notification persistence.",
+                "celeris/notification-outbox": "Transactional outbox primitives for durable asynchronous notification delivery.",
+                "celeris/notification-realtime-gateway-websocket": "Realtime gateway client adapter for websocket push publishing.",
+                "celeris/notification-smtp": "SMTP notification delivery adapter registered through SmtpNotificationServiceProvider.",
+                "celeris/queue-manager": "Queue manager with due-job workers, future task scheduling, and queue monitoring snapshots.",
+                "latte/latte": "Render MVC templates with Latte via TemplateRendererFactory (engine=latte).",
+                "league/plates": "Render MVC templates with Plates via TemplateRendererFactory (engine=plates).",
+                "twig/twig": "Render MVC templates with Twig via TemplateRendererFactory (engine=twig)."
+            },
+            "bin": [
+                "bin/celeris"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Celeris\\Framework\\": "src/"
+                }
+            },
+            "description": "Celeris framework core (minimal)",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "celeris/mvc",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "packages/mvc-stub",
+                "reference": "f2ff36af83a5aee910a2304c5bf8b62b0b7fddbf"
+            },
+            "require": {
+                "celeris/framework": "*",
+                "php": ">=8.4"
+            },
+            "suggest": {
+                "celeris/notification-dispatch-worker": "Enable outbox dispatch worker services via NotificationDispatchWorkerServiceProvider.",
+                "celeris/notification-in-app": "Enable durable in-app user notifications via InAppNotificationServiceProvider.",
+                "celeris/notification-outbox": "Enable transactional outbox services via OutboxServiceProvider.",
+                "celeris/notification-realtime-gateway-websocket": "Enable realtime websocket gateway client via RealtimeGatewayServiceProvider.",
+                "celeris/notification-smtp": "Enable the SMTP notification channel provider for outbound email delivery.",
+                "latte/latte": "Template engine support for VIEW_ENGINE=latte.",
+                "league/plates": "Template engine support for VIEW_ENGINE=plates.",
+                "twig/twig": "Template engine support for VIEW_ENGINE=twig."
+            },
+            "type": "project",
+            "autoload": {
+                "psr-4": {
+                    "App\\": "app/"
+                }
+            },
+            "scripts": {
+                "assets:build": [
+                    "npm run build"
+                ],
+                "assets:dev": [
+                    "npm run dev"
+                ],
+                "assets:watch": [
+                    "npm run watch"
+                ],
+                "post-create-project-cmd": [
+                    "@php -r \"echo 'Next step: run npm install && npm run build to compile frontend assets.' . PHP_EOL;\""
+                ]
+            },
+            "description": "Celeris MVC base application scaffold for building server-rendered web applications.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": {},
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {
+        "php": ">=8.4"
+    },
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
+}

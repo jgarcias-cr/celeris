@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Http\Controllers\ContactPageController;
+use App\Http\Controllers\HomePageController;
 use App\Repositories\ContactRepository;
 use App\Services\ContactService;
 use Celeris\Framework\Config\ConfigRepository;
@@ -47,6 +49,23 @@ final class AppServiceProvider implements ServiceProviderInterface
          ContactService::class,
          static fn (ContainerInterface $c): ContactService => new ContactService($c->get(ContactRepository::class)),
          [ContactRepository::class],
+      );
+
+      $services->singleton(
+         HomePageController::class,
+         static fn (ContainerInterface $c): HomePageController => new HomePageController(
+            $c->get(TemplateRendererInterface::class),
+         ),
+         [TemplateRendererInterface::class],
+      );
+
+      $services->singleton(
+         ContactPageController::class,
+         static fn (ContainerInterface $c): ContactPageController => new ContactPageController(
+            $c->get(ContactService::class),
+            $c->get(TemplateRendererInterface::class),
+         ),
+         [ContactService::class, TemplateRendererInterface::class],
       );
    }
 

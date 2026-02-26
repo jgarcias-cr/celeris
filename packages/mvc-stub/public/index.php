@@ -33,11 +33,13 @@ if (is_file($autoload)) {
 
 use App\AppServiceProvider;
 use App\Http\Controllers\ContactPageController;
+use App\Http\Controllers\HomePageController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Kernel\Kernel;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
+use Celeris\Framework\Tooling\ToolingPlatform;
 
 $basePath = dirname(__DIR__);
 
@@ -51,6 +53,7 @@ $kernel = new Kernel(
          true,
       ),
    ),
+   registerBuiltinRoutes: false,
 );
 $kernel->registerProvider(new AppServiceProvider());
 if (class_exists(\Celeris\Notification\Smtp\SmtpNotificationServiceProvider::class)) {
@@ -69,6 +72,10 @@ if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorker
    $kernel->registerProvider(new \Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider());
 }
 $kernel->registerController(ContactPageController::class);
+$kernel->registerController(HomePageController::class);
+
+$tooling = ToolingPlatform::fromProjectRoot($basePath);
+$tooling->mountWebUiRoutes($kernel->routes(), '/__dev/tooling');
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());
 $runner->run();

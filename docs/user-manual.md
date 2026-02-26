@@ -1140,6 +1140,8 @@ Celeris does not have a config toggle for “attribute vs PHP routes”. The rou
 
 - Attribute routes: call `registerController(...)` to scan `#[Route]` / `#[RouteGroup]` attributes.
 - PHP routes: call `routes()->get/post/...` (or `groupRoutes(...)`) to register route definitions directly.
+- Fluent PHP controller routes: call `routes()->controller(...)->get/post/...` for controller-focused mapping with the same underlying route collector behavior.
+- Static route facade style: call `Route::bind($kernel->routes())` once, then register routes with `Route::get/post/controller(...)`.
 
 You can use either approach or mix both in the same app.
 
@@ -1154,11 +1156,49 @@ $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/a
 #### PHP route example
 
 ```php
+use Celeris\Framework\Routing\Route;
+use Celeris\Framework\Routing\RouteGroup;
+
+Route::bind($kernel->routes()); // one-time bootstrap binding
+
+$kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
+
+$kernel->routes()->get('/health', function (RequestContext $ctx, Request $request): Response {
+    return new Response(200, ['content-type' => 'application/json'], '{"ok":true}');
+});
+
+Route::post('/contacts', [ContactController::class, 'create']);
+
+Route::controller(ContactController::class)
+    ->get('/contacts', 'index')
+    ->post('/contacts', 'create');
+
+Route::controller(ContactController::class, '/api', ['api.auth'])
+    ->get('/contacts/{id}', 'show');
+
+Route::group(new RouteGroup(prefix: '/api', middleware: ['api.auth']), function (RouteCollector $routes): void {
+    $routes->get('/contacts', [ContactController::class, 'index']);
+    $routes->post('/contacts', [ContactController::class, 'create']);
+});
+```
+
+`Route::...` is only syntax sugar; it delegates to the same `RouteCollector` methods used by `$kernel->routes()`, so matching/dispatch behavior and runtime performance remain the same.
+
+```php
 $kernel->routes()->get('/health', function (RequestContext $ctx, Request $request): Response {
     return new Response(200, ['content-type' => 'application/json'], '{"ok":true}');
 });
 
 $kernel->routes()->post('/contacts', [ContactController::class, 'create']);
+
+$kernel->routes()
+    ->controller(ContactController::class)
+    ->get('/contacts', 'index')
+    ->post('/contacts', 'create');
+
+$kernel->routes()
+    ->controller(ContactController::class, '/api', ['api.auth'])
+    ->get('/contacts/{id}', 'show');
 
 $kernel->groupRoutes(new RouteGroup(prefix: '/api', middleware: ['api.auth']), function (RouteCollector $routes) {
     $routes->get('/contacts', [ContactController::class, 'index']);
@@ -2880,26 +2920,7 @@ You can mount `DeveloperUiController` as route handler:
 use Celeris\Framework\Tooling\ToolingPlatform;
 
 $platform = ToolingPlatform::fromProjectRoot(__DIR__ . '/..');
-$toolingUi = $platform->webUi('/__dev/tooling');
-
-$kernel->routes()->get('/__dev/tooling', $toolingUi);
-
-// Legacy JSON endpoints (still supported)
-$kernel->routes()->get('/__dev/tooling/graph', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/validate', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/generate/preview', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/generate/apply', $toolingUi);
-
-// Versioned API endpoints used by the Web UI
-$kernel->routes()->get('/__dev/tooling/api/v1', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/summary', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/health', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/graph', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/validate', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/generators', $toolingUi);
-$kernel->routes()->get('/__dev/tooling/api/v1/generate/preview', $toolingUi);
-$kernel->routes()->post('/__dev/tooling/api/v1/generate/preview', $toolingUi);
-$kernel->routes()->post('/__dev/tooling/api/v1/generate/apply', $toolingUi);
+$platform->mountWebUiRoutes($kernel->routes(), '/__dev/tooling');
 ```
 
 The tooling UI is only available when `APP_ENV=development`. In other environments it returns `404`.
@@ -2938,6 +2959,58 @@ Example audit record:
   "error": null
 }
 ```
+
+### 15.3 DB-first scaffolding roadmap (MVP in progress)
+
+Current state:
+- Tooling generation is template-driven (`generator`, `name`, `module`, `overwrite`).
+- It does not yet introspect database schema to drive artifact selection.
+
+Planned workflow:
+1. Select configured database connection.
+2. Select table from that connection.
+3. Inspect discovered schema metadata:
+   - columns and types
+   - primary/foreign keys
+   - nullability/defaults
+   - unique/index metadata
+4. Choose artifacts to generate from a checkbox list (for example):
+   - model
+   - repository
+   - service
+   - controller
+   - request/response DTOs
+   - recommendation: for production APIs, keep request/response DTOs enabled by default to preserve explicit I/O contracts and validation boundaries
+5. Preview generated files in per-file tabs.
+6. Apply selected files (DB-first scaffold always recreates generated targets).
+
+Available MVP web API additions (tooling API v1):
+- `GET /__dev/tooling/api/v1/schema/connections`
+- `GET /__dev/tooling/api/v1/schema/tables?connection=<name>`
+- `GET /__dev/tooling/api/v1/schema/tables/{table}?connection=<name>`
+- `POST /__dev/tooling/api/v1/scaffold/preview`
+- `POST /__dev/tooling/api/v1/scaffold/apply`
+- `GET /__dev/tooling/api/v1/compat/breaking-changes?connection=<name>&table=<table>`
+- `POST /__dev/tooling/api/v1/compat/baseline/save`
+
+MVP notes:
+- Table introspection is currently implemented for `sqlite`, `mysql`/`mariadb`, and `pgsql`.
+- Preview returns generated file drafts, and apply recreates selected generated files.
+- Generated model/service scaffolding now uses column defaults (when scalar-literal resolvable) and required-field validation metadata derived from nullability/default/primary-key flags.
+- Additional DB-first artifacts available: factory, seeder, repository/service/controller test scaffolds.
+- Factory vs Seeder:
+  - Factory generates reusable synthetic data builders per table (values inferred from schema types/constraints and column-name heuristics).
+  - Seeder executes inserts for local/dev data population, commonly by invoking the generated factory repeatedly.
+  - Factories/seeders do not read production rows by default; they generate synthetic data unless a custom source is wired.
+- Compatibility guard supports baseline save + breaking-change detection for schema/API field contract changes.
+
+Safety model remains unchanged:
+- Base/generated files remain regenerable.
+- DB-first scaffold flow recreates generated targets each apply run.
+- Apply operations continue to be audited.
+
+Design reference:
+- `docs/ADR/adr-008-db-first-tooling-scaffolding.md`
 
 ## 16. Distributed Features (Microservice/SOA)
 

@@ -137,6 +137,7 @@ final class Kernel implements KernelInterface
       ?Serializer $serializer = null,
       ?DtoMapper $dtoMapper = null,
       ?DomainEventDispatcher $domainEventDispatcher = null,
+      bool $registerBuiltinRoutes = true,
    ) {
       $this->bootstrap = $bootstrap ?? new Bootstrap();
       $this->pipeline = $pipeline ?? new Pipeline();
@@ -169,7 +170,9 @@ final class Kernel implements KernelInterface
       $this->responsePipeline->add($this->httpCacheHeadersFinalizer);
 
       $this->registerCoreServices();
-      $this->registerBuiltinRoutes();
+      if ($registerBuiltinRoutes) {
+         $this->registerBuiltinRoutes();
+      }
    }
 
    /**

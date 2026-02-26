@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Celeris\Framework\Routing;
+
+use RuntimeException;
+
+/**
+ * Purpose: expose a static route registration API for ergonomic bootstrap wiring.
+ * How: delegates every call to a bound RouteCollector instance.
+ * Used in framework: optional facade-like routing syntax on top of RouteCollector.
+ */
+final class Route
+{
+   private static ?RouteCollector $collector = null;
+
+   private function __construct()
+   {
+   }
+
+   public static function bind(RouteCollector $collector): void
+   {
+      self::$collector = $collector;
+   }
+
+   public static function clear(): void
+   {
+      self::$collector = null;
+   }
+
+   public static function collector(): RouteCollector
+   {
+      if (self::$collector === null) {
+         throw new RuntimeException('Route facade is not bound. Call Route::bind($kernel->routes()) during bootstrap.');
+      }
+
+      return self::$collector;
+   }
+
+   /**
+    * @param class-string $controller
+    * @param array<int, string> $middleware
+    */
+   public static function controller(string $controller, string $prefix = '', array $middleware = []): RouteControllerRegistrar
+   {
+      return self::collector()->controller($controller, $prefix, $middleware);
+   }
+
+   /**
+    * @param string|array<int, string> $methods
+    * @param array<int, string> $middleware
+    */
+   public static function add(
+      string|array $methods,
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->add($methods, $path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function get(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->get($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function post(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->post($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function put(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->put($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function patch(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->patch($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function delete(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->delete($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param array<int, string> $middleware
+    */
+   public static function options(
+      string $path,
+      mixed $handler,
+      array $middleware = [],
+      ?RouteMetadata $metadata = null,
+   ): RouteDefinition {
+      return self::collector()->options($path, $handler, $middleware, $metadata);
+   }
+
+   /**
+    * @param callable(RouteCollector): void $callback
+    */
+   public static function group(RouteGroup $group, callable $callback): void
+   {
+      self::collector()->group($group, $callback);
+   }
+}
+

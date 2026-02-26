@@ -13,7 +13,7 @@ use Celeris\Framework\Routing\Attribute\RouteGroup;
  * Keep route-group metadata and custom endpoints/actions here.
  * Regeneration updates only `Controllers\Base\ContactPageControllerBase`.
  */
-#[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts UI'])]
+#[RouteGroup(prefix: '/contacts', tags: ['Contacts UI'])]
 final class ContactPageController extends ContactPageControllerBase
 {
 }

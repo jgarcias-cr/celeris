@@ -35,6 +35,17 @@ final class RouteCollector
    }
 
    /**
+    * Start fluent controller mapping while keeping route registration path unchanged.
+    *
+    * @param class-string $controller
+    * @param array<int, string> $middleware
+    */
+   public function controller(string $controller, string $prefix = '', array $middleware = []): RouteControllerRegistrar
+   {
+      return new RouteControllerRegistrar($this, $controller, $prefix, $middleware);
+   }
+
+   /**
     * @param string|array<int, string> $methods
     * @param array<int, string> $middleware
     */
@@ -131,7 +142,6 @@ final class RouteCollector
       return $this->groupStack[array_key_last($this->groupStack)];
    }
 }
-
 
 
 

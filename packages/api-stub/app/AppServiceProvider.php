@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ContactController;
 use App\Repositories\ContactRepository;
 use App\Services\AuthService;
 use App\Services\ContactService;
@@ -42,6 +44,22 @@ final class AppServiceProvider implements ServiceProviderInterface
          ContactService::class,
          static fn(ContainerInterface $c): ContactService => new ContactService($c->get(ContactRepository::class)),
          [ContactRepository::class],
+      );
+
+      $services->singleton(
+         AuthController::class,
+         static fn(ContainerInterface $c): AuthController => new AuthController(
+            $c->get(AuthService::class),
+         ),
+         [AuthService::class],
+      );
+
+      $services->singleton(
+         ContactController::class,
+         static fn(ContainerInterface $c): ContactController => new ContactController(
+            $c->get(ContactService::class),
+         ),
+         [ContactService::class],
       );
    }
 }

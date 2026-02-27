@@ -39,6 +39,7 @@ $toAbsolutePath = static function (?string $path, string $default): string {
 
 return [
     'name' => $env('APP_NAME', 'Celeris MVC'),
+    'key' => $env('APP_KEY', ''),
     'env' => $env('APP_ENV', 'development'),
     'debug' => $envBool('APP_DEBUG', true),
     'url' => $env('APP_URL', 'http://localhost'),

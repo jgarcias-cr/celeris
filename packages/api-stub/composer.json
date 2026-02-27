@@ -17,5 +17,11 @@
       "psr-4": {
          "App\\": "app/"
       }
+   },
+   "scripts": {
+      "app:key": "@php vendor/bin/celeris app-key",
+      "post-create-project-cmd": [
+         "@app:key"
+      ]
    }
 }

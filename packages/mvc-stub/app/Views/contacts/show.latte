@@ -4,6 +4,7 @@
    <p><strong>Address:</strong> {$contact->address}</p>
    <p><strong>Age:</strong> {$contact->age}</p>
 </article>
-<p>
-   <a class="back-link" href="/contacts">Back to contacts</a>
-</p>
+<div class="contact-form-actions">
+   <a class="btn btn-primary" href="/contacts/{$contact->id}/edit">Edit Contact</a>
+   <a class="btn btn-secondary" href="/contacts">Back to contacts</a>
+</div>

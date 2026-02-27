@@ -11,6 +11,7 @@ use Celeris\Framework\Security\Auth\ApiTokenStrategy;
 use Celeris\Framework\Security\Auth\AuthEngine;
 use Celeris\Framework\Security\Auth\AuthStrategyInterface;
 use Celeris\Framework\Security\Auth\CookieSessionStrategy;
+use Celeris\Framework\Security\Auth\HmacCookieValueCodec;
 use Celeris\Framework\Security\Auth\InMemoryApiTokenStore;
 use Celeris\Framework\Security\Auth\InMemoryOpaqueTokenStore;
 use Celeris\Framework\Security\Auth\InMemorySessionStore;
@@ -245,9 +246,26 @@ final class SecurityKernelGuard
       }
 
       if ((bool) $config->get('security.auth.cookie_session.enabled', true)) {
+         $cookieSigningEnabled = (bool) $config->get('security.auth.cookie_session.signing.enabled', false);
+         $cookieSigner = null;
+         $allowUnsignedFallback = (bool) $config->get('security.auth.cookie_session.signing.allow_unsigned_fallback', false);
+         if ($cookieSigningEnabled) {
+            $cookieSigningKey = trim((string) $config->get(
+               'security.auth.cookie_session.signing.key',
+               $config->secret('APP_KEY', (string) $config->get('app.key', '')) ?? ''
+            ));
+            if ($cookieSigningKey === '') {
+               throw new SecurityException('Cookie session signing is enabled, but no signing key is configured.');
+            }
+
+            $cookieSigner = new HmacCookieValueCodec($cookieSigningKey);
+         }
+
          $strategies[] = new CookieSessionStrategy(
             $sessionStore,
             (string) $config->get('security.auth.cookie_session.cookie', 'session_id'),
+            $cookieSigner,
+            $allowUnsignedFallback,
          );
       }
 
@@ -335,6 +353,4 @@ final class SecurityKernelGuard
       return $clean === '' ? null : $clean;
    }
 }
-
-
 

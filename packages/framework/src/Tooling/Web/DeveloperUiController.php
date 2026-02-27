@@ -19,6 +19,8 @@ use Celeris\Framework\Tooling\Diff\UnifiedDiffBuilder;
 use Celeris\Framework\Tooling\Generator\GenerationRequest;
 use Celeris\Framework\Tooling\Generator\GeneratorEngine;
 use Celeris\Framework\Tooling\Graph\DependencyGraphBuilder;
+use Celeris\Framework\Tooling\Routing\ProjectRouteInspector;
+use Celeris\Framework\Tooling\Security\AppKeyManager;
 use Celeris\Framework\Tooling\ToolingException;
 use Throwable;
 
@@ -36,6 +38,8 @@ final class DeveloperUiController
    private const AUDIT_ENABLED_KEY = 'TOOLING_AUDIT_ENABLED';
    private const AUDIT_PATH_KEY = 'TOOLING_AUDIT_PATH';
    private ?ConfigRepository $config = null;
+   private ?AppKeyManager $appKeyManager = null;
+   private ?ProjectRouteInspector $routeInspector = null;
 
    /**
     * Create a new instance.
@@ -46,6 +50,7 @@ final class DeveloperUiController
     * @param string $projectRoot
     * @param string $routePrefix
     * @param string $namespaceRoot
+    * @param ?callable(): array<int, \Celeris\Framework\Routing\RouteDefinition> $routeProvider
     * @return mixed
     */
    public function __construct(
@@ -55,6 +60,7 @@ final class DeveloperUiController
       private string $projectRoot,
       private string $routePrefix = '/__dev/tooling',
       private string $namespaceRoot = 'App',
+      private $routeProvider = null,
    ) {}
 
    /**
@@ -324,6 +330,102 @@ pre {
   background: #edf9f4;
   color: #0d5a49;
 }
+.preview-workspace {
+  margin-top: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffef9;
+  padding: 0.7rem;
+}
+.preview-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.preview-layout {
+  margin-top: 0.55rem;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 0.7rem;
+}
+@media (max-width: 840px) {
+  .preview-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.preview-tabs {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+.preview-tab {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  padding: 0.5rem 0.55rem;
+  cursor: pointer;
+}
+.preview-tab:hover {
+  border-color: #c9bbaa;
+}
+.preview-tab.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(225, 87, 63, 0.2);
+  background: #fff6f2;
+}
+.preview-tab .path {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.preview-tab .meta {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.73rem;
+  color: var(--muted);
+}
+.tabbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+}
+.tab-button.active {
+  background: var(--accent);
+}
+.routes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.routes-table th, .routes-table td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 0.4rem 0.3rem;
+  vertical-align: top;
+}
+.routes-table td code {
+  font-family: "JetBrains Mono", "Cascadia Code", monospace;
+}
+.routes-scroll {
+  margin-top: 0.7rem;
+  max-height: 27rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
 </style>
 </head>
 <body>
@@ -336,6 +438,14 @@ pre {
     </div>
   </section>
   <section class="card">
+    <div class="tabbar">
+      <button id="tabScaffoldBtn" class="tab-button primary active" type="button">Scaffold</button>
+      <button id="tabRoutesBtn" class="tab-button" type="button">Routes</button>
+      <button id="tabAppKeyBtn" class="tab-button" type="button">Security</button>
+    </div>
+  </section>
+  <div id="scaffoldTab" class="tab-panel active">
+  <section class="card">
     <h2>DB Scaffolding (MVP)</h2>
     <p class="muted" style="margin-top:0.25rem;">Generate code from database tables and preview per file.</p>
     <div class="row">
@@ -346,6 +456,13 @@ pre {
       <div>
         <label for="dbTable">Table</label>
         <select id="dbTable"></select>
+      </div>
+      <div>
+        <label for="routingType">Routing Type</label>
+        <select id="routingType">
+          <option value="attribute" selected>Attribute routes</option>
+          <option value="php">PHP routes</option>
+        </select>
       </div>
       <div>
         <label>&nbsp;</label>
@@ -370,8 +487,13 @@ pre {
       <button id="dbApplyBtn">DB Apply</button>
     </div>
     <div id="previewStatus" class="status" style="margin-top:0.7rem;">Idle</div>
-    <ul id="previewFiles" class="list"></ul>
-    <pre id="diffPanel">(no diff selected)</pre>
+    <section class="preview-workspace">
+      <div id="previewMeta" class="preview-meta">No preview generated yet.</div>
+      <div class="preview-layout">
+        <div id="previewTabs" class="preview-tabs" role="tablist" aria-label="Preview files"></div>
+        <pre id="diffPanel">(no diff selected)</pre>
+      </div>
+    </section>
   </section>
   <section class="card">
     <h2>Compatibility Guard</h2>
@@ -382,6 +504,46 @@ pre {
     </div>
     <pre id="compatPanel">(no compatibility run yet)</pre>
   </section>
+</div>
+  <div id="routesTab" class="tab-panel">
+    <section class="card">
+      <h2>Routes Explorer</h2>
+      <p class="muted" style="margin-top:0.25rem;">Inspect registered routes with method, URI, action, and middleware.</p>
+      <div class="actions">
+        <button id="routesRefreshBtn" class="primary">Refresh Routes</button>
+      </div>
+      <div id="routesStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <div class="routes-scroll">
+        <table class="routes-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>URI</th>
+              <th>Action</th>
+              <th>Middleware</th>
+            </tr>
+          </thead>
+          <tbody id="routesRows">
+            <tr><td colspan="4" class="muted">No routes loaded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div id="appKeyTab" class="tab-panel">
+    <section class="card">
+      <h2>Application Key</h2>
+      <p class="muted" style="margin-top:0.25rem;">Generate and persist APP_KEY into your env file.</p>
+      <div class="actions">
+        <button id="appKeyGenerateBtn" class="primary">Generate APP_KEY</button>
+        <label style="display:flex; align-items:center; gap:0.45rem;">
+          <input id="appKeyForce" type="checkbox" style="width:auto;"> Overwrite existing key
+        </label>
+      </div>
+      <div id="appKeyStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <pre id="appKeyOutput">(APP_KEY has not been generated in this session)</pre>
+    </section>
+  </div>
 </main>
 <script>
 const API_BASE = {$apiBaseJson};
@@ -389,15 +551,30 @@ const API_BASE = {$apiBaseJson};
 const elements = {
   dbConnection: document.getElementById('dbConnection'),
   dbTable: document.getElementById('dbTable'),
+  routingType: document.getElementById('routingType'),
   dbReloadBtn: document.getElementById('dbReloadBtn'),
   dbPreviewBtn: document.getElementById('dbPreviewBtn'),
   dbApplyBtn: document.getElementById('dbApplyBtn'),
   compatCheckBtn: document.getElementById('compatCheckBtn'),
   compatSaveBtn: document.getElementById('compatSaveBtn'),
   compatPanel: document.getElementById('compatPanel'),
+  tabScaffoldBtn: document.getElementById('tabScaffoldBtn'),
+  tabRoutesBtn: document.getElementById('tabRoutesBtn'),
+  tabAppKeyBtn: document.getElementById('tabAppKeyBtn'),
+  scaffoldTab: document.getElementById('scaffoldTab'),
+  routesTab: document.getElementById('routesTab'),
+  appKeyTab: document.getElementById('appKeyTab'),
+  routesRefreshBtn: document.getElementById('routesRefreshBtn'),
+  routesStatus: document.getElementById('routesStatus'),
+  routesRows: document.getElementById('routesRows'),
+  appKeyGenerateBtn: document.getElementById('appKeyGenerateBtn'),
+  appKeyForce: document.getElementById('appKeyForce'),
+  appKeyStatus: document.getElementById('appKeyStatus'),
+  appKeyOutput: document.getElementById('appKeyOutput'),
   artifactChecks: document.getElementById('artifactChecks'),
   previewStatus: document.getElementById('previewStatus'),
-  previewFiles: document.getElementById('previewFiles'),
+  previewMeta: document.getElementById('previewMeta'),
+  previewTabs: document.getElementById('previewTabs'),
   diffPanel: document.getElementById('diffPanel'),
 };
 
@@ -407,6 +584,8 @@ function setLoading(active) {
   if (elements.dbApplyBtn) elements.dbApplyBtn.disabled = active;
   if (elements.compatCheckBtn) elements.compatCheckBtn.disabled = active;
   if (elements.compatSaveBtn) elements.compatSaveBtn.disabled = active;
+  if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.disabled = active;
+  if (elements.routesRefreshBtn) elements.routesRefreshBtn.disabled = active;
 }
 
 function readScaffoldInput() {
@@ -420,8 +599,19 @@ function readScaffoldInput() {
   return {
     connection: elements.dbConnection ? elements.dbConnection.value : '',
     table: elements.dbTable ? elements.dbTable.value : '',
+    routing_type: selected.includes('controller') && elements.routingType ? elements.routingType.value : 'attribute',
     artifacts: selected,
   };
+}
+
+function syncRoutingTypeState() {
+  if (!elements.artifactChecks || !elements.routingType) return;
+  const controllerInput = elements.artifactChecks.querySelector('input[type="checkbox"][value="controller"]');
+  const enabled = !!(controllerInput && controllerInput.checked);
+  elements.routingType.disabled = !enabled;
+  if (!enabled) {
+    elements.routingType.value = 'attribute';
+  }
 }
 
 function request(path, options) {
@@ -464,35 +654,68 @@ function escapeHtml(value) {
 }
 
 function renderPreview(files) {
-  elements.previewFiles.innerHTML = '';
+  elements.previewTabs.innerHTML = '';
   elements.diffPanel.textContent = '(no diff selected)';
+  if (elements.previewMeta) {
+    elements.previewMeta.textContent = 'No preview generated yet.';
+  }
 
   if (!Array.isArray(files) || files.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = 'No files produced.';
-    elements.previewFiles.appendChild(li);
+    if (elements.previewMeta) {
+      elements.previewMeta.textContent = 'No files produced.';
+    }
     return;
   }
 
+  const changedCount = files.reduce((count, file) => {
+    return count + (file && file.diff && file.diff !== '' ? 1 : 0);
+  }, 0);
+  if (elements.previewMeta) {
+    elements.previewMeta.textContent = 'Files: ' + files.length + ' | Changed: ' + changedCount;
+  }
+
+  let activeTab = null;
   files.forEach((file, index) => {
-    const li = document.createElement('li');
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'preview-tab';
+    tab.setAttribute('role', 'tab');
     const changed = file.diff && file.diff !== '';
-    li.innerHTML =
-      '<div><strong>' + escapeHtml(file.path || '') + '</strong></div>' +
-      '<div class="meta">exists=' + escapeHtml(String(file.exists === true)) + ' changed=' + escapeHtml(String(changed)) + '</div>';
-    li.addEventListener('click', () => {
+    tab.innerHTML =
+      '<span class="path">' + escapeHtml(file.path || '') + '</span>' +
+      '<span class="meta">exists=' + escapeHtml(String(file.exists === true)) + ' changed=' + escapeHtml(String(changed)) + '</span>';
+    tab.addEventListener('click', () => {
       elements.diffPanel.textContent = file.diff && file.diff !== '' ? file.diff : '(no diff)';
-      Array.from(elements.previewFiles.children).forEach((item) => {
-        item.style.outline = '';
+      Array.from(elements.previewTabs.children).forEach((item) => {
+        item.classList.remove('active');
+        item.setAttribute('aria-selected', 'false');
       });
-      li.style.outline = '2px solid #e1573f';
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      activeTab = tab;
     });
 
-    elements.previewFiles.appendChild(li);
+    tab.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      const tabs = Array.from(elements.previewTabs.children);
+      const currentIndex = tabs.indexOf(tab);
+      const nextIndex = event.key === 'ArrowDown'
+        ? Math.min(tabs.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1);
+      const nextTab = tabs[nextIndex];
+      if (nextTab) nextTab.focus();
+    });
+
+    elements.previewTabs.appendChild(tab);
     if (index === 0) {
-      li.click();
+      tab.click();
     }
   });
+
+  if (!activeTab && elements.previewTabs.firstChild) {
+    elements.previewTabs.firstChild.click();
+  }
 }
 
 function setPreviewStatus(message, ok) {
@@ -672,14 +895,112 @@ function compatibilitySaveBaseline() {
       setLoading(false);
     });
 }
+
+function setAppKeyStatus(message, ok) {
+  if (!elements.appKeyStatus) return;
+  elements.appKeyStatus.textContent = message;
+  elements.appKeyStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
+function setRoutesStatus(message, ok) {
+  if (!elements.routesStatus) return;
+  elements.routesStatus.textContent = message;
+  elements.routesStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
+function showTab(tabName) {
+  const scaffoldActive = tabName === 'scaffold';
+  const routesActive = tabName === 'routes';
+  const appKeyActive = tabName === 'security';
+
+  if (elements.scaffoldTab) elements.scaffoldTab.classList.toggle('active', scaffoldActive);
+  if (elements.routesTab) elements.routesTab.classList.toggle('active', routesActive);
+  if (elements.appKeyTab) elements.appKeyTab.classList.toggle('active', appKeyActive);
+  if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.classList.toggle('active', scaffoldActive);
+  if (elements.tabRoutesBtn) elements.tabRoutesBtn.classList.toggle('active', routesActive);
+  if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.classList.toggle('active', appKeyActive);
+}
+
+function renderRoutes(items) {
+  if (!elements.routesRows) return;
+  elements.routesRows.innerHTML = '';
+
+  if (!Array.isArray(items) || items.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="4" class="muted">No routes found.</td>';
+    elements.routesRows.appendChild(tr);
+    return;
+  }
+
+  items.forEach((row) => {
+    const middleware = Array.isArray(row.middleware) && row.middleware.length > 0
+      ? row.middleware.join(', ')
+      : '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><code>' + escapeHtml(row.method || '') + '</code></td>' +
+      '<td><code>' + escapeHtml(row.uri || '') + '</code></td>' +
+      '<td><code>' + escapeHtml(row.action || '') + '</code></td>' +
+      '<td>' + escapeHtml(middleware) + '</td>';
+    elements.routesRows.appendChild(tr);
+  });
+}
+
+function loadRoutes() {
+  setLoading(true);
+  request('/routes')
+    .then((data) => {
+      const items = Array.isArray(data.items) ? data.items : [];
+      renderRoutes(items);
+      setRoutesStatus('Loaded ' + items.length + ' route(s).', true);
+    })
+    .catch((error) => {
+      renderRoutes([]);
+      setRoutesStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+function generateAppKey() {
+  const force = !!(elements.appKeyForce && elements.appKeyForce.checked);
+  setLoading(true);
+  request('/app-key/generate', { method: 'POST', body: { force: force, show: true } })
+    .then((data) => {
+      const createdEnv = data.created_env ? 'yes' : 'no';
+      const updated = data.updated ? 'yes' : 'no';
+      setAppKeyStatus('APP_KEY operation complete. updated=' + updated + ' created_env=' + createdEnv, true);
+      if (elements.appKeyOutput) {
+        elements.appKeyOutput.textContent = 'env_file: ' + (data.env_file || '') + '\\nAPP_KEY=' + (data.key || '');
+      }
+    })
+    .catch((error) => {
+      setAppKeyStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
 if (elements.dbConnection) elements.dbConnection.addEventListener('change', loadTables);
 if (elements.dbReloadBtn) elements.dbReloadBtn.addEventListener('click', loadTables);
 if (elements.dbPreviewBtn) elements.dbPreviewBtn.addEventListener('click', scaffoldPreview);
 if (elements.dbApplyBtn) elements.dbApplyBtn.addEventListener('click', scaffoldApply);
 if (elements.compatCheckBtn) elements.compatCheckBtn.addEventListener('click', compatibilityCheck);
 if (elements.compatSaveBtn) elements.compatSaveBtn.addEventListener('click', compatibilitySaveBaseline);
+if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.addEventListener('click', generateAppKey);
+if (elements.routesRefreshBtn) elements.routesRefreshBtn.addEventListener('click', loadRoutes);
+if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.addEventListener('click', () => showTab('scaffold'));
+if (elements.tabRoutesBtn) elements.tabRoutesBtn.addEventListener('click', () => {
+  showTab('routes');
+  loadRoutes();
+});
+if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.addEventListener('click', () => showTab('security'));
+if (elements.artifactChecks) elements.artifactChecks.addEventListener('change', syncRoutingTypeState);
 
 initScaffoldPanel();
+syncRoutingTypeState();
+showTab('scaffold');
 </script>
 </body>
 </html>
@@ -765,6 +1086,13 @@ HTML;
          return $this->apiSchemaTablesResponse($ctx, $request);
       }
 
+      if ($apiPath === '/routes') {
+         if ($request->getMethod() !== 'GET') {
+            return $this->methodNotAllowed($ctx, ['GET']);
+         }
+         return $this->apiRoutesResponse($ctx);
+      }
+
       if (str_starts_with($apiPath, '/schema/tables/')) {
          if ($request->getMethod() !== 'GET') {
             return $this->methodNotAllowed($ctx, ['GET']);
@@ -785,6 +1113,13 @@ HTML;
             return $this->methodNotAllowed($ctx, ['POST']);
          }
          return $this->apiScaffoldApplyResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/app-key/generate') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiGenerateAppKeyResponse($ctx, $request);
       }
 
       if ($apiPath === '/compat/breaking-changes') {
@@ -847,6 +1182,7 @@ HTML;
                name: $args['name'],
                module: $args['module'],
                namespaceRoot: $this->namespaceRoot,
+               options: ['routing_type' => $args['routing_type']],
                overwrite: $args['overwrite'],
             )
          );
@@ -858,6 +1194,7 @@ HTML;
          'generator' => $args['generator'],
          'name' => $args['name'],
          'module' => $args['module'],
+         'routing_type' => $args['routing_type'],
          'files' => array_map(static fn($row): array => $row->toArray(), $rows),
       ]);
    }
@@ -878,6 +1215,7 @@ HTML;
                name: $args['name'],
                module: $args['module'],
                namespaceRoot: $this->namespaceRoot,
+               options: ['routing_type' => $args['routing_type']],
                overwrite: $args['overwrite'],
             )
          );
@@ -891,6 +1229,7 @@ HTML;
          'generator' => $args['generator'],
          'name' => $args['name'],
          'module' => $args['module'],
+         'routing_type' => $args['routing_type'],
          'written' => $result->written(),
          'skipped' => $result->skipped(),
       ]);
@@ -911,6 +1250,7 @@ HTML;
                name: $args['name'],
                module: $args['module'],
                namespaceRoot: $this->namespaceRoot,
+               options: ['routing_type' => $args['routing_type']],
                overwrite: $args['overwrite'],
             )
          );
@@ -922,6 +1262,7 @@ HTML;
          'generator' => $args['generator'],
          'name' => $args['name'],
          'module' => $args['module'],
+         'routing_type' => $args['routing_type'],
          'files' => array_map(static fn($row): array => $row->toArray(), $rows),
       ]);
    }
@@ -941,6 +1282,7 @@ HTML;
                name: $args['name'],
                module: $args['module'],
                namespaceRoot: $this->namespaceRoot,
+               options: ['routing_type' => $args['routing_type']],
                overwrite: $args['overwrite'],
             )
          );
@@ -954,6 +1296,7 @@ HTML;
          'generator' => $args['generator'],
          'name' => $args['name'],
          'module' => $args['module'],
+         'routing_type' => $args['routing_type'],
          'written' => $result->written(),
          'skipped' => $result->skipped(),
       ]);
@@ -961,7 +1304,7 @@ HTML;
 
    /**
     * @param array<string, mixed> $input
-    * @return array{generator:string,name:string,module:string,overwrite:bool}|Response
+    * @return array{generator:string,name:string,module:string,routing_type:string,overwrite:bool}|Response
     */
    private function generationArgs(array $input): array|Response
    {
@@ -975,6 +1318,7 @@ HTML;
          'generator' => $generator,
          'name' => $name,
          'module' => $this->stringValue($input, 'module') ?? 'Generated',
+         'routing_type' => $this->routingTypeValue($input),
          'overwrite' => $this->boolValue($input, 'overwrite'),
       ];
    }
@@ -1112,6 +1456,27 @@ HTML;
       ]);
    }
 
+   private function apiRoutesResponse(RequestContext $ctx): Response
+   {
+      try {
+         $definitions = null;
+         if (is_callable($this->routeProvider)) {
+            $provided = call_user_func($this->routeProvider);
+            if (is_array($provided)) {
+               $definitions = $provided;
+            }
+         }
+
+         $items = $this->routeInspector()->inspect($this->projectRoot, $definitions);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'routes_error', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'items' => $items,
+      ]);
+   }
+
    private function apiSchemaTableDescribeResponse(RequestContext $ctx, Request $request, string $table): Response
    {
       $input = $this->requestInput($request);
@@ -1151,11 +1516,12 @@ HTML;
       if ($artifacts === []) {
          return $this->apiError($ctx, 400, 'invalid_input', 'artifacts must include at least one artifact.');
       }
+      $routingType = $this->effectiveRoutingType($input, $artifacts);
 
       try {
          [$connection, $driver] = $this->databaseConnectionAndDriver($connectionName);
          $schema = $this->describeTable($connection, $driver, $tableName);
-         $files = $this->buildScaffoldPreview($tableName, $schema, $artifacts);
+         $files = $this->buildScaffoldPreview($tableName, $schema, $artifacts, $routingType);
       } catch (Throwable $exception) {
          return $this->apiError($ctx, 422, 'tooling_error', $exception->getMessage());
       }
@@ -1163,6 +1529,7 @@ HTML;
       return $this->apiOk($ctx, [
          'connection' => $connectionName,
          'table' => $tableName,
+         'routing_type' => $routingType,
          'artifacts' => $artifacts,
          'schema' => $schema,
          'files' => $files,
@@ -1185,24 +1552,49 @@ HTML;
       if ($artifacts === []) {
          return $this->apiError($ctx, 400, 'invalid_input', 'artifacts must include at least one artifact.');
       }
+      $routingType = $this->effectiveRoutingType($input, $artifacts);
 
       try {
          [$connection, $driver] = $this->databaseConnectionAndDriver($connectionName);
          $schema = $this->describeTable($connection, $driver, $tableName);
-         $files = $this->buildScaffoldPreview($tableName, $schema, $artifacts);
+         $files = $this->buildScaffoldPreview($tableName, $schema, $artifacts, $routingType);
          [$written, $skipped] = $this->writeScaffoldFiles($files);
-         $this->auditScaffoldApply($ctx, $request, $connectionName, $tableName, $artifacts, $written, $skipped, null);
+         $this->auditScaffoldApply($ctx, $request, $connectionName, $tableName, $artifacts, $routingType, $written, $skipped, null);
       } catch (Throwable $exception) {
-         $this->auditScaffoldApply($ctx, $request, $connectionName, $tableName ?? '', $artifacts ?? [], [], [], $exception->getMessage());
+         $this->auditScaffoldApply($ctx, $request, $connectionName, $tableName ?? '', $artifacts ?? [], $routingType ?? 'attribute', [], [], $exception->getMessage());
          return $this->apiError($ctx, 422, 'tooling_error', $exception->getMessage());
       }
 
       return $this->apiOk($ctx, [
          'connection' => $connectionName,
          'table' => $tableName,
+         'routing_type' => $routingType,
          'artifacts' => $artifacts,
          'written' => $written,
          'skipped' => $skipped,
+      ]);
+   }
+
+   private function apiGenerateAppKeyResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $force = $this->boolValue($input, 'force');
+      $show = $this->boolValue($input, 'show');
+      $envFile = $this->stringValue($input, 'env_file') ?? '.env';
+
+      try {
+         $key = $this->appKeyManager()->generate();
+         $result = $this->appKeyManager()->write($this->projectRoot, $key, $envFile, $force);
+      } catch (ToolingException $exception) {
+         return $this->apiError($ctx, 422, 'app_key_generate_failed', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'env_file' => $result['env_file'],
+         'created_env' => $result['created_env'],
+         'updated' => $result['updated'],
+         'existing_key' => $result['existing_key'],
+         'key' => $show ? $key : null,
       ]);
    }
 
@@ -1357,6 +1749,28 @@ HTML;
          'test.integration.controller',
       ];
       return array_values(array_intersect($normalized, $allowed));
+   }
+
+   /**
+    * @param array<string, mixed> $input
+    */
+   private function routingTypeValue(array $input): string
+   {
+      $routingType = strtolower((string) ($this->stringValue($input, 'routing_type') ?? 'attribute'));
+      return $routingType === 'php' ? 'php' : 'attribute';
+   }
+
+   /**
+    * @param array<string, mixed> $input
+    * @param array<int, string> $artifacts
+    */
+   private function effectiveRoutingType(array $input, array $artifacts): string
+   {
+      if (!in_array('controller', $artifacts, true)) {
+         return 'attribute';
+      }
+
+      return $this->routingTypeValue($input);
    }
 
    private function config(): ConfigRepository
@@ -1726,9 +2140,10 @@ HTML;
    /**
     * @param array{table:string,schema:string,columns:array<int,array<string,mixed>>,primary_key:array<int,string>,relationships:array<int,array<string,mixed>>} $schema
     * @param array<int, string> $artifacts
+    * @param string $routingType
     * @return array<int, array<string, mixed>>
     */
-   private function buildScaffoldPreview(string $tableName, array $schema, array $artifacts): array
+   private function buildScaffoldPreview(string $tableName, array $schema, array $artifacts, string $routingType = 'attribute'): array
    {
       $entity = $this->entityNameFromTable($tableName);
       $columns = $schema['columns'];
@@ -1736,6 +2151,7 @@ HTML;
       $defaults = $this->defaultLiteralMap($columns);
       $required = $this->requiredColumns($columns);
       $rows = [];
+      $resolvedRoutingType = $routingType === 'php' ? 'php' : 'attribute';
 
       $modelPath = 'app/Models/' . $entity . '.php';
       $modelBasePath = 'app/Models/Base/' . $entity . 'Base.php';
@@ -1745,6 +2161,8 @@ HTML;
       $serviceBasePath = 'app/Services/Base/' . $entity . 'ServiceBase.php';
       $controllerPath = 'app/Http/Controllers/' . $entity . 'Controller.php';
       $controllerBasePath = 'app/Http/Controllers/Base/' . $entity . 'ControllerBase.php';
+      $routesPath = 'app/Http/Routes/' . $entity . 'Routes.php';
+      $routesBasePath = 'app/Http/Routes/Base/' . $entity . 'RoutesBase.php';
 
       $tableLiteral = $this->escapeSingleQuoted($tableName);
       $entityLower = strtolower($entity);
@@ -1780,6 +2198,10 @@ namespace {$this->namespaceRoot}\\Models;
 
 use {$this->namespaceRoot}\\Models\\Base\\{$entity}Base;
 
+/**
+ * User-editable model wrapper.
+ * Inherits generated metadata constants from {$entity}Base.
+ */
 final class {$entity} extends {$entity}Base
 {
 }
@@ -1825,6 +2247,12 @@ namespace {$this->namespaceRoot}\\Repositories;
 
 use {$this->namespaceRoot}\\Repositories\\Base\\{$entity}RepositoryBase;
 
+/**
+ * User-editable repository wrapper.
+ *
+ * @method string table()
+ * @method array<int, string> columns()
+ */
 final class {$entity}Repository extends {$entity}RepositoryBase
 {
 }
@@ -1885,6 +2313,12 @@ namespace {$this->namespaceRoot}\\Services;
 
 use {$this->namespaceRoot}\\Services\\Base\\{$entity}ServiceBase;
 
+/**
+ * User-editable service wrapper.
+ *
+ * Inherited from base:
+ * - validateForCreate(array<string, mixed> \$payload): array<string, mixed> (protected)
+ */
 final class {$entity}Service extends {$entity}ServiceBase
 {
 }
@@ -1893,7 +2327,8 @@ PHP
       }
 
       if (in_array('controller', $artifacts, true)) {
-         $controllerBaseContents = <<<PHP
+         $controllerBaseContents = $resolvedRoutingType === 'attribute'
+            ? <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -1917,6 +2352,29 @@ class {$entity}ControllerBase
       return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '{"resource":"{$entityLower}","status":"ok"}');
    }
 }
+PHP
+            : <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$this->namespaceRoot}\\Http\\Controllers\\Base;
+
+use Celeris\\Framework\\Http\\Request;
+use Celeris\\Framework\\Http\\RequestContext;
+use Celeris\\Framework\\Http\\Response;
+
+/**
+ * @generated by Celeris Tooling. Do not edit this file directly.
+ * Source table: {$tableLiteral}
+ */
+class {$entity}ControllerBase
+{
+   public function index(RequestContext \$ctx, Request \$request): Response
+   {
+      return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '{"resource":"{$entityLower}","status":"ok"}');
+   }
+}
 PHP;
          $rows[] = $this->previewFileRow($controllerBasePath, $controllerBaseContents . "\n");
          $rows = [...$rows, ...$this->previewWrapperFile($controllerPath, <<<PHP
@@ -1928,11 +2386,63 @@ namespace {$this->namespaceRoot}\\Http\\Controllers;
 
 use {$this->namespaceRoot}\\Http\\Controllers\\Base\\{$entity}ControllerBase;
 
+/**
+ * User-editable controller wrapper.
+ *
+ * @method \\Celeris\\Framework\\Http\\Response index(\\Celeris\\Framework\\Http\\RequestContext \$ctx, \\Celeris\\Framework\\Http\\Request \$request)
+ */
 final class {$entity}Controller extends {$entity}ControllerBase
 {
 }
 PHP
 )];
+
+         if ($resolvedRoutingType === 'php') {
+            $routesBaseContents = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$this->namespaceRoot}\\Http\\Routes\\Base;
+
+use {$this->namespaceRoot}\\Http\\Controllers\\{$entity}Controller;
+use Celeris\\Framework\\Routing\\RouteCollector;
+
+/**
+ * @generated by Celeris Tooling. Do not edit this file directly.
+ * Register from bootstrap: {$this->namespaceRoot}\\Http\\Routes\\{$entity}Routes::register(\$kernel->routes());
+ */
+class {$entity}RoutesBase
+{
+   public static function register(RouteCollector \$routes): void
+   {
+      \$routes
+         ->controller({$entity}Controller::class)
+         ->get('/api/{$entityLower}', 'index');
+   }
+}
+PHP;
+            $rows[] = $this->previewFileRow($routesBasePath, $routesBaseContents . "\n");
+            $rows = [...$rows, ...$this->previewWrapperFile($routesPath, <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$this->namespaceRoot}\\Http\\Routes;
+
+use {$this->namespaceRoot}\\Http\\Routes\\Base\\{$entity}RoutesBase;
+
+/**
+ * User-editable routes wrapper.
+ *
+ * @method static void register(\\Celeris\\Framework\\Routing\\RouteCollector \$routes)
+ */
+final class {$entity}Routes extends {$entity}RoutesBase
+{
+}
+PHP
+)];
+         }
       }
 
       if (in_array('dto.request', $artifacts, true)) {
@@ -2819,7 +3329,7 @@ PHP;
    }
 
    /**
-    * @param array{generator:string,name:string,module:string,overwrite:bool} $args
+    * @param array{generator:string,name:string,module:string,routing_type:string,overwrite:bool} $args
     * @param array<int, string> $written
     * @param array<int, string> $skipped
     */
@@ -2858,6 +3368,7 @@ PHP;
          'generator' => $args['generator'],
          'name' => $args['name'],
          'module' => $args['module'],
+         'routing_type' => $args['routing_type'],
          'overwrite' => $args['overwrite'],
          'written' => $written,
          'skipped' => $skipped,
@@ -2875,6 +3386,7 @@ PHP;
 
    /**
     * @param array<int, string> $artifacts
+    * @param string $routingType
     * @param array<int, string> $written
     * @param array<int, string> $skipped
     */
@@ -2884,6 +3396,7 @@ PHP;
       string $connection,
       string $table,
       array $artifacts,
+      string $routingType,
       array $written,
       array $skipped,
       ?string $error,
@@ -2915,6 +3428,7 @@ PHP;
          'connection' => $connection,
          'table' => $table,
          'artifacts' => $artifacts,
+         'routing_type' => $routingType,
          'written' => $written,
          'skipped' => $skipped,
          'status' => $error === null ? 'ok' : 'error',
@@ -2934,6 +3448,24 @@ PHP;
       $params = $ctx->getServerParams();
       $value = $params[$key] ?? null;
       return is_string($value) ? $value : '';
+   }
+
+   private function appKeyManager(): AppKeyManager
+   {
+      if ($this->appKeyManager === null) {
+         $this->appKeyManager = new AppKeyManager();
+      }
+
+      return $this->appKeyManager;
+   }
+
+   private function routeInspector(): ProjectRouteInspector
+   {
+      if ($this->routeInspector === null) {
+         $this->routeInspector = new ProjectRouteInspector();
+      }
+
+      return $this->routeInspector;
    }
 
    private function isAuditEnabled(): bool

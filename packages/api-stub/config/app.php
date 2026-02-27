@@ -23,6 +23,7 @@ $envBool = static function (string $key, bool $default = false) use ($env): bool
 
 return [
     'name' => $env('APP_NAME', 'Celeris API'),
+    'key' => $env('APP_KEY', ''),
     'env' => $env('APP_ENV', 'development'),
     'debug' => $envBool('APP_DEBUG', true),
     'url' => $env('APP_URL', 'http://localhost'),

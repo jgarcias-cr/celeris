@@ -8,6 +8,22 @@
       item.style.setProperty('--stagger-index', String(index));
    });
 
+   document.addEventListener('submit', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLFormElement)) {
+         return;
+      }
+
+      const message = target.getAttribute('data-confirm');
+      if (!message) {
+         return;
+      }
+
+      if (!window.confirm(message)) {
+         event.preventDefault();
+      }
+   });
+
    const table = document.querySelector('[data-contacts-table]');
    if (!table) {
       return;

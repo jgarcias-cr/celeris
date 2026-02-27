@@ -24,6 +24,8 @@ final class CookieSessionStrategy implements AuthStrategyInterface
    public function __construct(
       private SessionStoreInterface $store,
       private string $cookieName = 'session_id',
+      private ?CookieValueCodecInterface $cookieCodec = null,
+      private bool $allowUnsignedCookieValue = false,
    ) {
    }
 
@@ -45,8 +47,7 @@ final class CookieSessionStrategy implements AuthStrategyInterface
     */
    public function supports(Request $request): bool
    {
-      $sessionId = $request->getCookies()->get($this->cookieName);
-      return is_string($sessionId) && trim($sessionId) !== '';
+      return $this->resolveSessionId($request) !== null;
    }
 
    /**
@@ -58,8 +59,8 @@ final class CookieSessionStrategy implements AuthStrategyInterface
     */
    public function authenticate(RequestContext $context, Request $request): AuthResult
    {
-      $sessionId = $request->getCookies()->get($this->cookieName);
-      if (!is_string($sessionId) || trim($sessionId) === '') {
+      $sessionId = $this->resolveSessionId($request);
+      if ($sessionId === null) {
          return AuthResult::rejected('Session cookie is missing.');
       }
 
@@ -79,7 +80,29 @@ final class CookieSessionStrategy implements AuthStrategyInterface
 
       return AuthResult::authenticated($identity, $this->name(), $tokenId);
    }
-}
 
+   private function resolveSessionId(Request $request): ?string
+   {
+      $raw = $request->getCookies()->get($this->cookieName);
+      if (!is_string($raw) || trim($raw) === '') {
+         return null;
+      }
+
+      if ($this->cookieCodec === null) {
+         return $raw;
+      }
+
+      $decoded = $this->cookieCodec->decode($raw);
+      if (is_string($decoded) && trim($decoded) !== '') {
+         return $decoded;
+      }
+
+      if ($this->allowUnsignedCookieValue) {
+         return $raw;
+      }
+
+      return null;
+   }
+}
 
 

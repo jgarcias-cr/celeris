@@ -12,6 +12,7 @@ use Celeris\Framework\Config\ConfigRepository;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\Database\DBAL;
 use Celeris\Framework\View\TemplateRendererFactory;
 use Celeris\Framework\View\TemplateRendererInterface;
 
@@ -42,7 +43,9 @@ final class AppServiceProvider implements ServiceProviderInterface
 
       $services->singleton(
          ContactRepository::class,
-         static fn (ContainerInterface $c): ContactRepository => new ContactRepository(),
+         static fn (ContainerInterface $c): ContactRepository => new ContactRepository(
+            $c->has(DBAL::class) ? $c->get(DBAL::class) : null,
+         ),
       );
 
       $services->singleton(

@@ -1332,6 +1332,166 @@ if ($errors !== []) {
 }
 ```
 
+### 6.7 Routing feature map
+
+It is useful to separate first-class Celeris features from patterns you compose explicitly:
+
+- Route groups/prefixes/middleware/version/tags/name prefix: first-class via `RouteGroup`.
+- Route names: first-class as `RouteMetadata(name: '...')` (also used by OpenAPI metadata).
+- Multiple route styles: first-class (`registerController(...)`, `routes()->...`, `Route::...` facade, fluent `controller(...)`).
+- Fallback route helper (`Route::fallback(...)`): not a dedicated API; implement explicitly.
+- Redirect route helper (`Route::redirect(...)`): not a dedicated API; implement explicitly with `Response` + `Location`.
+- View route helper (`Route::view(...)`): not a dedicated API; implement explicitly by rendering and returning `Response`.
+- Resource route helper (`Route::resource(...)`): not a dedicated API; use a small registrar helper (example below).
+
+This keeps routing behavior explicit and predictable while still allowing ergonomic wrappers in your app layer.
+
+### 6.8 Common explicit patterns (fallback, redirect, view, resource-like)
+
+#### Fallback pattern
+
+By default, unresolved routes return framework `404 Not Found`.
+There is no dedicated `Route::fallback(...)` helper.  
+When you need custom fallback behavior, add a global pipeline middleware that rewrites 404 responses:
+
+```php
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Middleware\MiddlewareInterface;
+
+$kernel->getPipeline()->add(new class implements MiddlewareInterface {
+    public function handle(RequestContext $ctx, Request $request, callable $next): Response
+    {
+        $response = $next($ctx, $request);
+        if ($response->getStatus() !== 404) {
+            return $response;
+        }
+
+        return new Response(
+            404,
+            ['content-type' => 'application/json; charset=utf-8'],
+            '{"error":"not_found","message":"Route does not exist"}'
+        );
+    }
+});
+```
+
+#### Redirect pattern (with optional middleware)
+
+```php
+use Celeris\Framework\Http\Response;
+
+$kernel->registerMiddleware('web.auth', new \App\Http\Middleware\RequireAuthMiddleware());
+
+$kernel->routes()->get(
+    '/dashboard',
+    static fn (): Response => new Response(
+        302,
+        [
+            'location' => '/app',
+            'cache-control' => 'no-store',
+        ]
+    ),
+    ['web.auth'], // middleware runs before handler executes redirect response
+);
+```
+
+#### View route pattern
+
+```php
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\View\TemplateRendererInterface;
+
+$kernel->routes()->get('/about', static function (TemplateRendererInterface $views): Response {
+    $html = $views->render('about', ['title' => 'About']);
+    return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+});
+```
+
+#### Resource-like registration pattern
+
+```php
+use Celeris\Framework\Routing\RouteCollector;
+use Celeris\Framework\Routing\RouteMetadata;
+
+final class ContactResourceRoutes
+{
+    public static function register(RouteCollector $routes): void
+    {
+        $routes->get('/contacts', [\App\Http\Controllers\ContactController::class, 'index'], metadata: new RouteMetadata(name: 'contacts.index'));
+        $routes->post('/contacts', [\App\Http\Controllers\ContactController::class, 'store'], metadata: new RouteMetadata(name: 'contacts.store'));
+        $routes->get('/contacts/{id}', [\App\Http\Controllers\ContactController::class, 'show'], metadata: new RouteMetadata(name: 'contacts.show'));
+        $routes->put('/contacts/{id}', [\App\Http\Controllers\ContactController::class, 'update'], metadata: new RouteMetadata(name: 'contacts.update'));
+        $routes->delete('/contacts/{id}', [\App\Http\Controllers\ContactController::class, 'destroy'], metadata: new RouteMetadata(name: 'contacts.destroy'));
+    }
+}
+```
+
+### 6.9 Large systems: split routes across multiple files/modules
+
+Celeris supports multiple route files/registrars naturally.  
+A common approach is one route registrar per module, wired in bootstrap:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Billing\Routes\BillingRoutes;
+use App\Contacts\Routes\ContactRoutes;
+use App\Identity\Routes\AuthRoutes;
+use Celeris\Framework\Kernel\Kernel;
+use Celeris\Framework\Routing\RouteGroup;
+
+$kernel = new Kernel();
+
+AuthRoutes::register($kernel->routes());
+ContactRoutes::register($kernel->routes());
+
+$kernel->groupRoutes(new RouteGroup(prefix: '/api/v1'), static function ($routes): void {
+    BillingRoutes::register($routes);
+});
+
+// Optional attribute-style controllers can coexist:
+$kernel->registerController(\App\Admin\Http\AdminController::class, new RouteGroup(prefix: '/admin'));
+```
+
+Example registrar:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Contacts\Routes;
+
+use App\Contacts\Http\ContactController;
+use Celeris\Framework\Routing\RouteCollector;
+use Celeris\Framework\Routing\RouteGroup;
+
+final class ContactRoutes
+{
+    public static function register(RouteCollector $routes): void
+    {
+        $routes->group(new RouteGroup(prefix: '/contacts', middleware: ['api.auth']), static function (RouteCollector $r): void {
+            $r->get('/', [ContactController::class, 'index']);
+            $r->post('/', [ContactController::class, 'store']);
+            $r->get('/{id}', [ContactController::class, 'show']);
+        });
+    }
+}
+```
+
+### 6.10 Effective routing practices
+
+- Pick one default style for your team (attributes or PHP registrars) and allow mixing only when needed.
+- Keep route middleware lightweight; move heavy business logic to services.
+- Assign route names (`RouteMetadata(name: ...)`) for documentation consistency and diagnostics.
+- Use group-level prefix/middleware/version/tags to avoid repetition.
+- Keep custom fallback behavior centralized (global middleware) so all unresolved routes stay consistent.
+- For package/module boundaries, expose `*Routes::register(RouteCollector $routes)` and wire once in bootstrap.
+
 ## 7. API Project: End-to-End Example
 
 This section is a complete API-style setup with CRUD, service classes, validation, auth, transactions, and Data Mapper ORM.
@@ -1399,7 +1559,6 @@ api-app/
       ContactCreatedEvent.php
 ```
 
-Yes, this structure includes model classes.
 In this API layout, model/entity classes live in `app/Models/` (for example `Contact.php`).
 
 Generated code convention in stubs:

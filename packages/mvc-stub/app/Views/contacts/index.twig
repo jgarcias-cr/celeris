@@ -1,5 +1,11 @@
 <h1 data-page-title>{{ title|default('Contacts') }}</h1>
-<p class="lead">Choose a contact to open details.</p>
+<p class="lead">Manage your contacts with quick create, edit, and delete actions.</p>
+{% if notice is defined and notice %}
+   <p class="form-notice">{{ notice }}</p>
+{% endif %}
+<div class="contacts-toolbar">
+   <a class="btn btn-primary" href="/contacts/create">Add Contact</a>
+</div>
 <section class="contacts-table-card">
    <div class="contacts-table-wrap">
       <table class="contacts-table" data-contacts-table>
@@ -18,12 +24,23 @@
                <td>{{ contact.phone|default('-') }}</td>
                <td>{{ contact.address|default('-') }}</td>
                <td>
-                  <a class="table-link" data-contact-link href="/contacts/{{ contact.id }}">
-                     View
-                  </a>
+                  <div class="table-actions">
+                     <a class="table-link" data-contact-link href="/contacts/{{ contact.id }}/edit">Edit</a>
+                     <form method="post" action="/contacts/{{ contact.id }}/delete" data-confirm="Delete this contact?">
+                        <button type="submit" class="table-link danger-link">Delete</button>
+                     </form>
+                  </div>
                </td>
             </tr>
             {% endfor %}
+            {% if contacts is not defined or contacts is empty %}
+               <tr data-contact-row>
+                  <td colspan="4">
+                     No contacts yet.
+                     <a class="table-link" href="/contacts/create">Create the first one</a>.
+                  </td>
+               </tr>
+            {% endif %}
          </tbody>
       </table>
    </div>

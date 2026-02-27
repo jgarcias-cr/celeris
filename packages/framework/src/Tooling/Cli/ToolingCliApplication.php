@@ -8,6 +8,8 @@ use Celeris\Framework\Tooling\Architecture\ArchitectureDecisionValidator;
 use Celeris\Framework\Tooling\Generator\GenerationRequest;
 use Celeris\Framework\Tooling\Generator\GeneratorEngine;
 use Celeris\Framework\Tooling\Graph\DependencyGraphBuilder;
+use Celeris\Framework\Tooling\Routing\ProjectRouteInspector;
+use Celeris\Framework\Tooling\Security\AppKeyManager;
 use Celeris\Framework\Tooling\ToolingException;
 
 /**
@@ -47,6 +49,8 @@ final class ToolingCliApplication
       try {
          return match ($command) {
             'help', '--help', '-h' => $this->help(),
+            'app-key' => $this->appKey($options),
+            'routes:list' => $this->routesList($options),
             'list-generators' => $this->listGenerators($options),
             'graph' => $this->graph($options),
             'validate' => $this->validate($options),
@@ -69,10 +73,12 @@ final class ToolingCliApplication
       $this->out('Celeris Tooling CLI');
       $this->out('');
       $this->out('Commands:');
+      $this->out('  app-key [--force] [--env=.env] [--show] [--json]');
+      $this->out('  routes:list [--json]');
       $this->out('  list-generators [--json]');
       $this->out('  graph [--format=text|json|dot]');
       $this->out('  validate [--json]');
-      $this->out('  generate <generator> <name> [--module=Name] [--write] [--overwrite] [--json]');
+      $this->out('  generate <generator> <name> [--module=Name] [--routing-type=attribute|php] [--write] [--overwrite] [--json]');
       return 0;
    }
 
@@ -89,6 +95,92 @@ final class ToolingCliApplication
 
       foreach ($rows as $row) {
          $this->out(sprintf('%s: %s', $row['name'], $row['description']));
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function appKey(array $options): int
+   {
+      $manager = new AppKeyManager();
+      $key = $manager->generate();
+      $force = $this->asBool($options['force'] ?? false);
+      $show = $this->asBool($options['show'] ?? false);
+      $envFile = is_string($options['env'] ?? null) ? trim((string) $options['env']) : '.env';
+      if ($envFile === '') {
+         $envFile = '.env';
+      }
+
+      $result = $manager->write($this->projectRoot, $key, $envFile, $force);
+      $payload = [
+         'env_file' => $result['env_file'],
+         'created_env' => $result['created_env'],
+         'updated' => $result['updated'],
+         'existing_key' => $result['existing_key'],
+         'key' => $show ? $key : '[hidden]',
+      ];
+
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      if ($result['updated']) {
+         $this->out(sprintf('APP_KEY set in %s', $result['env_file']));
+      } else {
+         $this->out(sprintf('APP_KEY already set in %s (use --force to rotate)', $result['env_file']));
+      }
+
+      if ($show) {
+         $this->out('APP_KEY=' . $key);
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function routesList(array $options): int
+   {
+      $inspector = new ProjectRouteInspector();
+      $rows = $inspector->inspect($this->projectRoot);
+
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode(['items' => $rows], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      if ($rows === []) {
+         $this->out('No routes found.');
+         return 0;
+      }
+
+      $methodWidth = max(6, ...array_map(static fn (array $row): int => strlen($row['method']), $rows));
+      $uriWidth = max(3, ...array_map(static fn (array $row): int => strlen($row['uri']), $rows));
+      $actionWidth = max(6, ...array_map(static fn (array $row): int => strlen($row['action']), $rows));
+
+      $this->out(sprintf(
+         "%-{$methodWidth}s  %-{$uriWidth}s  %-{$actionWidth}s  %s",
+         'METHOD',
+         'URI',
+         'ACTION',
+         'MIDDLEWARE',
+      ));
+      $this->out(str_repeat('-', $methodWidth + $uriWidth + $actionWidth + 16));
+
+      foreach ($rows as $row) {
+         $middleware = $row['middleware'] === [] ? '-' : implode(', ', $row['middleware']);
+         $this->out(sprintf(
+            "%-{$methodWidth}s  %-{$uriWidth}s  %-{$actionWidth}s  %s",
+            $row['method'],
+            $row['uri'],
+            $row['action'],
+            $middleware,
+         ));
       }
 
       return 0;
@@ -149,16 +241,19 @@ final class ToolingCliApplication
       $generator = $positionals[0] ?? null;
       $name = $positionals[1] ?? null;
       if (!is_string($generator) || trim($generator) === '' || !is_string($name) || trim($name) === '') {
-         $this->err('Usage: generate <generator> <name> [--module=Name] [--write] [--overwrite] [--json]');
+         $this->err('Usage: generate <generator> <name> [--module=Name] [--routing-type=attribute|php] [--write] [--overwrite] [--json]');
          return 1;
       }
 
       $module = is_string($options['module'] ?? null) ? (string) $options['module'] : 'Generated';
+      $routingType = strtolower((string) ($options['routing-type'] ?? 'attribute'));
+      $routingType = $routingType === 'php' ? 'php' : 'attribute';
       $request = new GenerationRequest(
          basePath: $this->projectRoot,
          name: $name,
          module: $module,
          namespaceRoot: $this->namespaceRoot,
+         options: ['routing_type' => $routingType],
          overwrite: $this->asBool($options['overwrite'] ?? false),
       );
 
@@ -190,6 +285,7 @@ final class ToolingCliApplication
             'generator' => $generator,
             'name' => $name,
             'module' => $module,
+            'routing_type' => $routingType,
             'preview' => array_map(static fn ($preview): array => $preview->toArray(), $previews),
          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
          return 0;
@@ -289,6 +385,3 @@ final class ToolingCliApplication
       fwrite(STDERR, $line . PHP_EOL);
    }
 }
-
-
-

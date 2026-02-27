@@ -34,7 +34,15 @@ return [
     'auth' => [
         'jwt' => ['enabled' => $envBool('SECURITY_AUTH_JWT_ENABLED', false)],
         'opaque' => ['enabled' => $envBool('SECURITY_AUTH_OPAQUE_ENABLED', false)],
-        'cookie_session' => ['enabled' => $envBool('SECURITY_AUTH_COOKIE_SESSION_ENABLED', false)],
+        'cookie_session' => [
+            'enabled' => $envBool('SECURITY_AUTH_COOKIE_SESSION_ENABLED', false),
+            'cookie' => $env('SECURITY_AUTH_COOKIE_SESSION_COOKIE', 'session_id'),
+            'signing' => [
+                'enabled' => $envBool('SECURITY_AUTH_COOKIE_SESSION_SIGNING_ENABLED', true),
+                'key' => $env('SECURITY_AUTH_COOKIE_SESSION_SIGNING_KEY', $env('APP_KEY', '')),
+                'allow_unsigned_fallback' => $envBool('SECURITY_AUTH_COOKIE_SESSION_ALLOW_UNSIGNED_FALLBACK', false),
+            ],
+        ],
         'api_token' => ['enabled' => $envBool('SECURITY_AUTH_API_TOKEN_ENABLED', false)],
         'mtls' => ['enabled' => $envBool('SECURITY_AUTH_MTLS_ENABLED', false)],
     ],

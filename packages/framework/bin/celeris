@@ -13,6 +13,9 @@ if (is_file($bootstrap)) {
    }
 }
 
-$projectRoot = dirname(__DIR__, 3);
+$cwd = getcwd();
+$projectRoot = is_string($cwd) && is_file($cwd . '/composer.json')
+   ? $cwd
+   : dirname(__DIR__, 3);
 $platform = Celeris\Framework\Tooling\ToolingPlatform::fromProjectRoot($projectRoot);
 exit($platform->cli()->run($argv));

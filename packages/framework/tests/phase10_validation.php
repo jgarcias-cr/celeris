@@ -7,9 +7,11 @@ require __DIR__ . '/../src/bootstrap.php';
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Tooling\Architecture\ArchitectureDecisionValidator;
+use Celeris\Framework\Tooling\Cli\ToolingCliApplication;
 use Celeris\Framework\Tooling\Diff\UnifiedDiffBuilder;
 use Celeris\Framework\Tooling\Generator\GeneratorEngine;
 use Celeris\Framework\Tooling\Graph\DependencyGraphBuilder;
+use Celeris\Framework\Routing\RouteDefinition;
 use Celeris\Framework\Tooling\Web\DeveloperUiController;
 
 /**
@@ -49,7 +51,10 @@ function runUxTesting(): void
       $validator,
       $tmpRoot,
       '/__dev/tooling',
-      'App'
+      'App',
+      static fn (): array => [
+         new RouteDefinition('GET', '/health', static fn (): string => 'ok', ['auth']),
+      ],
    );
 
    $ctx = new RequestContext('phase10-ui', microtime(true), ['REMOTE_ADDR' => '127.0.0.1']);
@@ -68,6 +73,10 @@ function runUxTesting(): void
    assertTrue(
       str_contains($dashboardResponse->getBody(), 'Celeris Tooling Platform'),
       'Dashboard should include tooling platform heading.'
+   );
+   assertTrue(
+      str_contains($dashboardResponse->getBody(), 'Generate APP_KEY'),
+      'Dashboard should expose APP_KEY generator action.'
    );
 
    $previewRequest = new Request('GET', '/__dev/tooling/generate/preview', [], [
@@ -103,6 +112,14 @@ function runUxTesting(): void
       isset($summaryPayload['data']['generators']) && is_array($summaryPayload['data']['generators']),
       'Versioned summary endpoint should include generators in data.'
    );
+
+   $routesRequest = new Request('GET', '/__dev/tooling/api/v1/routes');
+   $routesResponse = $controller->handle($ctx, $routesRequest);
+   assertTrue($routesResponse->getStatus() === 200, 'Routes endpoint should return 200.');
+   $routesPayload = json_decode($routesResponse->getBody(), true);
+   assertTrue(is_array($routesPayload), 'Routes endpoint should return JSON payload.');
+   $routeItems = is_array($routesPayload['data']['items'] ?? null) ? $routesPayload['data']['items'] : [];
+   assertTrue($routeItems !== [], 'Routes endpoint should include at least one route row.');
 
    $applyRequest = new Request(
       'POST',
@@ -158,6 +175,31 @@ function runUxTesting(): void
    assertTrue(
       str_contains((string) file_get_contents($userControllerPath), '// custom change'),
       'Regeneration should not remove custom edits from user controller wrapper.'
+   );
+
+   $appKeyRequest = new Request(
+      'POST',
+      '/__dev/tooling/api/v1/app-key/generate',
+      ['content-type' => 'application/json'],
+      [],
+      (string) json_encode(['show' => true], JSON_UNESCAPED_SLASHES)
+   );
+   $appKeyResponse = $controller->handle($ctx, $appKeyRequest);
+   assertTrue($appKeyResponse->getStatus() === 200, 'APP key endpoint should return 200.');
+
+   $appKeyPayload = json_decode($appKeyResponse->getBody(), true);
+   assertTrue(is_array($appKeyPayload), 'APP key endpoint should return JSON payload.');
+   assertTrue(($appKeyPayload['status'] ?? null) === 'ok', 'APP key endpoint should return an ok envelope.');
+   $appKeyData = is_array($appKeyPayload['data'] ?? null) ? $appKeyPayload['data'] : [];
+   assertTrue(is_string($appKeyData['key'] ?? null), 'APP key endpoint should return generated key when requested.');
+   assertTrue(str_starts_with((string) ($appKeyData['key'] ?? ''), 'base64:'), 'Generated APP key should have base64 prefix.');
+
+   $envPath = $tmpRoot . '/.env';
+   assertTrue(is_file($envPath), 'APP key endpoint should create .env when missing.');
+   $envContents = (string) file_get_contents($envPath);
+   assertTrue(
+      str_contains($envContents, 'APP_KEY=' . $appKeyData['key']),
+      'APP key endpoint should persist generated key to .env.'
    );
 }
 
@@ -226,10 +268,38 @@ PHP);
    assertTrue($map['Beta'] === [], 'Beta module should have no dependencies in this fixture.');
 }
 
+/**
+ * Handle run cli app key command.
+ *
+ * @return void
+ */
+function runCliAppKeyCommand(): void
+{
+   $root = '/tmp/celeris-phase10-cli-' . bin2hex(random_bytes(6));
+   @mkdir($root, 0777, true);
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $exitCode = $app->run(['celeris', 'app-key', '--show']);
+   assertTrue($exitCode === 0, 'CLI app-key command should return zero.');
+
+   $envPath = $root . '/.env';
+   assertTrue(is_file($envPath), 'CLI app-key command should write .env.');
+   $contents = (string) file_get_contents($envPath);
+   assertTrue(str_contains($contents, 'APP_KEY=base64:'), 'CLI app-key command should write APP_KEY.');
+}
+
 $checks = [
    'UxTesting' => 'runUxTesting',
    'DiffGenerationCorrectness' => 'runDiffGenerationCorrectness',
    'DependencyGraphAccuracy' => 'runDependencyGraphAccuracy',
+   'CliAppKeyCommand' => 'runCliAppKeyCommand',
 ];
 
 $failed = false;

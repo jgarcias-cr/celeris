@@ -4,6 +4,7 @@
    <p><strong>Address:</strong> <?= htmlspecialchars($contact->address, ENT_QUOTES, 'UTF-8') ?></p>
    <p><strong>Age:</strong> <?= (int) $contact->age ?></p>
 </article>
-<p>
-   <a class="back-link" href="/contacts">Back to contacts</a>
-</p>
+<div class="contact-form-actions">
+   <a class="btn btn-primary" href="/contacts/<?= (int) $contact->id ?>/edit">Edit Contact</a>
+   <a class="btn btn-secondary" href="/contacts">Back to contacts</a>
+</div>

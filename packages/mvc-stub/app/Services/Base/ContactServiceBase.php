@@ -6,6 +6,7 @@ namespace App\Services\Base;
 
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -30,5 +31,68 @@ class ContactServiceBase
       }
 
       return $contact;
+   }
+
+   /**
+    * @param array<string, mixed> $payload
+    */
+   public function create(array $payload): Contact
+   {
+      return $this->repository->create($this->normalizePayload($payload));
+   }
+
+   /**
+    * @param array<string, mixed> $payload
+    */
+   public function update(int $id, array $payload): Contact
+   {
+      $contact = $this->repository->update($id, $this->normalizePayload($payload));
+      if (!$contact instanceof Contact) {
+         throw new RuntimeException('Contact not found.');
+      }
+
+      return $contact;
+   }
+
+   public function delete(int $id): bool
+   {
+      return $this->repository->delete($id);
+   }
+
+   /**
+    * @param array<string, mixed> $payload
+    * @return array{firstName:string,lastName:string,phone:string,address:string,age:int}
+    */
+   protected function normalizePayload(array $payload): array
+   {
+      $firstName = trim((string) ($payload['firstName'] ?? ''));
+      $lastName = trim((string) ($payload['lastName'] ?? ''));
+      $phone = trim((string) ($payload['phone'] ?? ''));
+      $address = trim((string) ($payload['address'] ?? ''));
+      $ageRaw = $payload['age'] ?? '';
+
+      if ($firstName === '') {
+         throw new InvalidArgumentException('First name is required.');
+      }
+      if ($lastName === '') {
+         throw new InvalidArgumentException('Last name is required.');
+      }
+
+      if (is_int($ageRaw)) {
+         $age = $ageRaw;
+      } else {
+         $age = filter_var((string) $ageRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+         if ($age === false) {
+            throw new InvalidArgumentException('Age must be a non-negative integer.');
+         }
+      }
+
+      return [
+         'firstName' => $firstName,
+         'lastName' => $lastName,
+         'phone' => $phone,
+         'address' => $address,
+         'age' => $age,
+      ];
    }
 }

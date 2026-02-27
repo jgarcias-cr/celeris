@@ -69,7 +69,10 @@ final class ToolingPlatform
 
    public function mountWebUiRoutes(RouteCollector $routes, string $routePrefix = '/__dev/tooling'): DeveloperUiController
    {
-      $webUi = $this->webUi($routePrefix);
+      $webUi = $this->webUi(
+         $routePrefix,
+         static fn (): array => $routes->router()->allRoutes(),
+      );
       $base = rtrim($routePrefix, '/');
       if ($base === '') {
          $base = '/';
@@ -93,8 +96,10 @@ final class ToolingPlatform
       $routes->get($base . '/api/v1/schema/connections', $webUi);
       $routes->get($base . '/api/v1/schema/tables', $webUi);
       $routes->get($base . '/api/v1/schema/tables/{table}', $webUi);
+      $routes->get($base . '/api/v1/routes', $webUi);
       $routes->post($base . '/api/v1/scaffold/preview', $webUi);
       $routes->post($base . '/api/v1/scaffold/apply', $webUi);
+      $routes->post($base . '/api/v1/app-key/generate', $webUi);
       $routes->get($base . '/api/v1/compat/breaking-changes', $webUi);
       $routes->post($base . '/api/v1/compat/baseline/save', $webUi);
 
@@ -153,7 +158,7 @@ final class ToolingPlatform
     * @param string $routePrefix
     * @return DeveloperUiController
     */
-   public function webUi(string $routePrefix = '/__dev/tooling'): DeveloperUiController
+   public function webUi(string $routePrefix = '/__dev/tooling', ?callable $routeProvider = null): DeveloperUiController
    {
       return new DeveloperUiController(
          $this->generatorEngine,
@@ -162,6 +167,7 @@ final class ToolingPlatform
          $this->projectRoot,
          $routePrefix,
          $this->namespaceRoot,
+         $routeProvider,
       );
    }
 }

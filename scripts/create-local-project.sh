@@ -62,6 +62,7 @@ run_with_host_composer() {
     composer config minimum-stability dev
     composer config prefer-stable true
     composer install --no-interaction
+    php vendor/bin/celeris app-key
   )
 }
 
@@ -76,7 +77,7 @@ run_with_docker_composer() {
     -v "$target_parent":/out \
     -w /repo \
     composer:2 \
-    sh -lc "git config --global --add safe.directory /repo && composer create-project $package_name /out/$target_name --stability=dev --no-interaction --repository='$repo_json_container' --add-repository --no-install && cd /out/$target_name && composer config minimum-stability dev && composer config prefer-stable true && composer install --no-interaction"
+    sh -lc "git config --global --add safe.directory /repo && composer create-project $package_name /out/$target_name --stability=dev --no-interaction --repository='$repo_json_container' --add-repository --no-install && cd /out/$target_name && composer config minimum-stability dev && composer config prefer-stable true && composer install --no-interaction && php vendor/bin/celeris app-key"
 }
 
 if command -v composer >/dev/null 2>&1; then
@@ -92,4 +93,7 @@ Created $project_type project at:
 Next:
   cd $target_dir
   php -S 127.0.0.1:8080 -t public
+
+APP_KEY was generated in:
+  $target_dir/.env
 EOF

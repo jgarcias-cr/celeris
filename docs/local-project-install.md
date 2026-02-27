@@ -15,6 +15,7 @@ The script:
 - Creates a new project in the target directory.
 - Resolves `celeris/api`, `celeris/mvc`, and `celeris/framework` from local `packages/*`.
 - Uses host `composer` when available, otherwise falls back to Docker `composer:2`.
+- Generates and writes `APP_KEY` into the new project `.env`.
 
 ## Run the generated app
 

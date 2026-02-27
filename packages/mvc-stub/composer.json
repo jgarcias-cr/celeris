@@ -22,10 +22,12 @@
       }
    },
    "scripts": {
+      "app:key": "@php vendor/bin/celeris app-key",
       "assets:build": "npm run build",
       "assets:dev": "npm run dev",
       "assets:watch": "npm run watch",
       "post-create-project-cmd": [
+         "@app:key",
          "@php -r \"echo 'Next step: run npm install && npm run build to compile frontend assets.' . PHP_EOL;\""
       ]
    }

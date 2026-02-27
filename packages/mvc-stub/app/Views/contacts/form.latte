@@ -1,0 +1,35 @@
+<h1>{$title ?? (($mode ?? 'create') === 'edit' ? 'Edit Contact' : 'Add Contact')}</h1>
+<p class="lead">Fill out the fields below and save your changes.</p>
+
+{if isset($error) && $error !== ''}
+   <p class="form-error">{$error}</p>
+{/if}
+
+<section class="contact-form-card">
+   <form method="post" action="{$action ?? '/contacts/create'}" class="contact-form-grid">
+      <label>
+         <span>First Name</span>
+         <input type="text" name="first_name" required value="{$values['first_name'] ?? ''}">
+      </label>
+      <label>
+         <span>Last Name</span>
+         <input type="text" name="last_name" required value="{$values['last_name'] ?? ''}">
+      </label>
+      <label>
+         <span>Phone</span>
+         <input type="text" name="phone" value="{$values['phone'] ?? ''}">
+      </label>
+      <label>
+         <span>Address</span>
+         <input type="text" name="address" value="{$values['address'] ?? ''}">
+      </label>
+      <label>
+         <span>Age</span>
+         <input type="number" min="0" step="1" name="age" required value="{$values['age'] ?? ''}">
+      </label>
+      <div class="contact-form-actions">
+         <button type="submit" class="btn btn-primary">{$submitLabel ?? 'Save'}</button>
+         <a class="btn btn-secondary" href="/contacts">Cancel</a>
+      </div>
+   </form>
+</section>

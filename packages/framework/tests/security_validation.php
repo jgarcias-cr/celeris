@@ -10,6 +10,7 @@ use Celeris\Framework\Http\Response;
 use Celeris\Framework\Kernel\Kernel;
 use Celeris\Framework\Security\Auth\AuthEngine;
 use Celeris\Framework\Security\Auth\CookieSessionStrategy;
+use Celeris\Framework\Security\Auth\HmacCookieValueCodec;
 use Celeris\Framework\Security\Auth\InMemoryOpaqueTokenStore;
 use Celeris\Framework\Security\Auth\InMemorySessionStore;
 use Celeris\Framework\Security\Auth\InMemoryTokenRevocationStore;
@@ -79,7 +80,7 @@ final class SecurityValidationController
 /**
  * @return array{Kernel, InMemoryTokenRevocationStore}
  */
-function buildKernel(int $rateLimit = 120): array
+function buildKernel(int $rateLimit = 120, bool $signedSessionCookie = false): array
 {
    $opaqueStore = new InMemoryOpaqueTokenStore([
       'opaque-admin' => new StoredCredential('admin-user', ['admin'], ['admin:read'], ['src' => 'test'], null, 'opaque-admin-token'),
@@ -92,9 +93,11 @@ function buildKernel(int $rateLimit = 120): array
 
    $revocationStore = new InMemoryTokenRevocationStore();
 
+   $cookieCodec = $signedSessionCookie ? new HmacCookieValueCodec('test-app-key') : null;
+
    $authEngine = new AuthEngine([
       new OpaqueTokenStrategy($opaqueStore),
-      new CookieSessionStrategy($sessionStore),
+      new CookieSessionStrategy($sessionStore, 'session_id', $cookieCodec),
    ], $revocationStore);
 
    $guard = new SecurityKernelGuard(
@@ -122,6 +125,49 @@ function buildKernel(int $rateLimit = 120): array
    $kernel->routes()->get('/public', [SecurityValidationController::class, 'public']);
 
    return [$kernel, $revocationStore];
+}
+
+/**
+ * Handle run signed cookie session test.
+ *
+ * @return void
+ */
+function runSignedCookieSessionTest(): void
+{
+   [$kernel] = buildKernel(120, true);
+   $codec = new HmacCookieValueCodec('test-app-key');
+
+   $valid = perform(
+      $kernel,
+      new Request(
+         'POST',
+         '/transfer',
+         ['x-csrf-token' => 'demo-csrf'],
+         [],
+         '',
+         ['session_id' => $codec->encode('sess-1'), 'csrf_token' => 'demo-csrf'],
+         [],
+         ['amount' => 10],
+         ['REMOTE_ADDR' => '10.0.0.9'],
+      )
+   );
+   assertStatus('signed cookie session accepted', $valid, 200);
+
+   $tampered = perform(
+      $kernel,
+      new Request(
+         'POST',
+         '/transfer',
+         ['x-csrf-token' => 'demo-csrf'],
+         [],
+         '',
+         ['session_id' => 'v1.c2Vzcy0x.invalid-signature', 'csrf_token' => 'demo-csrf'],
+         [],
+         ['amount' => 10],
+         ['REMOTE_ADDR' => '10.0.0.9'],
+      )
+   );
+   assertStatus('tampered signed cookie rejected', $tampered, 401);
 }
 
 /**
@@ -270,6 +316,7 @@ $checks = [
    'PenTest' => 'runPenTestSimulation',
    'TokenInvalidation' => 'runTokenInvalidationTest',
    'RateLimitLoad' => 'runRateLimitLoadTest',
+   'SignedCookieSession' => 'runSignedCookieSessionTest',
 ];
 
 $failed = false;
@@ -284,5 +331,4 @@ foreach ($checks as $name => $fn) {
 }
 
 exit($failed ? 1 : 0);
-
 

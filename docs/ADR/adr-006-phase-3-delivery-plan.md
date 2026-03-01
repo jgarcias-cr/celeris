@@ -10,7 +10,7 @@ Scope
   - Covers package-level implementation for:
     - `celeris/notification-in-app`
     - `celeris/notification-outbox`
-    - `celeris/realtime-gateway-websocket`
+    - `celeris/notification-realtime-gateway-websocket`
     - `celeris/notification-dispatch-worker`
   - Assumes an external websocket service already exists.
 
@@ -23,7 +23,7 @@ Delivery principles
 Milestone map
   - M1 (`P3A`): `celeris/notification-in-app` (durable user notification store).
   - M2 (`P3B`): `celeris/notification-outbox` (transactional outbox + retry metadata).
-  - M3 (`P3C`): `celeris/realtime-gateway-websocket` (gateway adapter package).
+  - M3 (`P3C`): `celeris/notification-realtime-gateway-websocket` (gateway adapter package).
   - M4 (`P3D`): `celeris/notification-dispatch-worker` (async dispatcher worker).
   - M5 (`P3E`): operational hardening and runbook publication.
 
@@ -31,7 +31,7 @@ Package dependency order
   - `celeris/framework` (existing base contracts)
   - `celeris/notification-outbox`
   - `celeris/notification-in-app` (integrates outbox writer)
-  - `celeris/realtime-gateway-websocket`
+  - `celeris/notification-realtime-gateway-websocket`
   - `celeris/notification-dispatch-worker` (depends on outbox + realtime gateway)
 
 M1 — `celeris/notification-in-app`
@@ -111,7 +111,7 @@ Ticket `P3B-05` — Tests and docs
   - Acceptance criteria:
     - tests prove atomicity and retry state transitions.
 
-M3 — `celeris/realtime-gateway-websocket`
+M3 — `celeris/notification-realtime-gateway-websocket`
 
 Ticket `P3C-01` — Gateway client contract + implementation
   - Deliverables:

@@ -78,6 +78,6 @@ Current Core Module Dependency Map
   - `Runtime -> Http, Kernel, Security`
   - `Security -> Config, Http`
   - `Serialization -> Validation`
-  - `Tooling -> Container, Http, Routing`
+  - `Tooling -> Config, Container, Database, Http, Kernel, Routing`
   - `Validation -> (none)`
   - `View -> (none)`

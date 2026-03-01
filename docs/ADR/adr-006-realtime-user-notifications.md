@@ -33,7 +33,7 @@ Package boundaries
   - `celeris/notification-dispatch-worker` (new)
     - Owns: polling/claiming outbox events, retry policy, backoff, dead-letter handling.
     - Publishes normalized realtime events to gateway adapter package.
-  - `celeris/realtime-gateway-websocket` (new)
+  - `celeris/notification-realtime-gateway-websocket` (new)
     - Owns: outbound integration to existing websocket service (HTTP publish API, Redis pub/sub, or broker topic based on deployment).
     - Must implement authenticated service-to-service calls and idempotent publish semantics.
 
@@ -108,7 +108,7 @@ Rollout plan
   - Phase 3B:
     - deliver `celeris/notification-outbox` and transaction integration.
   - Phase 3C:
-    - deliver `celeris/realtime-gateway-websocket` and `celeris/notification-dispatch-worker`.
+    - deliver `celeris/notification-realtime-gateway-websocket` and `celeris/notification-dispatch-worker`.
   - Phase 3D:
     - publish production runbook (retry tuning, dead-letter replay, observability dashboards).
 

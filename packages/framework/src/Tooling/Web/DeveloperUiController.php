@@ -1424,7 +1424,7 @@ HTML;
          }
 
          $default = $this->defaultConnectionName();
-         $names = array_map(static fn (array $item): string => (string) ($item['name'] ?? ''), $items);
+         $names = array_map(static fn(array $item): string => (string) ($item['name'] ?? ''), $items);
          if (!in_array($default, $names, true)) {
             $default = $names[0] ?? '';
          }
@@ -1861,13 +1861,13 @@ HTML;
    {
       $items = match ($driver) {
          DatabaseDriver::SQLite => array_map(
-            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            static fn(array $row): string => (string) ($row['name'] ?? ''),
             $connection->fetchAll(
                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
             )
          ),
          DatabaseDriver::MySQL, DatabaseDriver::MariaDB => array_map(
-            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            static fn(array $row): string => (string) ($row['name'] ?? ''),
             $connection->fetchAll(
                "SELECT table_name AS name
                 FROM information_schema.tables
@@ -1898,7 +1898,7 @@ HTML;
          ),
       };
 
-      return array_values(array_filter($items, static fn (string $name): bool => trim($name) !== ''));
+      return array_values(array_filter($items, static fn(string $name): bool => trim($name) !== ''));
    }
 
    /**
@@ -1972,7 +1972,7 @@ HTML;
       ksort($primary);
 
       $fkRows = $connection->fetchAll('PRAGMA foreign_key_list(' . $quoted . ')');
-      $relationships = array_map(static fn (array $row): array => [
+      $relationships = array_map(static fn(array $row): array => [
          'column' => (string) ($row['from'] ?? ''),
          'referenced_table' => (string) ($row['table'] ?? ''),
          'referenced_column' => (string) ($row['to'] ?? ''),
@@ -2033,7 +2033,7 @@ HTML;
             AND referenced_table_name IS NOT NULL",
          ['table' => $table]
       );
-      $relationships = array_map(static fn (array $row): array => [
+      $relationships = array_map(static fn(array $row): array => [
          'column' => (string) ($row['column_name'] ?? ''),
          'referenced_table' => (string) ($row['referenced_table_name'] ?? ''),
          'referenced_column' => (string) ($row['referenced_column_name'] ?? ''),
@@ -2081,7 +2081,7 @@ HTML;
           ORDER BY kcu.ordinal_position",
          ['schema' => $schema, 'table' => $table]
       );
-      $primary = array_map(static fn (array $row): string => (string) ($row['column_name'] ?? ''), $pkRows);
+      $primary = array_map(static fn(array $row): string => (string) ($row['column_name'] ?? ''), $pkRows);
       $primaryLookup = array_fill_keys($primary, true);
 
       $columns = [];
@@ -2189,7 +2189,9 @@ class {$entity}Base
 }
 PHP;
          $rows[] = $this->previewFileRow($modelBasePath, $modelBaseContents . "\n");
-         $rows = [...$rows, ...$this->previewWrapperFile($modelPath, <<<PHP
+         $rows = [...$rows, ...$this->previewWrapperFile(
+            $modelPath,
+            <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -2206,7 +2208,7 @@ final class {$entity} extends {$entity}Base
 {
 }
 PHP
-)];
+         )];
       }
 
       if (in_array('repository', $artifacts, true)) {
@@ -2238,7 +2240,9 @@ class {$entity}RepositoryBase
 }
 PHP;
          $rows[] = $this->previewFileRow($repositoryBasePath, $repositoryBaseContents . "\n");
-         $rows = [...$rows, ...$this->previewWrapperFile($repositoryPath, <<<PHP
+         $rows = [...$rows, ...$this->previewWrapperFile(
+            $repositoryPath,
+            <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -2257,7 +2261,7 @@ final class {$entity}Repository extends {$entity}RepositoryBase
 {
 }
 PHP
-)];
+         )];
       }
 
       if (in_array('service', $artifacts, true)) {
@@ -2304,7 +2308,9 @@ class {$entity}ServiceBase
 }
 PHP;
          $rows[] = $this->previewFileRow($serviceBasePath, $serviceBaseContents . "\n");
-         $rows = [...$rows, ...$this->previewWrapperFile($servicePath, <<<PHP
+         $rows = [...$rows, ...$this->previewWrapperFile(
+            $servicePath,
+            <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -2323,7 +2329,7 @@ final class {$entity}Service extends {$entity}ServiceBase
 {
 }
 PHP
-)];
+         )];
       }
 
       if (in_array('controller', $artifacts, true)) {
@@ -2377,7 +2383,9 @@ class {$entity}ControllerBase
 }
 PHP;
          $rows[] = $this->previewFileRow($controllerBasePath, $controllerBaseContents . "\n");
-         $rows = [...$rows, ...$this->previewWrapperFile($controllerPath, <<<PHP
+         $rows = [...$rows, ...$this->previewWrapperFile(
+            $controllerPath,
+            <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -2395,7 +2403,7 @@ final class {$entity}Controller extends {$entity}ControllerBase
 {
 }
 PHP
-)];
+         )];
 
          if ($resolvedRoutingType === 'php') {
             $routesBaseContents = <<<PHP
@@ -2423,7 +2431,9 @@ class {$entity}RoutesBase
 }
 PHP;
             $rows[] = $this->previewFileRow($routesBasePath, $routesBaseContents . "\n");
-            $rows = [...$rows, ...$this->previewWrapperFile($routesPath, <<<PHP
+            $rows = [...$rows, ...$this->previewWrapperFile(
+               $routesPath,
+               <<<PHP
 <?php
 
 declare(strict_types=1);
@@ -2441,7 +2451,7 @@ final class {$entity}Routes extends {$entity}RoutesBase
 {
 }
 PHP
-)];
+            )];
          }
       }
 
@@ -2461,7 +2471,7 @@ final class {$entity}CreateRequest
 {$requestProperties}
 }
 PHP
-            . "\n"
+               . "\n"
          );
       }
 
@@ -2481,7 +2491,7 @@ final class {$entity}Response
 {$responseProperties}
 }
 PHP
-            . "\n"
+               . "\n"
          );
       }
 
@@ -3104,7 +3114,7 @@ PHP;
       }
 
       $first = array_shift($parts);
-      $rest = array_map(static fn (string $part): string => ucfirst($part), $parts);
+      $rest = array_map(static fn(string $part): string => ucfirst($part), $parts);
       return ($first !== null ? $first : 'field') . implode('', $rest);
    }
 
@@ -3498,8 +3508,8 @@ PHP;
          return [];
       }
 
-      $parts = array_map(static fn (string $item): string => strtolower(trim($item)), explode(',', $raw));
-      return array_values(array_filter($parts, static fn (string $item): bool => $item !== ''));
+      $parts = array_map(static fn(string $item): string => strtolower(trim($item)), explode(',', $raw));
+      return array_values(array_filter($parts, static fn(string $item): bool => $item !== ''));
    }
 
    private function envString(string $key): string

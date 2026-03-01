@@ -46,7 +46,10 @@ digraph celeris_dependencies {
   Security -> Config [label="module_dep"];
   Security -> Http [label="module_dep"];
   Serialization -> Validation [label="module_dep"];
+  Tooling -> Config [label="module_dep"];
   Tooling -> Container [label="module_dep"];
+  Tooling -> Database [label="module_dep"];
   Tooling -> Http [label="module_dep"];
+  Tooling -> Kernel [label="module_dep"];
   Tooling -> Routing [label="module_dep"];
 }

@@ -36,6 +36,8 @@ use Celeris\Framework\Http\ResponseBuilder;
 use Celeris\Framework\Http\ResponsePipeline;
 use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\RequestContextContainer;
+use Celeris\Framework\Logging\LoggerInterface;
+use Celeris\Framework\Logging\LoggingBootstrap;
 use Celeris\Framework\Middleware\MiddlewareDispatcher;
 use Celeris\Framework\Middleware\Pipeline;
 use Celeris\Framework\Notification\NotificationManager;
@@ -90,12 +92,15 @@ final class Kernel implements KernelInterface
    private ServiceRegistry $coreServices;
    private ProviderRegistry $providerRegistry;
    private ?ConfigLoader $configLoader;
+   private string $projectRoot;
    private ConfigRepository $config;
    private Container $container;
    private ?string $configFingerprint = null;
    private bool $hotReloadEnabled;
    private SecurityKernelGuard $securityGuard;
    private bool $securityGuardManagedByConfig;
+   private LoggerInterface $logger;
+   private bool $loggerManagedByConfig;
    private NotificationManager $notificationManager;
    private bool $notificationManagerManagedByConfig;
    private ValidatorEngine $validator;
@@ -132,6 +137,7 @@ final class Kernel implements KernelInterface
       ?OpenApiGenerator $openApiGenerator = null,
       ?MiddlewareDispatcher $middlewareDispatcher = null,
       ?SecurityKernelGuard $securityGuard = null,
+      ?LoggerInterface $logger = null,
       ?NotificationManager $notificationManager = null,
       ?ValidatorEngine $validator = null,
       ?Serializer $serializer = null,
@@ -148,11 +154,14 @@ final class Kernel implements KernelInterface
       $this->coreServices = $serviceRegistry ?? new ServiceRegistry();
       $this->providerRegistry = $providerRegistry ?? new ProviderRegistry();
       $this->configLoader = $configLoader ?? self::defaultConfigLoader();
+      $this->projectRoot = self::resolveProjectRoot($this->configLoader);
       $this->config = new ConfigRepository();
       $this->container = new Container();
       $this->hotReloadEnabled = $hotReloadEnabled;
       $this->securityGuardManagedByConfig = $securityGuard === null;
       $this->securityGuard = $securityGuard ?? SecurityKernelGuard::fromConfig($this->config);
+      $this->loggerManagedByConfig = $logger === null;
+      $this->logger = $logger ?? LoggingBootstrap::fromConfig($this->config, $this->projectRoot);
       $this->notificationManagerManagedByConfig = $notificationManager === null;
       $this->notificationManager = $notificationManager ?? NotificationManager::fromConfig($this->config);
       $this->validator = $validator ?? new ValidatorEngine();
@@ -408,6 +417,17 @@ final class Kernel implements KernelInterface
    public function getNotificationManager(): NotificationManager
    {
       return $this->notificationManager;
+   }
+
+   public function getLogger(): LoggerInterface
+   {
+      return $this->logger;
+   }
+
+   public function setLogger(LoggerInterface $logger, bool $managedByConfig = false): void
+   {
+      $this->logger = $logger;
+      $this->loggerManagedByConfig = $managedByConfig;
    }
 
    /**
@@ -1110,6 +1130,18 @@ final class Kernel implements KernelInterface
          true
       );
       $this->coreServices->singleton(
+         LoggerInterface::class,
+         fn (ContainerInterface $container): LoggerInterface => $this->logger,
+         [],
+         true
+      );
+      $this->coreServices->singleton(
+         'logger',
+         fn (ContainerInterface $container): LoggerInterface => $this->logger,
+         [LoggerInterface::class],
+         true
+      );
+      $this->coreServices->singleton(
          NotificationManager::class,
          fn (ContainerInterface $container): NotificationManager => $this->notificationManager,
          [],
@@ -1428,6 +1460,9 @@ final class Kernel implements KernelInterface
       if ($this->securityGuardManagedByConfig) {
          $this->securityGuard = SecurityKernelGuard::fromConfig($this->config);
       }
+      if ($this->loggerManagedByConfig) {
+         $this->logger = LoggingBootstrap::fromConfig($this->config, $this->projectRoot);
+      }
       if ($this->notificationManagerManagedByConfig) {
          $this->notificationManager = NotificationManager::fromConfig($this->config);
       }
@@ -1486,6 +1521,18 @@ final class Kernel implements KernelInterface
       }
 
       return dirname(__DIR__, 3);
+   }
+
+   private static function resolveProjectRoot(?ConfigLoader $configLoader): string
+   {
+      if ($configLoader instanceof ConfigLoader) {
+         $dir = rtrim($configLoader->configDirectory(), '/\\');
+         if ($dir !== '') {
+            return dirname($dir);
+         }
+      }
+
+      return self::defaultBasePath();
    }
 
    /**

@@ -29,6 +29,11 @@ final class ConfigLoader
       private bool $injectEnvironmentIntoConfig = true,
    ) {}
 
+   public function configDirectory(): string
+   {
+      return $this->configDirectory;
+   }
+
    /**
     * Handle snapshot.
     *
@@ -128,6 +133,5 @@ final class ConfigLoader
       return $copy;
    }
 }
-
 
 

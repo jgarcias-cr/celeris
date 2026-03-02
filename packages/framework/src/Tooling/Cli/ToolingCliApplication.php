@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Celeris\Framework\Tooling\Cli;
 
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Tooling\Architecture\ArchitectureDecisionValidator;
 use Celeris\Framework\Tooling\Generator\GenerationRequest;
 use Celeris\Framework\Tooling\Generator\GeneratorEngine;
@@ -11,6 +13,7 @@ use Celeris\Framework\Tooling\Graph\DependencyGraphBuilder;
 use Celeris\Framework\Tooling\Routing\ProjectRouteInspector;
 use Celeris\Framework\Tooling\Security\AppKeyManager;
 use Celeris\Framework\Tooling\ToolingException;
+use Celeris\Framework\Tooling\Web\DeveloperUiController;
 
 /**
  * Purpose: implement tooling cli application behavior for the Tooling subsystem.
@@ -55,6 +58,13 @@ final class ToolingCliApplication
             'graph' => $this->graph($options),
             'validate' => $this->validate($options),
             'generate' => $this->generate($positionals, $options),
+            'schema:connections' => $this->schemaConnections($options),
+            'schema:tables' => $this->schemaTables($options),
+            'schema:describe' => $this->schemaDescribe($positionals, $options),
+            'scaffold:preview' => $this->scaffoldPreview($positionals, $options),
+            'scaffold:apply' => $this->scaffoldApply($positionals, $options),
+            'compat:check' => $this->compatCheck($positionals, $options),
+            'compat:baseline:save' => $this->compatBaselineSave($positionals, $options),
             default => $this->unknown($command),
          };
       } catch (ToolingException $exception) {
@@ -79,6 +89,13 @@ final class ToolingCliApplication
       $this->out('  graph [--format=text|json|dot]');
       $this->out('  validate [--json]');
       $this->out('  generate <generator> <name> [--module=Name] [--routing-type=attribute|php] [--write] [--overwrite] [--json]');
+      $this->out('  schema:connections [--json]');
+      $this->out('  schema:tables [--connection=name] [--json]');
+      $this->out('  schema:describe <table> [--connection=name] [--json]');
+      $this->out('  scaffold:preview <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
+      $this->out('  scaffold:apply <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
+      $this->out('  compat:check <table> [--connection=name] [--json]');
+      $this->out('  compat:baseline:save <table> [--connection=name] [--json]');
       return 0;
    }
 
@@ -300,6 +317,248 @@ final class ToolingCliApplication
    }
 
    /**
+    * @param array<string, string|bool> $options
+    */
+   private function schemaConnections(array $options): int
+   {
+      $data = $this->toolingApi('GET', '/schema/connections');
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $items = is_array($data['items'] ?? null) ? $data['items'] : [];
+      if ($items === []) {
+         $this->out('No connections found.');
+         return 0;
+      }
+
+      foreach ($items as $row) {
+         if (!is_array($row)) {
+            continue;
+         }
+         $name = (string) ($row['name'] ?? '');
+         $driver = (string) ($row['driver'] ?? 'unknown');
+         $default = (bool) ($row['default'] ?? false);
+         $this->out(sprintf('%s [%s]%s', $name, $driver, $default ? ' (default)' : ''));
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function schemaTables(array $options): int
+   {
+      $query = [];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $query['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('GET', '/schema/tables', $query);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $items = is_array($data['items'] ?? null) ? $data['items'] : [];
+      if ($items === []) {
+         $this->out('No tables found.');
+         return 0;
+      }
+
+      foreach ($items as $name) {
+         $this->out((string) $name);
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function schemaDescribe(array $positionals, array $options): int
+   {
+      $table = trim((string) ($positionals[0] ?? ''));
+      if ($table === '') {
+         $this->err('Usage: schema:describe <table> [--connection=name] [--json]');
+         return 1;
+      }
+
+      $query = [];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $query['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('GET', '/schema/tables/' . rawurlencode($table), $query);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $schema = is_array($data['schema'] ?? null) ? $data['schema'] : [];
+      $columns = is_array($schema['columns'] ?? null) ? $schema['columns'] : [];
+      $this->out('Table: ' . (string) ($data['table'] ?? $table));
+      $this->out('Columns: ' . count($columns));
+
+      foreach ($columns as $row) {
+         if (!is_array($row)) {
+            continue;
+         }
+         $this->out(sprintf(
+            '- %s (%s) nullable=%s default=%s',
+            (string) ($row['name'] ?? ''),
+            (string) ($row['type'] ?? ''),
+            ((bool) ($row['nullable'] ?? false)) ? 'yes' : 'no',
+            array_key_exists('default', $row) && $row['default'] !== null ? (string) $row['default'] : '-'
+         ));
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function scaffoldPreview(array $positionals, array $options): int
+   {
+      $table = trim((string) ($positionals[0] ?? ''));
+      if ($table === '') {
+         $this->err('Usage: scaffold:preview <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
+         return 1;
+      }
+
+      $payload = $this->scaffoldPayload($table, $options);
+      $data = $this->toolingApi('POST', '/scaffold/preview', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $files = is_array($data['files'] ?? null) ? $data['files'] : [];
+      $this->out(sprintf('Preview files: %d', count($files)));
+      foreach ($files as $row) {
+         if (!is_array($row)) {
+            continue;
+         }
+         $diff = (string) ($row['diff'] ?? '');
+         $this->out(sprintf(
+            '- %s | exists=%s | changed=%s',
+            (string) ($row['path'] ?? ''),
+            ((bool) ($row['exists'] ?? false)) ? 'yes' : 'no',
+            $diff !== '' ? 'yes' : 'no'
+         ));
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function scaffoldApply(array $positionals, array $options): int
+   {
+      $table = trim((string) ($positionals[0] ?? ''));
+      if ($table === '') {
+         $this->err('Usage: scaffold:apply <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
+         return 1;
+      }
+
+      $payload = $this->scaffoldPayload($table, $options);
+      $data = $this->toolingApi('POST', '/scaffold/apply', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $written = is_array($data['written'] ?? null) ? $data['written'] : [];
+      $skipped = is_array($data['skipped'] ?? null) ? $data['skipped'] : [];
+      foreach ($written as $path) {
+         $this->out('WROTE ' . (string) $path);
+      }
+      foreach ($skipped as $path) {
+         $this->out('SKIP ' . (string) $path);
+      }
+      $this->out(sprintf('Done: written=%d skipped=%d', count($written), count($skipped)));
+
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function compatCheck(array $positionals, array $options): int
+   {
+      $table = trim((string) ($positionals[0] ?? ''));
+      if ($table === '') {
+         $this->err('Usage: compat:check <table> [--connection=name] [--json]');
+         return 1;
+      }
+
+      $query = ['table' => $table];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $query['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('GET', '/compat/breaking-changes', $query);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $changes = is_array($data['breaking_changes'] ?? null) ? $data['breaking_changes'] : [];
+      $this->out(sprintf('Breaking changes: %d', count($changes)));
+      foreach ($changes as $change) {
+         if (!is_array($change)) {
+            continue;
+         }
+         $this->out(sprintf(
+            '- %s: %s',
+            (string) ($change['type'] ?? 'unknown'),
+            (string) ($change['message'] ?? json_encode($change, JSON_UNESCAPED_SLASHES))
+         ));
+      }
+
+      return count($changes) === 0 ? 0 : 1;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function compatBaselineSave(array $positionals, array $options): int
+   {
+      $table = trim((string) ($positionals[0] ?? ''));
+      if ($table === '') {
+         $this->err('Usage: compat:baseline:save <table> [--connection=name] [--json]');
+         return 1;
+      }
+
+      $payload = ['table' => $table];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('POST', '/compat/baseline/save', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $this->out('Baseline saved for table ' . $table . '.');
+      if (is_string($data['path'] ?? null) && $data['path'] !== '') {
+         $this->out('Path: ' . $data['path']);
+      }
+
+      return 0;
+   }
+
+   /**
     * Handle unknown.
     *
     * @param string $command
@@ -310,6 +569,140 @@ final class ToolingCliApplication
       $this->err(sprintf('Unknown command "%s".', $command));
       $this->help();
       return 1;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    * @return array<string, mixed>
+    */
+   private function scaffoldPayload(string $table, array $options): array
+   {
+      $payload = [
+         'table' => $table,
+         'routing_type' => strtolower((string) ($options['routing-type'] ?? 'attribute')) === 'php' ? 'php' : 'attribute',
+         'artifacts' => $this->defaultScaffoldArtifacts(),
+      ];
+
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      if (is_string($options['artifacts'] ?? null) && trim((string) $options['artifacts']) !== '') {
+         $payload['artifacts'] = $this->csvList((string) $options['artifacts']);
+      }
+
+      return $payload;
+   }
+
+   /**
+    * @return array<int, string>
+    */
+   private function defaultScaffoldArtifacts(): array
+   {
+      return [
+         'model',
+         'repository',
+         'service',
+         'controller',
+         'dto.request',
+         'dto.response',
+      ];
+   }
+
+   /**
+    * @return array<int, string>
+    */
+   private function csvList(string $value): array
+   {
+      $items = array_map(static fn (string $item): string => trim($item), explode(',', $value));
+      $items = array_values(array_filter($items, static fn (string $item): bool => $item !== ''));
+      return array_values(array_unique($items));
+   }
+
+   /**
+    * @param string $method
+    * @param string $path
+    * @param array<string, mixed> $query
+    * @param array<string, mixed>|null $payload
+    * @return array<string, mixed>
+    */
+   private function toolingApi(string $method, string $path, array $query = [], ?array $payload = null): array
+   {
+      $controller = new DeveloperUiController(
+         $this->generatorEngine,
+         $this->dependencyGraphBuilder,
+         $this->architectureValidator,
+         $this->projectRoot,
+         '/__dev/tooling',
+         $this->namespaceRoot,
+      );
+
+      $previousEnv = $_ENV['APP_ENV'] ?? null;
+      $previousServerEnv = $_SERVER['APP_ENV'] ?? null;
+      $previousToolingEnabled = $_ENV['TOOLING_ENABLED'] ?? null;
+      $previousServerToolingEnabled = $_SERVER['TOOLING_ENABLED'] ?? null;
+      $_ENV['APP_ENV'] = (string) ($previousEnv ?? 'development');
+      $_SERVER['APP_ENV'] = (string) ($previousServerEnv ?? $_ENV['APP_ENV']);
+      $_ENV['TOOLING_ENABLED'] = 'true';
+      $_SERVER['TOOLING_ENABLED'] = 'true';
+
+      try {
+         $json = '';
+         $headers = [];
+         if ($payload !== null) {
+            $json = (string) json_encode($payload, JSON_UNESCAPED_SLASHES);
+            $headers['content-type'] = 'application/json';
+         }
+
+         $request = new Request(
+            strtoupper($method),
+            '/__dev/tooling/api/v1' . $path,
+            $headers,
+            $query,
+            $json,
+         );
+         $ctx = new RequestContext('tooling-cli-' . uniqid('', true), microtime(true), ['REMOTE_ADDR' => '127.0.0.1']);
+         $response = $controller->handle($ctx, $request);
+
+         $decoded = json_decode($response->getBody(), true);
+         if (!is_array($decoded)) {
+            throw new ToolingException(sprintf(
+               'Tooling API returned non-JSON response (status %d).',
+               $response->getStatus()
+            ));
+         }
+
+         if (($decoded['status'] ?? null) !== 'ok') {
+            $errors = is_array($decoded['errors'] ?? null) ? $decoded['errors'] : [];
+            $first = is_array($errors[0] ?? null) ? $errors[0] : [];
+            $message = is_string($first['message'] ?? null) ? $first['message'] : 'Unknown tooling API error.';
+            throw new ToolingException($message);
+         }
+
+         $data = $decoded['data'] ?? [];
+         return is_array($data) ? $data : [];
+      } finally {
+         if ($previousEnv === null) {
+            unset($_ENV['APP_ENV']);
+         } else {
+            $_ENV['APP_ENV'] = $previousEnv;
+         }
+         if ($previousServerEnv === null) {
+            unset($_SERVER['APP_ENV']);
+         } else {
+            $_SERVER['APP_ENV'] = $previousServerEnv;
+         }
+         if ($previousToolingEnabled === null) {
+            unset($_ENV['TOOLING_ENABLED']);
+         } else {
+            $_ENV['TOOLING_ENABLED'] = $previousToolingEnabled;
+         }
+         if ($previousServerToolingEnabled === null) {
+            unset($_SERVER['TOOLING_ENABLED']);
+         } else {
+            $_SERVER['TOOLING_ENABLED'] = $previousServerToolingEnabled;
+         }
+      }
    }
 
    /**

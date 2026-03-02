@@ -284,6 +284,104 @@ button:disabled {
   font-size: 0.73rem;
   line-height: 1.3;
 }
+.schema-snapshot {
+  margin-top: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffef8;
+  padding: 0.55rem 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.schema-snapshot .summary {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.schema-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 23, 37, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 60;
+}
+.schema-modal[hidden] {
+  display: none;
+}
+.schema-modal-panel {
+  width: min(980px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 12px;
+  background: #fffef9;
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 44px rgba(20, 27, 44, 0.26);
+  padding: 0.8rem;
+}
+.schema-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.schema-modal-title {
+  margin: 0;
+  font-size: 1rem;
+}
+.schema-kpis {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+.schema-kpi {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  background: #fff;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.schema-table-wrap {
+  margin-top: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  overflow: auto;
+  max-height: 48vh;
+}
+.schema-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.schema-table th, .schema-table td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 0.35rem 0.4rem;
+  vertical-align: top;
+}
+.schema-table th {
+  color: var(--muted);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: #fffef9;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  background: #f8f7f1;
+}
 pre {
   margin-top: 0.7rem;
   overflow: auto;
@@ -426,6 +524,24 @@ pre {
   border-radius: 10px;
   background: #fff;
 }
+.env-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+@media (max-width: 900px) {
+  .env-grid { grid-template-columns: 1fr; }
+}
+.env-section {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.65rem;
+  background: #fffef9;
+}
+.env-section h3 {
+  font-size: 0.9rem;
+}
 </style>
 </head>
 <body>
@@ -441,6 +557,7 @@ pre {
     <div class="tabbar">
       <button id="tabScaffoldBtn" class="tab-button primary active" type="button">Scaffold</button>
       <button id="tabRoutesBtn" class="tab-button" type="button">Routes</button>
+      <button id="tabEnvBtn" class="tab-button" type="button">Environment</button>
       <button id="tabAppKeyBtn" class="tab-button" type="button">Security</button>
     </div>
   </section>
@@ -486,6 +603,10 @@ pre {
       <button id="dbPreviewBtn" class="primary">DB Preview</button>
       <button id="dbApplyBtn">DB Apply</button>
     </div>
+    <div id="schemaSnapshot" class="schema-snapshot">
+      <div id="schemaSnapshotText" class="summary">Schema snapshot unavailable until a table is selected.</div>
+      <button id="schemaInspectBtn" type="button" disabled>Inspect Schema</button>
+    </div>
     <div id="previewStatus" class="status" style="margin-top:0.7rem;">Idle</div>
     <section class="preview-workspace">
       <div id="previewMeta" class="preview-meta">No preview generated yet.</div>
@@ -505,6 +626,36 @@ pre {
     <pre id="compatPanel">(no compatibility run yet)</pre>
   </section>
 </div>
+  <div id="schemaModal" class="schema-modal" hidden>
+    <section class="schema-modal-panel" role="dialog" aria-modal="true" aria-labelledby="schemaModalTitle">
+      <div class="schema-modal-head">
+        <div>
+          <h3 id="schemaModalTitle" class="schema-modal-title">Schema Inspector</h3>
+          <p id="schemaModalSummary" class="muted" style="margin-top:0.2rem;">No schema loaded.</p>
+        </div>
+        <button id="schemaModalCloseBtn" type="button">Close</button>
+      </div>
+      <div id="schemaModalStatus" class="status" style="margin-top:0.6rem;">Idle</div>
+      <div id="schemaModalKpis" class="schema-kpis"></div>
+      <div class="schema-table-wrap">
+        <table class="schema-table">
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Type</th>
+              <th>Null</th>
+              <th>Default</th>
+              <th>PK</th>
+              <th>FK</th>
+            </tr>
+          </thead>
+          <tbody id="schemaModalRows">
+            <tr><td colspan="6" class="muted">No schema loaded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
   <div id="routesTab" class="tab-panel">
     <section class="card">
       <h2>Routes Explorer</h2>
@@ -527,6 +678,54 @@ pre {
             <tr><td colspan="4" class="muted">No routes loaded.</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+  </div>
+  <div id="environmentTab" class="tab-panel">
+    <section class="card">
+      <h2>Environment</h2>
+      <p class="muted" style="margin-top:0.25rem;">Manage core app settings safely. Only supported scaffold keys are editable.</p>
+      <p class="muted" style="margin-top:0.35rem;">Note: saving requires a writable <code>.env</code> file for the app runtime user (recommended: <code>www-data:www-data</code>, mode <code>664</code>).</p>
+      <div class="actions">
+        <button id="envReloadBtn">Reload</button>
+        <button id="envSaveBtn" class="primary">Save Environment</button>
+      </div>
+      <div id="envStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <div class="env-grid">
+        <section class="env-section">
+          <h3>Application</h3>
+          <label for="envAppName">APP_NAME</label>
+          <input id="envAppName" type="text">
+          <label for="envAppUrl">APP_URL</label>
+          <input id="envAppUrl" type="text">
+          <label for="envAppTimezone">APP_TIMEZONE</label>
+          <input id="envAppTimezone" type="text">
+        </section>
+        <section class="env-section">
+          <h3>Database</h3>
+          <label for="envDbDefault">DB_DEFAULT</label>
+          <input id="envDbDefault" type="text">
+          <label for="envPgHost">PGSQL_HOST</label>
+          <input id="envPgHost" type="text">
+          <label for="envPgPort">PGSQL_PORT</label>
+          <input id="envPgPort" type="text">
+          <label for="envPgDatabase">PGSQL_DATABASE</label>
+          <input id="envPgDatabase" type="text">
+          <label for="envPgUsername">PGSQL_USERNAME</label>
+          <input id="envPgUsername" type="text">
+          <label for="envPgPassword">PGSQL_PASSWORD (leave blank to keep current)</label>
+          <input id="envPgPassword" type="password">
+        </section>
+        <section id="envViewSection" class="env-section">
+          <h3>MVC View</h3>
+          <label for="envViewEngine">VIEW_ENGINE</label>
+          <select id="envViewEngine">
+            <option value="php">php</option>
+            <option value="twig">twig</option>
+            <option value="plates">plates</option>
+            <option value="latte">latte</option>
+          </select>
+        </section>
       </div>
     </section>
   </div>
@@ -560,9 +759,11 @@ const elements = {
   compatPanel: document.getElementById('compatPanel'),
   tabScaffoldBtn: document.getElementById('tabScaffoldBtn'),
   tabRoutesBtn: document.getElementById('tabRoutesBtn'),
+  tabEnvBtn: document.getElementById('tabEnvBtn'),
   tabAppKeyBtn: document.getElementById('tabAppKeyBtn'),
   scaffoldTab: document.getElementById('scaffoldTab'),
   routesTab: document.getElementById('routesTab'),
+  environmentTab: document.getElementById('environmentTab'),
   appKeyTab: document.getElementById('appKeyTab'),
   routesRefreshBtn: document.getElementById('routesRefreshBtn'),
   routesStatus: document.getElementById('routesStatus'),
@@ -571,12 +772,206 @@ const elements = {
   appKeyForce: document.getElementById('appKeyForce'),
   appKeyStatus: document.getElementById('appKeyStatus'),
   appKeyOutput: document.getElementById('appKeyOutput'),
+  envReloadBtn: document.getElementById('envReloadBtn'),
+  envSaveBtn: document.getElementById('envSaveBtn'),
+  envStatus: document.getElementById('envStatus'),
+  envViewSection: document.getElementById('envViewSection'),
+  envAppName: document.getElementById('envAppName'),
+  envAppUrl: document.getElementById('envAppUrl'),
+  envAppTimezone: document.getElementById('envAppTimezone'),
+  envDbDefault: document.getElementById('envDbDefault'),
+  envPgHost: document.getElementById('envPgHost'),
+  envPgPort: document.getElementById('envPgPort'),
+  envPgDatabase: document.getElementById('envPgDatabase'),
+  envPgUsername: document.getElementById('envPgUsername'),
+  envPgPassword: document.getElementById('envPgPassword'),
+  envViewEngine: document.getElementById('envViewEngine'),
+  schemaSnapshotText: document.getElementById('schemaSnapshotText'),
+  schemaInspectBtn: document.getElementById('schemaInspectBtn'),
+  schemaModal: document.getElementById('schemaModal'),
+  schemaModalCloseBtn: document.getElementById('schemaModalCloseBtn'),
+  schemaModalTitle: document.getElementById('schemaModalTitle'),
+  schemaModalSummary: document.getElementById('schemaModalSummary'),
+  schemaModalStatus: document.getElementById('schemaModalStatus'),
+  schemaModalKpis: document.getElementById('schemaModalKpis'),
+  schemaModalRows: document.getElementById('schemaModalRows'),
   artifactChecks: document.getElementById('artifactChecks'),
   previewStatus: document.getElementById('previewStatus'),
   previewMeta: document.getElementById('previewMeta'),
   previewTabs: document.getElementById('previewTabs'),
   diffPanel: document.getElementById('diffPanel'),
 };
+
+let envSnapshot = null;
+const schemaCache = new Map();
+
+function selectedSchemaKey() {
+  const connection = elements.dbConnection ? elements.dbConnection.value : '';
+  const table = elements.dbTable ? elements.dbTable.value : '';
+  if (!connection || !table) return null;
+  return connection + '|' + table;
+}
+
+function setSchemaSnapshotMessage(message) {
+  if (!elements.schemaSnapshotText) return;
+  elements.schemaSnapshotText.textContent = message;
+}
+
+function setSchemaModalStatus(message, ok) {
+  if (!elements.schemaModalStatus) return;
+  elements.schemaModalStatus.textContent = message;
+  elements.schemaModalStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
+function renderSchemaKpis(schema) {
+  if (!elements.schemaModalKpis) return;
+  elements.schemaModalKpis.innerHTML = '';
+  if (!schema || !Array.isArray(schema.columns)) return;
+
+  const primary = Array.isArray(schema.primary_key) ? schema.primary_key : [];
+  const relationships = Array.isArray(schema.relationships) ? schema.relationships : [];
+  const nullable = schema.columns.reduce((count, row) => count + (row && row.nullable ? 1 : 0), 0);
+  const kpis = [
+    'columns: ' + schema.columns.length,
+    'pk: ' + (primary.length === 0 ? '-' : primary.join(', ')),
+    'fk: ' + relationships.length,
+    'nullable: ' + nullable,
+  ];
+
+  kpis.forEach((item) => {
+    const chip = document.createElement('div');
+    chip.className = 'schema-kpi';
+    chip.textContent = item;
+    elements.schemaModalKpis.appendChild(chip);
+  });
+}
+
+function renderSchemaRows(schema) {
+  if (!elements.schemaModalRows) return;
+  elements.schemaModalRows.innerHTML = '';
+  if (!schema || !Array.isArray(schema.columns) || schema.columns.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="6" class="muted">No columns detected.</td>';
+    elements.schemaModalRows.appendChild(tr);
+    return;
+  }
+
+  const primary = new Set(Array.isArray(schema.primary_key) ? schema.primary_key : []);
+  const relationships = Array.isArray(schema.relationships) ? schema.relationships : [];
+  const relationshipMap = new Map();
+  relationships.forEach((row) => {
+    if (!row || !row.column) return;
+    const refSchema = row.referenced_schema ? String(row.referenced_schema) + '.' : '';
+    relationshipMap.set(String(row.column), refSchema + String(row.referenced_table || '') + '.' + String(row.referenced_column || ''));
+  });
+
+  schema.columns.forEach((column) => {
+    const name = String(column && column.name ? column.name : '');
+    const type = String(column && column.type ? column.type : '');
+    const nullable = !!(column && column.nullable);
+    const defaultValue = column && Object.prototype.hasOwnProperty.call(column, 'default') ? column.default : null;
+    const pk = primary.has(name);
+    const fkRef = relationshipMap.get(name);
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><code>' + escapeHtml(name) + '</code></td>' +
+      '<td>' + escapeHtml(type) + '</td>' +
+      '<td>' + (nullable ? '<span class="pill">yes</span>' : '<span class="pill">no</span>') + '</td>' +
+      '<td><code>' + escapeHtml(defaultValue === null ? '-' : String(defaultValue)) + '</code></td>' +
+      '<td>' + (pk ? '<span class="pill">yes</span>' : '<span class="muted">-</span>') + '</td>' +
+      '<td>' + (fkRef ? '<code>' + escapeHtml(fkRef) + '</code>' : '<span class="muted">-</span>') + '</td>';
+    elements.schemaModalRows.appendChild(tr);
+  });
+}
+
+function applySchemaSnapshot(data) {
+  const schema = data && data.schema ? data.schema : null;
+  if (!schema || !Array.isArray(schema.columns)) {
+    setSchemaSnapshotMessage('Schema snapshot unavailable for current selection.');
+    if (elements.schemaInspectBtn) elements.schemaInspectBtn.disabled = true;
+    return;
+  }
+
+  const primary = Array.isArray(schema.primary_key) ? schema.primary_key : [];
+  const relationships = Array.isArray(schema.relationships) ? schema.relationships : [];
+  const nullable = schema.columns.reduce((count, row) => count + (row && row.nullable ? 1 : 0), 0);
+  setSchemaSnapshotMessage(
+    'columns: ' + schema.columns.length +
+    ' | pk: ' + (primary.length === 0 ? '-' : primary.join(', ')) +
+    ' | fk: ' + relationships.length +
+    ' | nullable: ' + nullable
+  );
+  if (elements.schemaInspectBtn) elements.schemaInspectBtn.disabled = false;
+}
+
+function setSchemaModalOpen(open) {
+  if (!elements.schemaModal) return;
+  if (open) {
+    elements.schemaModal.removeAttribute('hidden');
+  } else {
+    elements.schemaModal.setAttribute('hidden', 'hidden');
+  }
+}
+
+function loadTableSchema(force) {
+  const connection = elements.dbConnection ? elements.dbConnection.value : '';
+  const table = elements.dbTable ? elements.dbTable.value : '';
+  if (!connection || !table) {
+    setSchemaSnapshotMessage('Schema snapshot unavailable until a table is selected.');
+    if (elements.schemaInspectBtn) elements.schemaInspectBtn.disabled = true;
+    return Promise.resolve(null);
+  }
+
+  const key = selectedSchemaKey();
+  if (!force && key && schemaCache.has(key)) {
+    const cached = schemaCache.get(key);
+    applySchemaSnapshot(cached);
+    return Promise.resolve(cached);
+  }
+
+  const query = '?connection=' + encodeURIComponent(connection);
+  const path = '/schema/tables/' + encodeURIComponent(table) + query;
+  return request(path).then((data) => {
+    if (key) schemaCache.set(key, data);
+    applySchemaSnapshot(data);
+    return data;
+  }).catch((error) => {
+    setSchemaSnapshotMessage('Schema snapshot error: ' + error.message);
+    if (elements.schemaInspectBtn) elements.schemaInspectBtn.disabled = true;
+    throw error;
+  });
+}
+
+function openSchemaInspector() {
+  if (!selectedSchemaKey()) {
+    setPreviewStatus('Select a connection and table first.', false);
+    return;
+  }
+  setSchemaModalOpen(true);
+  setSchemaModalStatus('Loading schema...', true);
+  loadTableSchema(false)
+    .then((data) => {
+      const schema = data && data.schema ? data.schema : null;
+      const tableName = data && data.table ? data.table : (elements.dbTable ? elements.dbTable.value : '');
+      if (elements.schemaModalTitle) {
+        elements.schemaModalTitle.textContent = 'Schema Inspector: ' + tableName;
+      }
+      if (elements.schemaModalSummary) {
+        elements.schemaModalSummary.textContent = 'Connection: ' + (elements.dbConnection ? elements.dbConnection.value : '-');
+      }
+      renderSchemaKpis(schema);
+      renderSchemaRows(schema);
+      setSchemaModalStatus('Schema loaded.', true);
+    })
+    .catch((error) => {
+      if (elements.schemaModalSummary) {
+        elements.schemaModalSummary.textContent = 'Unable to load schema.';
+      }
+      renderSchemaKpis(null);
+      renderSchemaRows(null);
+      setSchemaModalStatus(error.message, false);
+    });
+}
 
 function setLoading(active) {
   if (elements.dbReloadBtn) elements.dbReloadBtn.disabled = active;
@@ -586,6 +981,8 @@ function setLoading(active) {
   if (elements.compatSaveBtn) elements.compatSaveBtn.disabled = active;
   if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.disabled = active;
   if (elements.routesRefreshBtn) elements.routesRefreshBtn.disabled = active;
+  if (elements.envReloadBtn) elements.envReloadBtn.disabled = active;
+  if (elements.envSaveBtn) elements.envSaveBtn.disabled = active;
 }
 
 function readScaffoldInput() {
@@ -755,11 +1152,14 @@ function loadTables() {
   const connection = elements.dbConnection && elements.dbConnection.value ? elements.dbConnection.value : '';
   if (!connection) {
     renderTableOptions([]);
+    setSchemaSnapshotMessage('Schema snapshot unavailable until a table is selected.');
+    if (elements.schemaInspectBtn) elements.schemaInspectBtn.disabled = true;
     return Promise.resolve();
   }
   const query = connection ? ('?connection=' + encodeURIComponent(connection)) : '';
   return request('/schema/tables' + query).then((data) => {
     renderTableOptions(data.items || []);
+    return loadTableSchema(false).catch(() => null);
   });
 }
 
@@ -908,16 +1308,119 @@ function setRoutesStatus(message, ok) {
   elements.routesStatus.className = 'status ' + (ok ? 'ok' : 'error');
 }
 
+function setEnvStatus(message, ok) {
+  if (!elements.envStatus) return;
+  elements.envStatus.textContent = message;
+  elements.envStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
+function setInputValue(el, value) {
+  if (!el) return;
+  el.value = typeof value === 'string' ? value : '';
+}
+
+function populateEnvironmentForm(data) {
+  envSnapshot = data || {};
+  const app = data && data.app ? data.app : {};
+  const database = data && data.database ? data.database : {};
+  const pgsql = database && database.pgsql ? database.pgsql : {};
+  const view = data && data.view ? data.view : {};
+
+  setInputValue(elements.envAppName, app.name || '');
+  setInputValue(elements.envAppUrl, app.url || '');
+  setInputValue(elements.envAppTimezone, app.timezone || '');
+  setInputValue(elements.envDbDefault, database.default || '');
+  setInputValue(elements.envPgHost, pgsql.host || '');
+  setInputValue(elements.envPgPort, pgsql.port || '');
+  setInputValue(elements.envPgDatabase, pgsql.database || '');
+  setInputValue(elements.envPgUsername, pgsql.username || '');
+  if (elements.envPgPassword) {
+    elements.envPgPassword.value = '';
+  }
+  setInputValue(elements.envViewEngine, view.engine || 'php');
+
+  const hasView = !!(view && view.enabled);
+  if (elements.envViewSection) {
+    elements.envViewSection.style.display = hasView ? '' : 'none';
+  }
+}
+
+function readEnvironmentPayload() {
+  const payload = {
+    app: {
+      name: elements.envAppName ? elements.envAppName.value : '',
+      url: elements.envAppUrl ? elements.envAppUrl.value : '',
+      timezone: elements.envAppTimezone ? elements.envAppTimezone.value : '',
+    },
+    database: {
+      default: elements.envDbDefault ? elements.envDbDefault.value : '',
+      pgsql: {
+        host: elements.envPgHost ? elements.envPgHost.value : '',
+        port: elements.envPgPort ? elements.envPgPort.value : '',
+        database: elements.envPgDatabase ? elements.envPgDatabase.value : '',
+        username: elements.envPgUsername ? elements.envPgUsername.value : '',
+      },
+    },
+  };
+
+  if (elements.envPgPassword && elements.envPgPassword.value !== '') {
+    payload.database.pgsql.password = elements.envPgPassword.value;
+  }
+
+  const hasView = !!(envSnapshot && envSnapshot.view && envSnapshot.view.enabled);
+  if (hasView) {
+    payload.view = {
+      engine: elements.envViewEngine ? elements.envViewEngine.value : 'php',
+    };
+  }
+
+  return payload;
+}
+
+function loadEnvironment() {
+  setLoading(true);
+  request('/environment')
+    .then((data) => {
+      populateEnvironmentForm(data);
+      const appType = data && data.app_type ? data.app_type : 'app';
+      setEnvStatus('Loaded environment settings (' + appType + ').', true);
+    })
+    .catch((error) => {
+      setEnvStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+function saveEnvironment() {
+  setLoading(true);
+  request('/environment', { method: 'POST', body: readEnvironmentPayload() })
+    .then((data) => {
+      populateEnvironmentForm(data.current || envSnapshot || {});
+      setEnvStatus('Environment updated in ' + (data.env_file || '.env') + '.', true);
+    })
+    .catch((error) => {
+      setEnvStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
 function showTab(tabName) {
   const scaffoldActive = tabName === 'scaffold';
   const routesActive = tabName === 'routes';
+  const envActive = tabName === 'environment';
   const appKeyActive = tabName === 'security';
 
   if (elements.scaffoldTab) elements.scaffoldTab.classList.toggle('active', scaffoldActive);
   if (elements.routesTab) elements.routesTab.classList.toggle('active', routesActive);
+  if (elements.environmentTab) elements.environmentTab.classList.toggle('active', envActive);
   if (elements.appKeyTab) elements.appKeyTab.classList.toggle('active', appKeyActive);
   if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.classList.toggle('active', scaffoldActive);
   if (elements.tabRoutesBtn) elements.tabRoutesBtn.classList.toggle('active', routesActive);
+  if (elements.tabEnvBtn) elements.tabEnvBtn.classList.toggle('active', envActive);
   if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.classList.toggle('active', appKeyActive);
 }
 
@@ -982,10 +1485,27 @@ function generateAppKey() {
       setLoading(false);
     });
 }
-if (elements.dbConnection) elements.dbConnection.addEventListener('change', loadTables);
+if (elements.dbConnection) elements.dbConnection.addEventListener('change', () => {
+  loadTables().catch(() => null);
+});
+if (elements.dbTable) elements.dbTable.addEventListener('change', () => {
+  loadTableSchema(false).catch(() => null);
+});
 if (elements.dbReloadBtn) elements.dbReloadBtn.addEventListener('click', loadTables);
 if (elements.dbPreviewBtn) elements.dbPreviewBtn.addEventListener('click', scaffoldPreview);
 if (elements.dbApplyBtn) elements.dbApplyBtn.addEventListener('click', scaffoldApply);
+if (elements.schemaInspectBtn) elements.schemaInspectBtn.addEventListener('click', openSchemaInspector);
+if (elements.schemaModalCloseBtn) elements.schemaModalCloseBtn.addEventListener('click', () => setSchemaModalOpen(false));
+if (elements.schemaModal) elements.schemaModal.addEventListener('click', (event) => {
+  if (event.target === elements.schemaModal) {
+    setSchemaModalOpen(false);
+  }
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setSchemaModalOpen(false);
+  }
+});
 if (elements.compatCheckBtn) elements.compatCheckBtn.addEventListener('click', compatibilityCheck);
 if (elements.compatSaveBtn) elements.compatSaveBtn.addEventListener('click', compatibilitySaveBaseline);
 if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.addEventListener('click', generateAppKey);
@@ -995,7 +1515,13 @@ if (elements.tabRoutesBtn) elements.tabRoutesBtn.addEventListener('click', () =>
   showTab('routes');
   loadRoutes();
 });
+if (elements.tabEnvBtn) elements.tabEnvBtn.addEventListener('click', () => {
+  showTab('environment');
+  loadEnvironment();
+});
 if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.addEventListener('click', () => showTab('security'));
+if (elements.envReloadBtn) elements.envReloadBtn.addEventListener('click', loadEnvironment);
+if (elements.envSaveBtn) elements.envSaveBtn.addEventListener('click', saveEnvironment);
 if (elements.artifactChecks) elements.artifactChecks.addEventListener('change', syncRoutingTypeState);
 
 initScaffoldPanel();
@@ -1070,6 +1596,16 @@ HTML;
             return $this->methodNotAllowed($ctx, ['GET']);
          }
          return $this->apiOk($ctx, ['items' => $this->generatorEngine->list()]);
+      }
+
+      if ($apiPath === '/environment') {
+         if ($request->getMethod() === 'GET') {
+            return $this->apiEnvironmentResponse($ctx);
+         }
+         if ($request->getMethod() === 'POST') {
+            return $this->apiSaveEnvironmentResponse($ctx, $request);
+         }
+         return $this->methodNotAllowed($ctx, ['GET', 'POST']);
       }
 
       if ($apiPath === '/schema/connections') {
@@ -1575,6 +2111,105 @@ HTML;
       ]);
    }
 
+   private function apiEnvironmentResponse(RequestContext $ctx): Response
+   {
+      try {
+         $payload = $this->environmentPayload();
+      } catch (ToolingException $exception) {
+         return $this->apiError($ctx, 422, 'environment_read_failed', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, $payload);
+   }
+
+   private function apiSaveEnvironmentResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $isMvc = $this->environmentHasViewEngine();
+      $allowedKeys = $this->envAllowedKeys($isMvc);
+      $updates = [];
+
+      $app = $input['app'] ?? null;
+      if (is_array($app)) {
+         foreach (['name' => 'APP_NAME', 'url' => 'APP_URL', 'timezone' => 'APP_TIMEZONE'] as $source => $target) {
+            $value = $this->environmentInputString($app, $source);
+            if ($value !== null) {
+               $updates[$target] = $value;
+            }
+         }
+      }
+
+      $database = $input['database'] ?? null;
+      if (is_array($database)) {
+         $default = $this->environmentInputString($database, 'default');
+         if ($default !== null) {
+            $updates['DB_DEFAULT'] = $default;
+         }
+
+         $pgsql = $database['pgsql'] ?? null;
+         if (is_array($pgsql)) {
+            foreach ([
+               'host' => 'PGSQL_HOST',
+               'port' => 'PGSQL_PORT',
+               'database' => 'PGSQL_DATABASE',
+               'username' => 'PGSQL_USERNAME',
+               'password' => 'PGSQL_PASSWORD',
+            ] as $source => $target) {
+               $value = $this->environmentInputString($pgsql, $source);
+               if ($value !== null) {
+                  $updates[$target] = $value;
+               }
+            }
+         }
+      }
+
+      if ($isMvc) {
+         $view = $input['view'] ?? null;
+         if (is_array($view)) {
+            $engine = $this->environmentInputString($view, 'engine');
+            if ($engine !== null) {
+               $engine = strtolower($engine);
+               if (!in_array($engine, ['php', 'twig', 'plates', 'latte'], true)) {
+                  return $this->apiError($ctx, 400, 'invalid_input', 'Unsupported VIEW_ENGINE value.');
+               }
+               $updates['VIEW_ENGINE'] = $engine;
+            }
+         }
+      }
+
+      if ($updates === []) {
+         return $this->apiError($ctx, 400, 'invalid_input', 'No environment values were provided.');
+      }
+
+      foreach (array_keys($updates) as $key) {
+         if (!in_array($key, $allowedKeys, true)) {
+            return $this->apiError($ctx, 400, 'invalid_input', sprintf('Key "%s" is not writable.', $key));
+         }
+      }
+
+      try {
+         $envMeta = $this->readEnvironmentMap();
+         $current = $envMeta['map'];
+         foreach ($updates as $key => $value) {
+            $current[$key] = $value;
+         }
+         $savedPath = $this->persistEnvironmentMap($envMeta, $current, $allowedKeys);
+      } catch (ToolingException $exception) {
+         return $this->apiError($ctx, 422, 'environment_write_failed', $exception->getMessage());
+      }
+
+      try {
+         $currentPayload = $this->environmentPayload();
+      } catch (ToolingException $exception) {
+         return $this->apiError($ctx, 422, 'environment_read_failed', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'env_file' => $this->relativeToProject($savedPath),
+         'current' => $currentPayload,
+      ]);
+   }
+
    private function apiGenerateAppKeyResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -1596,6 +2231,266 @@ HTML;
          'existing_key' => $result['existing_key'],
          'key' => $show ? $key : null,
       ]);
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function environmentPayload(): array
+   {
+      $meta = $this->readEnvironmentMap();
+      $map = $meta['map'];
+      $isMvc = $this->environmentHasViewEngine();
+      $appType = $isMvc ? 'mvc' : 'api';
+
+      $appName = $this->environmentMapValue($map, 'APP_NAME', (string) $this->config()->get('app.name', ''));
+      $appUrl = $this->environmentMapValue($map, 'APP_URL', (string) $this->config()->get('app.url', ''));
+      $appTimezone = $this->environmentMapValue($map, 'APP_TIMEZONE', (string) $this->config()->get('app.timezone', 'UTC'));
+      $dbDefault = $this->environmentMapValue($map, 'DB_DEFAULT', (string) $this->config()->get('database.default', ''));
+
+      $defaultPgPort = (string) $this->config()->get('database.connections.pgsql.port', '5432');
+      if ($defaultPgPort === '') {
+         $defaultPgPort = '5432';
+      }
+
+      return [
+         'app_type' => $appType,
+         'app' => [
+            'name' => $appName,
+            'url' => $appUrl,
+            'timezone' => $appTimezone,
+         ],
+         'database' => [
+            'default' => $dbDefault,
+            'pgsql' => [
+               'host' => $this->environmentMapValue($map, 'PGSQL_HOST', (string) $this->config()->get('database.connections.pgsql.host', '127.0.0.1')),
+               'port' => $this->environmentMapValue($map, 'PGSQL_PORT', $defaultPgPort),
+               'database' => $this->environmentMapValue($map, 'PGSQL_DATABASE', (string) $this->config()->get('database.connections.pgsql.database', 'app')),
+               'username' => $this->environmentMapValue($map, 'PGSQL_USERNAME', (string) $this->config()->get('database.connections.pgsql.username', 'postgres')),
+               'password' => '',
+            ],
+         ],
+         'view' => [
+            'enabled' => $isMvc,
+            'engine' => $isMvc
+               ? $this->environmentMapValue($map, 'VIEW_ENGINE', (string) $this->config()->get('app.view.engine', 'php'))
+               : '',
+         ],
+      ];
+   }
+
+   private function environmentHasViewEngine(): bool
+   {
+      $viewsPath = rtrim($this->projectRoot, '/\\') . '/app/Views';
+      if (is_dir($viewsPath)) {
+         return true;
+      }
+
+      $value = $this->config()->get('app.view.engine');
+      return is_string($value) && trim($value) !== '';
+   }
+
+   /**
+    * @return array{target:string,map:array<string,string>,lines:array<int,string>,line_ending:string}
+    */
+   private function readEnvironmentMap(): array
+   {
+      $root = rtrim($this->projectRoot, '/\\');
+      $target = $root . '/.env';
+      $template = $target . '.example';
+
+      $contents = '';
+      if (is_file($target)) {
+         $read = @file_get_contents($target);
+         if (!is_string($read)) {
+            throw new ToolingException(sprintf('Unable to read env file "%s".', $target));
+         }
+         $contents = $read;
+      } elseif (is_file($template)) {
+         $read = @file_get_contents($template);
+         if (!is_string($read)) {
+            throw new ToolingException(sprintf('Unable to read env template "%s".', $template));
+         }
+         $contents = $read;
+      }
+
+      $lineEnding = str_contains($contents, "\r\n") ? "\r\n" : "\n";
+      $normalized = str_replace(["\r\n", "\r"], "\n", $contents);
+      $lines = $normalized === '' ? [] : explode("\n", $normalized);
+      if ($lines !== [] && $lines[count($lines) - 1] === '') {
+         array_pop($lines);
+      }
+
+      return [
+         'target' => $target,
+         'map' => $this->parseEnvironmentLines($lines),
+         'lines' => $lines,
+         'line_ending' => $lineEnding,
+      ];
+   }
+
+   /**
+    * @param array<int, string> $lines
+    * @return array<string, string>
+    */
+   private function parseEnvironmentLines(array $lines): array
+   {
+      $map = [];
+      foreach ($lines as $line) {
+         if (!preg_match('/^\s*([A-Z0-9_]+)\s*=(.*)$/', $line, $matches)) {
+            continue;
+         }
+
+         $key = trim((string) ($matches[1] ?? ''));
+         if ($key === '') {
+            continue;
+         }
+
+         $map[$key] = $this->decodeEnvironmentValue((string) ($matches[2] ?? ''));
+      }
+
+      return $map;
+   }
+
+   private function decodeEnvironmentValue(string $value): string
+   {
+      $trimmed = trim($value);
+      if ($trimmed === '') {
+         return '';
+      }
+
+      if (strlen($trimmed) >= 2) {
+         $first = $trimmed[0];
+         $last = $trimmed[strlen($trimmed) - 1];
+         if ($first === '"' && $last === '"') {
+            $inner = substr($trimmed, 1, -1);
+            return str_replace(['\\"', '\\\\'], ['"', '\\'], $inner);
+         }
+         if ($first === "'" && $last === "'") {
+            $inner = substr($trimmed, 1, -1);
+            return str_replace(["\\'", '\\\\'], ["'", '\\'], $inner);
+         }
+      }
+
+      return $trimmed;
+   }
+
+   /**
+    * @param array{target:string,map:array<string,string>,lines:array<int,string>,line_ending:string} $meta
+    * @param array<string, string> $map
+    * @param array<int, string> $allowedKeys
+    */
+   private function persistEnvironmentMap(array $meta, array $map, array $allowedKeys): string
+   {
+      $target = $meta['target'];
+      $root = rtrim($this->projectRoot, '/\\');
+      $allowedRoot = $root . '/';
+      if (!str_starts_with($target, $allowedRoot)) {
+         throw new ToolingException('Refusing to write environment file outside project root.');
+      }
+
+      $lines = $meta['lines'];
+      foreach ($allowedKeys as $key) {
+         if (!array_key_exists($key, $map)) {
+            continue;
+         }
+
+         $updated = false;
+         foreach ($lines as $index => $line) {
+            if (preg_match('/^\s*' . preg_quote($key, '/') . '\s*=/', $line) === 1) {
+               $lines[$index] = $key . '=' . $this->envValueForWrite($map[$key]);
+               $updated = true;
+               break;
+            }
+         }
+
+         if (!$updated) {
+            $lines[] = $key . '=' . $this->envValueForWrite($map[$key]);
+         }
+      }
+
+      $lineEnding = $meta['line_ending'] === "\r\n" ? "\r\n" : "\n";
+      $contents = implode($lineEnding, $lines);
+      if ($contents !== '') {
+         $contents .= $lineEnding;
+      }
+
+      $dir = dirname($target);
+      if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+         throw new ToolingException(sprintf('Unable to create directory "%s".', $dir));
+      }
+
+      if (@file_put_contents($target, $contents) === false) {
+         throw new ToolingException(sprintf('Unable to write env file "%s".', $target));
+      }
+
+      return $target;
+   }
+
+   /**
+    * @return array<int, string>
+    */
+   private function envAllowedKeys(bool $isMvc): array
+   {
+      $keys = [
+         'APP_NAME',
+         'APP_URL',
+         'APP_TIMEZONE',
+         'DB_DEFAULT',
+         'PGSQL_HOST',
+         'PGSQL_PORT',
+         'PGSQL_DATABASE',
+         'PGSQL_USERNAME',
+         'PGSQL_PASSWORD',
+      ];
+
+      if ($isMvc) {
+         $keys[] = 'VIEW_ENGINE';
+      }
+
+      return $keys;
+   }
+
+   private function envValueForWrite(string $value): string
+   {
+      if ($value === '') {
+         return '';
+      }
+
+      if (preg_match('/[\s#"\']/', $value) !== 1) {
+         return $value;
+      }
+
+      return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+   }
+
+   /**
+    * @param array<string, mixed> $source
+    */
+   private function environmentInputString(array $source, string $key): ?string
+   {
+      if (!array_key_exists($key, $source)) {
+         return null;
+      }
+
+      $value = $source[$key];
+      if (!is_scalar($value) && $value !== null) {
+         return null;
+      }
+
+      return trim((string) $value);
+   }
+
+   /**
+    * @param array<string, string> $map
+    */
+   private function environmentMapValue(array $map, string $key, string $fallback = ''): string
+   {
+      if (!array_key_exists($key, $map)) {
+         return $fallback;
+      }
+
+      return (string) $map[$key];
    }
 
    private function apiCompatibilityBreakingChangesResponse(RequestContext $ctx, Request $request): Response

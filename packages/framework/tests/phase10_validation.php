@@ -295,11 +295,54 @@ function runCliAppKeyCommand(): void
    assertTrue(str_contains($contents, 'APP_KEY=base64:'), 'CLI app-key command should write APP_KEY.');
 }
 
+/**
+ * @return void
+ */
+function runCliSchemaConnectionsCommand(): void
+{
+   $root = '/tmp/celeris-phase10-cli-schema-' . bin2hex(random_bytes(6));
+   @mkdir($root . '/config', 0777, true);
+
+   file_put_contents($root . '/config/app.php', <<<'PHP'
+<?php
+return [
+   'name' => 'CLI Schema Test',
+   'env' => 'development',
+];
+PHP
+);
+   file_put_contents($root . '/config/database.php', <<<'PHP'
+<?php
+return [
+   'default' => 'sqlite',
+   'connections' => [
+      'sqlite' => [
+         'driver' => 'sqlite',
+         'path' => ':memory:',
+      ],
+   ],
+];
+PHP
+);
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $exitCode = $app->run(['celeris', 'schema:connections', '--json']);
+   assertTrue($exitCode === 0, 'CLI schema:connections command should return zero.');
+}
+
 $checks = [
    'UxTesting' => 'runUxTesting',
    'DiffGenerationCorrectness' => 'runDiffGenerationCorrectness',
    'DependencyGraphAccuracy' => 'runDependencyGraphAccuracy',
    'CliAppKeyCommand' => 'runCliAppKeyCommand',
+   'CliSchemaConnectionsCommand' => 'runCliSchemaConnectionsCommand',
 ];
 
 $failed = false;

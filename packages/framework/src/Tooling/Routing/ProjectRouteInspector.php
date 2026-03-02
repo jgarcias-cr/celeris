@@ -29,9 +29,14 @@ final class ProjectRouteInspector
          }
 
          foreach ($route->methods() as $method) {
+            $uri = $route->path();
+            if (str_starts_with($uri, '/__dev')) {
+               continue;
+            }
+
             $rows[] = [
                'method' => strtoupper(trim((string) $method)),
-               'uri' => $route->path(),
+               'uri' => $uri,
                'action' => $this->handlerToAction($route->handler()),
                'middleware' => $this->normalizeMiddleware($route->middleware()),
             ];

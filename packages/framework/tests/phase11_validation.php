@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/../src/bootstrap.php';
 
+use Celeris\Framework\Config\ConfigLoader;
+use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Database\ORM\Event\EntityPersistedEvent;
 use Celeris\Framework\Database\ORM\Event\PersistenceEventDispatcher;
 use Celeris\Framework\Distributed\Auth\ServiceAuthenticator;
@@ -21,6 +23,8 @@ use Celeris\Framework\Distributed\Tracing\W3CTraceContextPropagator;
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\Response;
+use Celeris\Framework\Kernel\Kernel;
+use Celeris\Framework\Logging\LoggerInterface;
 
 /**
  * Handle assert true.
@@ -223,9 +227,60 @@ function runTracingCorrectnessTests(): void
    assertTrue(($span->attributes()['http.status_code'] ?? null) === 200, 'Captured span should include final HTTP status attribute.');
 }
 
+/**
+ * @return void
+ */
+function runLoggingSubsystemTests(): void
+{
+   $tmpRoot = '/tmp/celeris-phase11-logging-' . bin2hex(random_bytes(6));
+   mkdir($tmpRoot . '/config', 0777, true);
+
+   file_put_contents($tmpRoot . '/config/app.php', <<<'PHP'
+<?php
+return [
+   'name' => 'Logging Test',
+   'env' => 'test',
+   'debug' => true,
+];
+PHP
+);
+   file_put_contents($tmpRoot . '/config/logging.php', <<<'PHP'
+<?php
+return [
+   'path' => '/tmp/celeris-custom-log-path.log',
+   'level' => 'debug',
+];
+PHP
+);
+
+   $kernel = new Kernel(
+      configLoader: new ConfigLoader(
+         $tmpRoot . '/config',
+         new EnvironmentLoader(null, null, false, true),
+      ),
+      registerBuiltinRoutes: false,
+   );
+   $kernel->boot();
+
+   $container = $kernel->getServiceContainer();
+   $logger = $container->get(LoggerInterface::class);
+   assertTrue($logger instanceof LoggerInterface, 'Logger interface should be resolvable from container.');
+
+   $logger->info('logging test info', ['scope' => 'phase11']);
+   $logger->error('logging test error', ['reason' => 'expected']);
+
+   $defaultPath = $tmpRoot . '/var/log/app.log';
+   assertTrue(is_file($defaultPath), 'Logger should write to fixed project path var/log/app.log.');
+   $contents = (string) file_get_contents($defaultPath);
+   assertTrue(str_contains($contents, '"message":"logging test info"'), 'Log file should include info message.');
+   assertTrue(str_contains($contents, '"message":"logging test error"'), 'Log file should include error message.');
+   assertTrue(!is_file('/tmp/celeris-custom-log-path.log'), 'Custom logging path config should be ignored.');
+}
+
 $checks = [
    'MultiServiceIntegration' => 'runMultiServiceIntegrationTests',
    'TracingCorrectness' => 'runTracingCorrectnessTests',
+   'LoggingSubsystem' => 'runLoggingSubsystemTests',
 ];
 
 $failed = false;
@@ -240,4 +295,3 @@ foreach ($checks as $name => $fn) {
 }
 
 exit($failed ? 1 : 0);
-

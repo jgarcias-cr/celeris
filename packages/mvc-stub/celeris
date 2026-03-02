@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Celeris CLI wrapper for the MVC stub project.
+ *
+ * Usage:
+ * - Run from this project root with: `php celeris <command>`
+ *
+ * Resolution order:
+ * 1) vendor/bin/celeris (installed dependency)
+ * 2) ../framework/bin/celeris (monorepo/dev fallback)
+ */
+$candidates = [
+   __DIR__ . '/vendor/bin/celeris',
+   __DIR__ . '/../framework/bin/celeris',
+];
+
+foreach ($candidates as $path) {
+   if (is_file($path)) {
+      require $path;
+      return;
+   }
+}
+
+fwrite(STDERR, "Unable to locate Celeris CLI binary.\n");
+fwrite(STDERR, "Checked:\n");
+foreach ($candidates as $path) {
+   fwrite(STDERR, "  - {$path}\n");
+}
+exit(1);

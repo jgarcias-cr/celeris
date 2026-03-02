@@ -1017,6 +1017,43 @@ sequenceDiagram
     K->>R: clear scope
 ```
 
+### 4.5 Logging
+
+`LoggerInterface` is available from the container by default and can be constructor-injected into controllers/services.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use Celeris\Framework\Logging\LoggerInterface;
+
+final class ContactService
+{
+   public function __construct(private LoggerInterface $logger) {}
+
+   public function create(array $payload): void
+   {
+      $this->logger->info('Creating contact', ['payload' => $payload]);
+   }
+}
+```
+
+Quick value logging:
+
+```php
+$this->logger->debug('Value check', ['value' => $myValue]);
+```
+
+Log storage path is fixed per project:
+- `var/log/app.log`
+
+Notes:
+- Records are JSON lines (one JSON object per line).
+- Log path is intentionally not configurable.
+
 ## 5. HTTP Abstractions
 
 ### 5.1 Request
@@ -1922,6 +1959,11 @@ final class ContactController
 }
 ```
 
+HTTP verb convention note:
+- API stub routes follow REST-oriented verbs by default (`GET`, `POST`, `PUT`, `DELETE`).
+- MVC stub routes are form-oriented by default, so update/delete actions use `POST` endpoints such as `/{id}/edit` and `/{id}/delete`.
+- This MVC pattern is intentional for browser form flows. If you need strict REST semantics in web UI routes, you can switch to `PATCH`/`DELETE` with method override or JavaScript clients.
+
 ### 7.6 API bootstrap wiring
 
 `public/index.php`:
@@ -2535,7 +2577,7 @@ Note for API/MVC app scaffolds:
 - `.env` / `.env.example` ship compact PostgreSQL defaults (`DB_DEFAULT=pgsql` + `PGSQL_*`).
 - Engine-specific key sets for other drivers are documented in `docs/database-engines.md`.
 
-### 9.1.1 DSN notes for Firebird, IBM DB2, and Oracle
+### 9.1.1 DSN (Data Source Name) notes for Firebird, IBM DB2, and Oracle
 
 These new drivers support two modes:
 
@@ -3051,20 +3093,157 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 ### 15.1 CLI
 
 `packages/framework/bin/celeris` supports:
+- `app-key`
+- `routes:list`
 - `list-generators`
 - `graph`
 - `validate`
 - `generate`
+- `schema:connections`
+- `schema:tables`
+- `schema:describe`
+- `scaffold:preview`
+- `scaffold:apply`
+- `compat:check`
+- `compat:baseline:save`
 
-Examples:
+General form:
+
+```bash
+php packages/framework/bin/celeris <command> [options]
+```
+
+#### `app-key`
+
+```bash
+php packages/framework/bin/celeris app-key --show
+php packages/framework/bin/celeris app-key --force --env=.env --json
+```
+
+#### `routes:list`
+
+```bash
+php packages/framework/bin/celeris routes:list
+php packages/framework/bin/celeris routes:list --json
+```
+
+#### `list-generators`
 
 ```bash
 php packages/framework/bin/celeris list-generators
+php packages/framework/bin/celeris list-generators --json
+```
+
+#### `graph`
+
+```bash
+php packages/framework/bin/celeris graph
 php packages/framework/bin/celeris graph --format=dot
+php packages/framework/bin/celeris graph --format=json
+```
+
+#### `validate`
+
+```bash
 php packages/framework/bin/celeris validate
+php packages/framework/bin/celeris validate --json
+```
+
+#### `generate`
+
+```bash
 php packages/framework/bin/celeris generate controller Contact --module=Contacts
+php packages/framework/bin/celeris generate controller Contact --module=Contacts --write
+php packages/framework/bin/celeris generate controller Contact --module=Contacts --routing-type=php --write --overwrite
+```
+
+Use `generate module` only when you intentionally want a new module boundary (for example `Billing`, `Inventory`) with its own provider/controller skeleton:
+
+```bash
 php packages/framework/bin/celeris generate module Billing --write
 ```
+
+In scaffolded API/MVC projects, this is usually not the default day-to-day command.
+Most feature work should use DB scaffolding or targeted generators for models/repositories/services/controllers.
+
+#### `schema:connections`
+
+```bash
+php packages/framework/bin/celeris schema:connections
+php packages/framework/bin/celeris schema:connections --json
+```
+
+#### `schema:tables`
+
+```bash
+php packages/framework/bin/celeris schema:tables --connection=pgsql
+php packages/framework/bin/celeris schema:tables --connection=pgsql --json
+```
+
+#### `schema:describe`
+
+```bash
+php packages/framework/bin/celeris schema:describe contacts --connection=pgsql
+php packages/framework/bin/celeris schema:describe contacts --connection=pgsql --json
+```
+
+#### `scaffold:preview`
+
+```bash
+php packages/framework/bin/celeris scaffold:preview contacts --connection=pgsql
+php packages/framework/bin/celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=attribute --json
+```
+
+#### `scaffold:apply`
+
+```bash
+php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql
+php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=php --json
+```
+
+#### `compat:check`
+
+```bash
+php packages/framework/bin/celeris compat:check contacts --connection=pgsql
+php packages/framework/bin/celeris compat:check contacts --connection=pgsql --json
+```
+
+#### `compat:baseline:save`
+
+```bash
+php packages/framework/bin/celeris compat:baseline:save contacts --connection=pgsql
+php packages/framework/bin/celeris compat:baseline:save contacts --connection=pgsql --json
+```
+
+#### Recommended workflow in scaffolded API/MVC apps
+
+Run commands from the scaffolded project root (the folder containing `app/`, `config/`, and `public/`).
+
+Typical flow to add/extend CRUD for a table:
+
+```bash
+# 1) Inspect available connections and tables
+php vendor/bin/celeris schema:connections
+php vendor/bin/celeris schema:tables --connection=pgsql
+
+# 2) Preview generated app artifacts for one table
+php vendor/bin/celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
+
+# 3) Apply generation once preview looks correct
+php vendor/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
+
+# 4) Save baseline and check compatibility on later changes
+php vendor/bin/celeris compat:baseline:save contacts --connection=pgsql
+php vendor/bin/celeris compat:check contacts --connection=pgsql
+```
+
+What to use in scaffolded apps:
+- To add/update model-like artifacts from schema: `scaffold:preview` + `scaffold:apply`
+- To add targeted non-DB class scaffolds: `generate controller ...` (and other template generators)
+- To inspect routes and architecture: `routes:list`, `graph`, `validate`
+
+What not to default to:
+- `generate module ...` for normal CRUD additions inside an existing API/MVC app
 
 Generator output safety pattern:
 - Generated files are written under `Base/*Base.php`.

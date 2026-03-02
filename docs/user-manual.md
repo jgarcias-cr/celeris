@@ -3095,15 +3095,27 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 `packages/framework/bin/celeris` supports:
 - `app-key`
 - `routes:list`
+- `health`
+- `summary`
 - `list-generators`
 - `graph`
 - `validate`
 - `generate`
+- `environment:get`
+- `environment:save`
 - `schema:connections`
 - `schema:tables`
 - `schema:describe`
+- `migrate`
+- `migrate:rollback`
+- `migrate:fresh`
+- `migrate:status`
 - `scaffold:preview`
 - `scaffold:apply`
+- `seed`
+- `cache:clear`
+- `route:clear`
+- `http:cache:clear`
 - `compat:check`
 - `compat:baseline:save`
 
@@ -3125,6 +3137,20 @@ php packages/framework/bin/celeris app-key --force --env=.env --json
 ```bash
 php packages/framework/bin/celeris routes:list
 php packages/framework/bin/celeris routes:list --json
+```
+
+#### `health`
+
+```bash
+php packages/framework/bin/celeris health
+php packages/framework/bin/celeris health --json
+```
+
+#### `summary`
+
+```bash
+php packages/framework/bin/celeris summary
+php packages/framework/bin/celeris summary --json
 ```
 
 #### `list-generators`
@@ -3166,6 +3192,22 @@ php packages/framework/bin/celeris generate module Billing --write
 In scaffolded API/MVC projects, this is usually not the default day-to-day command.
 Most feature work should use DB scaffolding or targeted generators for models/repositories/services/controllers.
 
+#### `environment:get`
+
+```bash
+php packages/framework/bin/celeris environment:get
+php packages/framework/bin/celeris environment:get --json
+```
+
+#### `environment:save`
+
+Prepare a JSON payload file (for example `env-update.json`) with the same shape returned by `environment:get --json`, then apply it:
+
+```bash
+php packages/framework/bin/celeris environment:save --file=env-update.json
+php packages/framework/bin/celeris environment:save --file=env-update.json --json
+```
+
 #### `schema:connections`
 
 ```bash
@@ -3187,6 +3229,35 @@ php packages/framework/bin/celeris schema:describe contacts --connection=pgsql
 php packages/framework/bin/celeris schema:describe contacts --connection=pgsql --json
 ```
 
+Migration commands use files from `app/Database/Migrations`.
+
+#### `migrate`
+
+```bash
+php packages/framework/bin/celeris migrate all --connection=pgsql
+php packages/framework/bin/celeris migrate CreateContactsTableMigration.php --connection=pgsql
+```
+
+#### `migrate:rollback`
+
+```bash
+php packages/framework/bin/celeris migrate:rollback all --connection=pgsql
+php packages/framework/bin/celeris migrate:rollback SeedContactsTableMigration.php --connection=pgsql
+```
+
+#### `migrate:fresh`
+
+```bash
+php packages/framework/bin/celeris migrate:fresh --connection=pgsql
+```
+
+#### `migrate:status`
+
+```bash
+php packages/framework/bin/celeris migrate:status --connection=pgsql
+php packages/framework/bin/celeris migrate:status --connection=pgsql --json
+```
+
 #### `scaffold:preview`
 
 ```bash
@@ -3200,6 +3271,54 @@ php packages/framework/bin/celeris scaffold:preview contacts --connection=pgsql 
 php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql
 php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=php --json
 ```
+
+When `seed` is included in artifacts, Celeris generates table-based seed files in `database/seeds/`:
+
+- `database/seeds/contacts.php`
+- `database/seeds/orders.php`
+
+Each file returns:
+- `table` (target table name)
+- `records` (rows to insert)
+
+#### `seed`
+
+```bash
+php packages/framework/bin/celeris seed all --connection=pgsql
+php packages/framework/bin/celeris seed contacts --connection=pgsql
+php packages/framework/bin/celeris seed contacts --connection=pgsql --json
+```
+
+`seed all` runs every `*.php` file in `database/seeds/` (sorted by filename).
+`seed <table>` targets `database/seeds/<table>.php`.
+
+#### `cache:clear`
+
+```bash
+php packages/framework/bin/celeris cache:clear
+php packages/framework/bin/celeris cache:clear --scope=route
+php packages/framework/bin/celeris cache:clear --scope=http --json
+```
+
+Supported scopes: `all`, `route`, `http`, `view`.
+
+#### `route:clear`
+
+```bash
+php packages/framework/bin/celeris route:clear
+php packages/framework/bin/celeris route:clear --json
+```
+
+`route:clear` is a focused alias for `cache:clear --scope=route`.
+
+#### `http:cache:clear`
+
+```bash
+php packages/framework/bin/celeris http:cache:clear
+php packages/framework/bin/celeris http:cache:clear --json
+```
+
+`http:cache:clear` is a focused alias for `cache:clear --scope=http`.
 
 #### `compat:check`
 
@@ -3241,6 +3360,7 @@ What to use in scaffolded apps:
 - To add/update model-like artifacts from schema: `scaffold:preview` + `scaffold:apply`
 - To add targeted non-DB class scaffolds: `generate controller ...` (and other template generators)
 - To inspect routes and architecture: `routes:list`, `graph`, `validate`
+- To clear runtime caches safely during development: `cache:clear`, `route:clear`, `http:cache:clear`
 
 What not to default to:
 - `generate module ...` for normal CRUD additions inside an existing API/MVC app

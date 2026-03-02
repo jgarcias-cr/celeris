@@ -55,15 +55,27 @@ final class ToolingCliApplication
             'help', '--help', '-h' => $this->help(),
             'app-key' => $this->appKey($options),
             'routes:list' => $this->routesList($options),
+            'health' => $this->health($options),
+            'summary' => $this->summary($options),
             'list-generators' => $this->listGenerators($options),
             'graph' => $this->graph($options),
             'validate' => $this->validate($options),
             'generate' => $this->generate($positionals, $options),
+            'environment:get' => $this->environmentGet($options),
+            'environment:save' => $this->environmentSave($options),
             'schema:connections' => $this->schemaConnections($options),
             'schema:tables' => $this->schemaTables($options),
             'schema:describe' => $this->schemaDescribe($positionals, $options),
+            'migrate' => $this->migrate($positionals, $options),
+            'migrate:rollback' => $this->migrateRollback($positionals, $options),
+            'migrate:fresh' => $this->migrateFresh($options),
+            'migrate:status' => $this->migrateStatus($options),
             'scaffold:preview' => $this->scaffoldPreview($positionals, $options),
             'scaffold:apply' => $this->scaffoldApply($positionals, $options),
+            'seed' => $this->seed($positionals, $options),
+            'cache:clear' => $this->cacheClear($options),
+            'route:clear' => $this->routeClear($options),
+            'http:cache:clear' => $this->httpCacheClear($options),
             'compat:check' => $this->compatCheck($positionals, $options),
             'compat:baseline:save' => $this->compatBaselineSave($positionals, $options),
             default => $this->unknown($command),
@@ -86,17 +98,77 @@ final class ToolingCliApplication
       $this->out('Commands:');
       $this->out('  app-key [--force] [--env=.env] [--show] [--json]');
       $this->out('  routes:list [--json]');
+      $this->out('  health [--json]');
+      $this->out('  summary [--json]');
       $this->out('  list-generators [--json]');
       $this->out('  graph [--format=text|json|dot]');
       $this->out('  validate [--json]');
       $this->out('  generate <generator> <name> [--module=Name] [--routing-type=attribute|php] [--write] [--overwrite] [--json]');
+      $this->out('  environment:get [--json]');
+      $this->out('  environment:save --file=path.json [--json]');
       $this->out('  schema:connections [--json]');
       $this->out('  schema:tables [--connection=name] [--json]');
       $this->out('  schema:describe <table> [--connection=name] [--json]');
+      $this->out('  migrate <all|file> [--connection=name] [--json]');
+      $this->out('  migrate:rollback <all|file> [--connection=name] [--json]');
+      $this->out('  migrate:fresh [--connection=name] [--json]');
+      $this->out('  migrate:status [--connection=name] [--json]');
       $this->out('  scaffold:preview <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
       $this->out('  scaffold:apply <table> [--connection=name] [--artifacts=a,b,c] [--routing-type=attribute|php] [--json]');
+      $this->out('  seed <all|table> [--connection=name] [--json]');
+      $this->out('  cache:clear [--scope=all|route|http|view] [--json]');
+      $this->out('  route:clear [--json]');
+      $this->out('  http:cache:clear [--json]');
       $this->out('  compat:check <table> [--connection=name] [--json]');
       $this->out('  compat:baseline:save <table> [--connection=name] [--json]');
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function health(array $options): int
+   {
+      $data = $this->toolingApi('GET', '/health');
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $this->out(sprintf(
+         'ok=%s version=%s route_prefix=%s',
+         ((bool) ($data['ok'] ?? false)) ? 'true' : 'false',
+         (string) ($data['version'] ?? ''),
+         (string) ($data['route_prefix'] ?? ''),
+      ));
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function summary(array $options): int
+   {
+      $data = $this->toolingApi('GET', '/summary');
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $generators = is_array($data['generators'] ?? null) ? $data['generators'] : [];
+      $graph = is_array($data['graph'] ?? null) ? $data['graph'] : [];
+      $nodes = is_array($graph['nodes'] ?? null) ? $graph['nodes'] : [];
+      $edges = is_array($graph['edges'] ?? null) ? $graph['edges'] : [];
+      $arch = is_array($data['architecture'] ?? null) ? $data['architecture'] : [];
+      $violations = is_array($arch['violations'] ?? null) ? $arch['violations'] : [];
+
+      $this->out(sprintf(
+         'nodes=%d edges=%d generators=%d violations=%d',
+         count($nodes),
+         count($edges),
+         count($generators),
+         count($violations),
+      ));
       return 0;
    }
 
@@ -320,6 +392,64 @@ final class ToolingCliApplication
    /**
     * @param array<string, string|bool> $options
     */
+   private function environmentGet(array $options): int
+   {
+      $data = $this->toolingApi('GET', '/environment');
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $app = is_array($data['app'] ?? null) ? $data['app'] : [];
+      $database = is_array($data['database'] ?? null) ? $data['database'] : [];
+      $defaultDb = (string) ($database['default'] ?? '');
+      $this->out(sprintf(
+         'app_name=%s env_type=%s db_default=%s',
+         (string) ($app['name'] ?? ''),
+         (string) ($data['app_type'] ?? ''),
+         $defaultDb
+      ));
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function environmentSave(array $options): int
+   {
+      $fileOption = is_string($options['file'] ?? null) ? trim((string) $options['file']) : '';
+      if ($fileOption === '') {
+         $this->err('Usage: environment:save --file=path.json [--json]');
+         return 1;
+      }
+
+      $path = $this->resolveInputPath($fileOption);
+      if (!is_file($path)) {
+         throw new ToolingException(sprintf('Environment payload file not found: %s', $path));
+      }
+
+      $raw = (string) file_get_contents($path);
+      $decoded = json_decode($raw, true);
+      if (!is_array($decoded)) {
+         throw new ToolingException(sprintf('Environment payload file is not valid JSON: %s', $path));
+      }
+
+      $data = $this->toolingApi('POST', '/environment', [], $decoded);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $this->out('Environment updated.');
+      if (is_string($data['env_file'] ?? null) && $data['env_file'] !== '') {
+         $this->out('env_file=' . $data['env_file']);
+      }
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
    private function schemaConnections(array $options): int
    {
       $data = $this->toolingApi('GET', '/schema/connections');
@@ -424,6 +554,134 @@ final class ToolingCliApplication
     * @param array<int, string> $positionals
     * @param array<string, string|bool> $options
     */
+   private function migrate(array $positionals, array $options): int
+   {
+      $target = strtolower(trim((string) ($positionals[0] ?? 'all')));
+      if ($target === '') {
+         $target = 'all';
+      }
+
+      $payload = ['target' => $target];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('POST', '/migrations/run', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $applied = is_array($data['applied'] ?? null) ? $data['applied'] : [];
+      if ($applied === []) {
+         $this->out('No new migrations to apply.');
+         return 0;
+      }
+
+      $this->out('Applied migrations: ' . implode(', ', array_map(static fn (mixed $row): string => (string) $row, $applied)));
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function migrateRollback(array $positionals, array $options): int
+   {
+      $target = strtolower(trim((string) ($positionals[0] ?? 'all')));
+      if ($target === '') {
+         $target = 'all';
+      }
+
+      $payload = ['target' => $target];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('POST', '/migrations/rollback', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $rolledBack = is_array($data['rolled_back'] ?? null) ? $data['rolled_back'] : [];
+      if ($rolledBack === []) {
+         $this->out('No migrations were rolled back.');
+         return 0;
+      }
+
+      $this->out('Rolled back migrations: ' . implode(', ', array_map(static fn (mixed $row): string => (string) $row, $rolledBack)));
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function migrateFresh(array $options): int
+   {
+      $payload = [];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('POST', '/migrations/fresh', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $rolledBackCount = (int) ($data['rolled_back_count'] ?? 0);
+      $appliedCount = (int) ($data['applied_count'] ?? 0);
+      $this->out(sprintf('Fresh migration complete. rolled_back=%d applied=%d', $rolledBackCount, $appliedCount));
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function migrateStatus(array $options): int
+   {
+      $query = [];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $query['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('GET', '/migrations/status', $query);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $items = is_array($data['items'] ?? null) ? $data['items'] : [];
+      if ($items === []) {
+         $this->out('No migration files were found.');
+         return 0;
+      }
+
+      foreach ($items as $row) {
+         if (!is_array($row)) {
+            continue;
+         }
+         $this->out(sprintf(
+            '[%s] %s %s',
+            ((bool) ($row['applied'] ?? false)) ? 'APPLIED' : 'PENDING',
+            (string) ($row['version'] ?? ''),
+            (string) ($row['file'] ?? '')
+         ));
+      }
+
+      $orphans = is_array($data['orphan_applied_versions'] ?? null) ? $data['orphan_applied_versions'] : [];
+      if ($orphans !== []) {
+         $this->out('Orphan applied versions: ' . implode(', ', array_map(static fn (mixed $row): string => (string) $row, $orphans)));
+      }
+
+      return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
    private function scaffoldPreview(array $positionals, array $options): int
    {
       $table = trim((string) ($positionals[0] ?? ''));
@@ -487,6 +745,95 @@ final class ToolingCliApplication
       $this->out(sprintf('Done: written=%d skipped=%d', count($written), count($skipped)));
 
       return 0;
+   }
+
+   /**
+    * @param array<int, string> $positionals
+    * @param array<string, string|bool> $options
+    */
+   private function seed(array $positionals, array $options): int
+   {
+      $target = strtolower(trim((string) ($positionals[0] ?? '')));
+      if ($target === '') {
+         $this->err('Usage: seed <all|table> [--connection=name] [--json]');
+         return 1;
+      }
+
+      $payload = ['target' => $target];
+      if (is_string($options['connection'] ?? null) && trim((string) $options['connection']) !== '') {
+         $payload['connection'] = trim((string) $options['connection']);
+      }
+
+      $data = $this->toolingApi('POST', '/seed/run', [], $payload);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $this->out(sprintf(
+         'Seeding complete. connection=%s target=%s files=%d tables=%d inserted_rows=%d',
+         (string) ($data['connection'] ?? ($payload['connection'] ?? 'default')),
+         (string) ($data['target'] ?? $target),
+         is_array($data['files'] ?? null) ? count($data['files']) : 0,
+         is_array($data['tables'] ?? null) ? count($data['tables']) : 0,
+         (int) ($data['inserted_rows'] ?? 0),
+      ));
+
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function cacheClear(array $options): int
+   {
+      $scope = strtolower(trim((string) ($options['scope'] ?? 'all')));
+      if ($scope === '') {
+         $scope = 'all';
+      }
+      if (!in_array($scope, ['all', 'route', 'http', 'view'], true)) {
+         $this->err('Usage: cache:clear [--scope=all|route|http|view] [--json]');
+         return 1;
+      }
+
+      $data = $this->toolingApi('POST', '/cache/clear', [], ['scope' => $scope]);
+      if ($this->isJson($options)) {
+         $this->out((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+         return 0;
+      }
+
+      $deletedFiles = (int) ($data['deleted_files'] ?? 0);
+      $deletedDirs = (int) ($data['deleted_dirs'] ?? 0);
+      $missing = (int) ($data['missing_paths'] ?? 0);
+      $this->out(sprintf(
+         'Cache clear complete. scope=%s deleted_files=%d deleted_dirs=%d missing_paths=%d',
+         (string) ($data['scope'] ?? $scope),
+         $deletedFiles,
+         $deletedDirs,
+         $missing,
+      ));
+
+      return 0;
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function routeClear(array $options): int
+   {
+      $next = $options;
+      $next['scope'] = 'route';
+      return $this->cacheClear($next);
+   }
+
+   /**
+    * @param array<string, string|bool> $options
+    */
+   private function httpCacheClear(array $options): int
+   {
+      $next = $options;
+      $next['scope'] = 'http';
+      return $this->cacheClear($next);
    }
 
    /**
@@ -618,6 +965,15 @@ final class ToolingCliApplication
       $items = array_map(static fn (string $item): string => trim($item), explode(',', $value));
       $items = array_values(array_filter($items, static fn (string $item): bool => $item !== ''));
       return array_values(array_unique($items));
+   }
+
+   private function resolveInputPath(string $path): string
+   {
+      if (str_starts_with($path, '/') || preg_match('/^[A-Za-z]:[\/\\\\]/', $path) === 1) {
+         return $path;
+      }
+
+      return rtrim($this->projectRoot, '/\\') . '/' . ltrim($path, '/\\');
    }
 
    /**

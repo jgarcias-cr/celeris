@@ -97,11 +97,17 @@ final class ToolingPlatform
       $routes->get($base . '/api/v1/schema/connections', $webUi);
       $routes->get($base . '/api/v1/schema/tables', $webUi);
       $routes->get($base . '/api/v1/schema/tables/{table}', $webUi);
+      $routes->get($base . '/api/v1/migrations/status', $webUi);
       $routes->get($base . '/api/v1/routes', $webUi);
       $routes->get($base . '/api/v1/environment', $webUi);
       $routes->post($base . '/api/v1/environment', $webUi);
       $routes->post($base . '/api/v1/scaffold/preview', $webUi);
       $routes->post($base . '/api/v1/scaffold/apply', $webUi);
+      $routes->post($base . '/api/v1/migrations/run', $webUi);
+      $routes->post($base . '/api/v1/migrations/rollback', $webUi);
+      $routes->post($base . '/api/v1/migrations/fresh', $webUi);
+      $routes->post($base . '/api/v1/seed/run', $webUi);
+      $routes->post($base . '/api/v1/cache/clear', $webUi);
       $routes->post($base . '/api/v1/app-key/generate', $webUi);
       $routes->get($base . '/api/v1/compat/breaking-changes', $webUi);
       $routes->post($base . '/api/v1/compat/baseline/save', $webUi);

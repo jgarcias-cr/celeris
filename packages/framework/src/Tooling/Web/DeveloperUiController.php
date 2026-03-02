@@ -11,9 +11,13 @@ use Celeris\Framework\Database\Connection\ConnectionInterface;
 use Celeris\Framework\Database\DatabaseBootstrap;
 use Celeris\Framework\Database\DatabaseConfig;
 use Celeris\Framework\Database\DatabaseDriver;
+use Celeris\Framework\Database\Migration\DatabaseMigrationRepository;
+use Celeris\Framework\Database\Migration\MigrationInterface;
+use Celeris\Framework\Database\Migration\MigrationRunner;
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Route;
 use Celeris\Framework\Tooling\Architecture\ArchitectureDecisionValidator;
 use Celeris\Framework\Tooling\Diff\UnifiedDiffBuilder;
 use Celeris\Framework\Tooling\Generator\GenerationRequest;
@@ -681,6 +685,17 @@ pre {
         </table>
       </div>
     </section>
+    <section class="card">
+      <h2>Cache Maintenance</h2>
+      <p class="muted" style="margin-top:0.25rem;">Clear app cache directories and route bindings from one place.</p>
+      <div class="actions">
+        <button id="cacheClearAllBtn" class="primary">Clear All Cache</button>
+        <button id="cacheClearRouteBtn">Route Clear</button>
+        <button id="cacheClearHttpBtn">HTTP Cache Clear</button>
+      </div>
+      <div id="cacheStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <pre id="cacheOutput">(no cache clear run yet)</pre>
+    </section>
   </div>
   <div id="environmentTab" class="tab-panel">
     <section class="card">
@@ -769,6 +784,11 @@ const elements = {
   routesRefreshBtn: document.getElementById('routesRefreshBtn'),
   routesStatus: document.getElementById('routesStatus'),
   routesRows: document.getElementById('routesRows'),
+  cacheClearAllBtn: document.getElementById('cacheClearAllBtn'),
+  cacheClearRouteBtn: document.getElementById('cacheClearRouteBtn'),
+  cacheClearHttpBtn: document.getElementById('cacheClearHttpBtn'),
+  cacheStatus: document.getElementById('cacheStatus'),
+  cacheOutput: document.getElementById('cacheOutput'),
   appKeyGenerateBtn: document.getElementById('appKeyGenerateBtn'),
   appKeyForce: document.getElementById('appKeyForce'),
   appKeyStatus: document.getElementById('appKeyStatus'),
@@ -982,6 +1002,9 @@ function setLoading(active) {
   if (elements.compatSaveBtn) elements.compatSaveBtn.disabled = active;
   if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.disabled = active;
   if (elements.routesRefreshBtn) elements.routesRefreshBtn.disabled = active;
+  if (elements.cacheClearAllBtn) elements.cacheClearAllBtn.disabled = active;
+  if (elements.cacheClearRouteBtn) elements.cacheClearRouteBtn.disabled = active;
+  if (elements.cacheClearHttpBtn) elements.cacheClearHttpBtn.disabled = active;
   if (elements.envReloadBtn) elements.envReloadBtn.disabled = active;
   if (elements.envSaveBtn) elements.envSaveBtn.disabled = active;
 }
@@ -1309,6 +1332,12 @@ function setRoutesStatus(message, ok) {
   elements.routesStatus.className = 'status ' + (ok ? 'ok' : 'error');
 }
 
+function setCacheStatus(message, ok) {
+  if (!elements.cacheStatus) return;
+  elements.cacheStatus.textContent = message;
+  elements.cacheStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
 function setEnvStatus(message, ok) {
   if (!elements.envStatus) return;
   elements.envStatus.textContent = message;
@@ -1486,6 +1515,29 @@ function generateAppKey() {
       setLoading(false);
     });
 }
+
+function clearCache(scope) {
+  setLoading(true);
+  request('/cache/clear', { method: 'POST', body: { scope: scope } })
+    .then((data) => {
+      const deletedFiles = Number(data.deleted_files || 0);
+      const deletedDirs = Number(data.deleted_dirs || 0);
+      const missingPaths = Number(data.missing_paths || 0);
+      setCacheStatus(
+        'Cache clear complete. scope=' + (data.scope || scope) + ' deleted_files=' + deletedFiles + ' deleted_dirs=' + deletedDirs + ' missing_paths=' + missingPaths,
+        true
+      );
+      if (elements.cacheOutput) {
+        elements.cacheOutput.textContent = JSON.stringify(data, null, 2);
+      }
+    })
+    .catch((error) => {
+      setCacheStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
 if (elements.dbConnection) elements.dbConnection.addEventListener('change', () => {
   loadTables().catch(() => null);
 });
@@ -1511,6 +1563,9 @@ if (elements.compatCheckBtn) elements.compatCheckBtn.addEventListener('click', c
 if (elements.compatSaveBtn) elements.compatSaveBtn.addEventListener('click', compatibilitySaveBaseline);
 if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.addEventListener('click', generateAppKey);
 if (elements.routesRefreshBtn) elements.routesRefreshBtn.addEventListener('click', loadRoutes);
+if (elements.cacheClearAllBtn) elements.cacheClearAllBtn.addEventListener('click', () => clearCache('all'));
+if (elements.cacheClearRouteBtn) elements.cacheClearRouteBtn.addEventListener('click', () => clearCache('route'));
+if (elements.cacheClearHttpBtn) elements.cacheClearHttpBtn.addEventListener('click', () => clearCache('http'));
 if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.addEventListener('click', () => showTab('scaffold'));
 if (elements.tabRoutesBtn) elements.tabRoutesBtn.addEventListener('click', () => {
   showTab('routes');
@@ -1623,6 +1678,13 @@ HTML;
          return $this->apiSchemaTablesResponse($ctx, $request);
       }
 
+      if ($apiPath === '/migrations/status') {
+         if ($request->getMethod() !== 'GET') {
+            return $this->methodNotAllowed($ctx, ['GET']);
+         }
+         return $this->apiMigrationsStatusResponse($ctx, $request);
+      }
+
       if ($apiPath === '/routes') {
          if ($request->getMethod() !== 'GET') {
             return $this->methodNotAllowed($ctx, ['GET']);
@@ -1650,6 +1712,41 @@ HTML;
             return $this->methodNotAllowed($ctx, ['POST']);
          }
          return $this->apiScaffoldApplyResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/migrations/run') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiMigrationsRunResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/migrations/rollback') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiMigrationsRollbackResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/migrations/fresh') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiMigrationsFreshResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/seed/run') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiSeedRunResponse($ctx, $request);
+      }
+
+      if ($apiPath === '/cache/clear') {
+         if ($request->getMethod() !== 'POST') {
+            return $this->methodNotAllowed($ctx, ['POST']);
+         }
+         return $this->apiCacheClearResponse($ctx, $request);
       }
 
       if ($apiPath === '/app-key/generate') {
@@ -2037,6 +2134,82 @@ HTML;
       ]);
    }
 
+   private function apiMigrationsStatusResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $connectionName = $this->stringValue($input, 'connection') ?? $this->defaultConnectionName();
+
+      try {
+         [$connection, ] = $this->databaseConnectionAndDriver($connectionName);
+         $status = $this->migrationsStatus($connection);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'migrations_error', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'connection' => $connectionName,
+         ...$status,
+      ]);
+   }
+
+   private function apiMigrationsRunResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $connectionName = $this->stringValue($input, 'connection') ?? $this->defaultConnectionName();
+      $target = strtolower($this->stringValue($input, 'target') ?? 'all');
+
+      try {
+         [$connection, ] = $this->databaseConnectionAndDriver($connectionName);
+         $result = $this->migrationsRun($connection, $target);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'migrations_error', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'connection' => $connectionName,
+         'target' => $target,
+         ...$result,
+      ]);
+   }
+
+   private function apiMigrationsRollbackResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $connectionName = $this->stringValue($input, 'connection') ?? $this->defaultConnectionName();
+      $target = strtolower($this->stringValue($input, 'target') ?? 'all');
+
+      try {
+         [$connection, ] = $this->databaseConnectionAndDriver($connectionName);
+         $result = $this->migrationsRollback($connection, $target);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'migrations_error', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'connection' => $connectionName,
+         'target' => $target,
+         ...$result,
+      ]);
+   }
+
+   private function apiMigrationsFreshResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $connectionName = $this->stringValue($input, 'connection') ?? $this->defaultConnectionName();
+
+      try {
+         [$connection, ] = $this->databaseConnectionAndDriver($connectionName);
+         $result = $this->migrationsFresh($connection);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'migrations_error', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'connection' => $connectionName,
+         ...$result,
+      ]);
+   }
+
    private function apiScaffoldPreviewResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2110,6 +2283,46 @@ HTML;
          'written' => $written,
          'skipped' => $skipped,
       ]);
+   }
+
+   private function apiSeedRunResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $target = strtolower($this->stringValue($input, 'target') ?? 'all');
+      $connectionName = $this->stringValue($input, 'connection') ?? $this->defaultConnectionName();
+      if ($target === '') {
+         $target = 'all';
+      }
+
+      try {
+         [$connection, $driver] = $this->databaseConnectionAndDriver($connectionName);
+         $result = $this->runSeeds($connection, $driver, $target);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'seed_failed', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, [
+         'connection' => $connectionName,
+         'target' => $target,
+         ...$result,
+      ]);
+   }
+
+   private function apiCacheClearResponse(RequestContext $ctx, Request $request): Response
+   {
+      $input = $this->requestInput($request);
+      $scope = strtolower($this->stringValue($input, 'scope') ?? 'all');
+      if (!in_array($scope, ['all', 'route', 'http', 'view'], true)) {
+         return $this->apiError($ctx, 400, 'invalid_input', 'scope must be one of: all, route, http, view.');
+      }
+
+      try {
+         $result = $this->clearCacheScope($scope);
+      } catch (Throwable $exception) {
+         return $this->apiError($ctx, 422, 'cache_clear_failed', $exception->getMessage());
+      }
+
+      return $this->apiOk($ctx, $result);
    }
 
    private function apiEnvironmentResponse(RequestContext $ctx): Response
@@ -2728,6 +2941,229 @@ HTML;
       }
 
       return trim($default);
+   }
+
+   private function migrationsDirectory(): string
+   {
+      return rtrim($this->projectRoot, '/\\') . '/app/Database/Migrations';
+   }
+
+   /**
+    * @return array<int, array{file:string,migration:MigrationInterface}>
+    */
+   private function discoverMigrationEntries(): array
+   {
+      $dir = $this->migrationsDirectory();
+      if (!is_dir($dir)) {
+         throw new ToolingException(sprintf('Migrations directory not found: %s', $this->relativeToProject($dir)));
+      }
+
+      $entries = scandir($dir);
+      if (!is_array($entries)) {
+         throw new ToolingException(sprintf('Unable to read migrations directory: %s', $this->relativeToProject($dir)));
+      }
+
+      $files = [];
+      foreach ($entries as $entry) {
+         if ($entry === '.' || $entry === '..') {
+            continue;
+         }
+         $path = $dir . '/' . $entry;
+         if (is_file($path) && str_ends_with(strtolower($entry), '.php')) {
+            $files[] = $path;
+         }
+      }
+
+      sort($files, SORT_STRING);
+      $rows = [];
+      foreach ($files as $path) {
+         $className = $this->migrationClassFromFile($path);
+         require_once $path;
+         if (!class_exists($className)) {
+            throw new ToolingException(sprintf('Migration class "%s" was not found in %s', $className, $this->relativeToProject($path)));
+         }
+         if (!is_subclass_of($className, MigrationInterface::class)) {
+            throw new ToolingException(sprintf('Migration class "%s" must implement %s', $className, MigrationInterface::class));
+         }
+
+         /** @var MigrationInterface $migration */
+         $migration = new $className();
+         $rows[] = [
+            'file' => $path,
+            'migration' => $migration,
+         ];
+      }
+
+      return $rows;
+   }
+
+   private function migrationClassFromFile(string $path): string
+   {
+      $source = (string) file_get_contents($path);
+      $namespace = '';
+      $class = '';
+
+      if (preg_match('/^\s*namespace\s+([^;]+);/m', $source, $match) === 1) {
+         $namespace = trim((string) ($match[1] ?? ''));
+      }
+      if (preg_match('/^\s*(?:final\s+|abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)/m', $source, $match) === 1) {
+         $class = trim((string) ($match[1] ?? ''));
+      }
+
+      if ($class === '') {
+         throw new ToolingException(sprintf('Migration class declaration was not found in %s', $this->relativeToProject($path)));
+      }
+
+      return $namespace === '' ? $class : $namespace . '\\' . $class;
+   }
+
+   /**
+    * @param array<int, array{file:string,migration:MigrationInterface}> $entries
+    * @return array<int, array{file:string,migration:MigrationInterface}>
+    */
+   private function selectMigrationEntries(array $entries, string $target): array
+   {
+      $normalized = strtolower(trim($target));
+      if ($normalized === '' || $normalized === 'all') {
+         return $entries;
+      }
+
+      foreach ($entries as $entry) {
+         $basename = strtolower(basename($entry['file']));
+         $withoutExt = strtolower(pathinfo($entry['file'], PATHINFO_FILENAME));
+         if ($normalized === $basename || $normalized === $withoutExt) {
+            return [$entry];
+         }
+      }
+
+      throw new ToolingException(sprintf(
+         'Migration file "%s" was not found in %s.',
+         $target,
+         $this->relativeToProject($this->migrationsDirectory())
+      ));
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function migrationsStatus(ConnectionInterface $connection): array
+   {
+      $repo = new DatabaseMigrationRepository($connection);
+      $repo->ensureStorage();
+      $entries = $this->discoverMigrationEntries();
+      $applied = array_flip($repo->appliedVersions());
+
+      $items = [];
+      $knownVersions = [];
+      foreach ($entries as $entry) {
+         $version = $entry['migration']->version();
+         $knownVersions[] = $version;
+         $items[] = [
+            'version' => $version,
+            'description' => $entry['migration']->description(),
+            'file' => $this->relativeToProject($entry['file']),
+            'applied' => isset($applied[$version]),
+            'pending' => !isset($applied[$version]),
+         ];
+      }
+
+      $orphans = [];
+      foreach (array_keys($applied) as $version) {
+         if (!in_array($version, $knownVersions, true)) {
+            $orphans[] = $version;
+         }
+      }
+
+      return [
+         'directory' => $this->relativeToProject($this->migrationsDirectory()),
+         'items' => $items,
+         'pending' => array_values(array_filter($items, static fn (array $row): bool => (bool) ($row['pending'] ?? false))),
+         'applied_count' => count($applied),
+         'pending_count' => count(array_filter($items, static fn (array $row): bool => (bool) ($row['pending'] ?? false))),
+         'orphan_applied_versions' => $orphans,
+      ];
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function migrationsRun(ConnectionInterface $connection, string $target): array
+   {
+      $repo = new DatabaseMigrationRepository($connection);
+      $entries = $this->selectMigrationEntries($this->discoverMigrationEntries(), $target);
+      $migrations = array_map(static fn (array $entry): MigrationInterface => $entry['migration'], $entries);
+
+      $runner = new MigrationRunner($connection, $repo);
+      $result = $runner->migrate($migrations);
+      return [
+         'applied' => $result->applied(),
+         'count' => count($result->applied()),
+      ];
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function migrationsRollback(ConnectionInterface $connection, string $target): array
+   {
+      $repo = new DatabaseMigrationRepository($connection);
+      $repo->ensureStorage();
+      $entries = $this->discoverMigrationEntries();
+      $selected = $this->selectMigrationEntries($entries, $target);
+
+      if ($target === 'all' || $target === '') {
+         $all = array_map(static fn (array $entry): MigrationInterface => $entry['migration'], $entries);
+         $applied = $repo->appliedVersions();
+         $knownVersions = array_map(static fn (array $entry): string => $entry['migration']->version(), $entries);
+         $orphans = array_values(array_filter($applied, static fn (string $version): bool => !in_array($version, $knownVersions, true)));
+         if ($orphans !== []) {
+            throw new ToolingException('Cannot rollback all because applied versions are missing migration files: ' . implode(', ', $orphans));
+         }
+
+         $runner = new MigrationRunner($connection, $repo);
+         $result = $runner->rollback($all, count($applied));
+         return [
+            'rolled_back' => $result->rolledBack(),
+            'count' => count($result->rolledBack()),
+         ];
+      }
+
+      $entry = $selected[0];
+      $migration = $entry['migration'];
+      $version = $migration->version();
+      $applied = $repo->appliedVersions();
+      if (!in_array($version, $applied, true)) {
+         return [
+            'rolled_back' => [],
+            'count' => 0,
+         ];
+      }
+
+      $connection->transactional(function (ConnectionInterface $tx) use ($migration, $repo, $version): void {
+         $migration->down($tx);
+         $repo->markRolledBack($version);
+      });
+
+      return [
+         'rolled_back' => [$version],
+         'count' => 1,
+      ];
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function migrationsFresh(ConnectionInterface $connection): array
+   {
+      $rollback = $this->migrationsRollback($connection, 'all');
+      $migrate = $this->migrationsRun($connection, 'all');
+
+      return [
+         'rolled_back' => $rollback['rolled_back'] ?? [],
+         'rolled_back_count' => (int) ($rollback['count'] ?? 0),
+         'applied' => $migrate['applied'] ?? [],
+         'applied_count' => (int) ($migrate['count'] ?? 0),
+      ];
    }
 
    /**
@@ -3399,9 +3835,10 @@ PHP
       }
 
       if (in_array('seed', $artifacts, true)) {
+         $seedFile = $this->seedFileNameForTable($tableName);
          $rows[] = $this->previewFileRow(
-            'database/seeders/' . $entity . 'Seeder.php',
-            $this->seederContents($entity, $tableName, $columns) . "\n"
+            'database/seeds/' . $seedFile . '.php',
+            $this->seederContents($tableName, $columns) . "\n"
          );
       }
 
@@ -3487,7 +3924,7 @@ PHP;
    /**
     * @param array<int, array<string, mixed>> $columns
     */
-   private function seederContents(string $entity, string $tableName, array $columns): string
+   private function seederContents(string $tableName, array $columns): string
    {
       $rows = [];
       for ($i = 1; $i <= 3; $i++) {
@@ -3506,26 +3943,28 @@ PHP;
 
 declare(strict_types=1);
 
-namespace {$this->namespaceRoot}\\Database\\Seeders;
-
-final class {$entity}Seeder
-{
-   /**
-    * @return array<int, array<string, mixed>>
-    */
-   public function records(): array
-   {
-      return [
+return [
+   'table' => '{$tableLiteral}',
+   'records' => [
 {$rowsBlock}
-      ];
+   ],
+];
+PHP;
    }
 
-   public function table(): string
+   private function seedFileNameForTable(string $tableName): string
    {
-      return '{$tableLiteral}';
-   }
-}
-PHP;
+      $normalized = strtolower(trim($tableName));
+      if ($normalized === '') {
+         return 'table';
+      }
+
+      $safe = preg_replace('/[^a-z0-9_.-]+/', '_', $normalized);
+      if (!is_string($safe) || trim($safe, '._-') === '') {
+         return 'table';
+      }
+
+      return trim($safe, '._-');
    }
 
    private function repositoryTestContents(string $entity): string
@@ -3662,6 +4101,338 @@ PHP;
       }
 
       return $absolutePath;
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function runSeeds(ConnectionInterface $connection, DatabaseDriver $driver, string $target): array
+   {
+      $seedFiles = $this->resolveSeedFiles($target);
+      if ($seedFiles === []) {
+         throw new ToolingException('No seed files were found for the requested target.');
+      }
+
+      $appliedFiles = [];
+      $appliedTables = [];
+      $insertedRows = 0;
+
+      $connection->transactional(function (ConnectionInterface $tx) use ($driver, $seedFiles, &$appliedFiles, &$appliedTables, &$insertedRows): void {
+         foreach ($seedFiles as $path) {
+            $seed = $this->loadSeedFile($path);
+            $table = $seed['table'];
+            $records = $seed['records'];
+            $rows = $this->insertSeedRecords($tx, $driver, $table, $records);
+            $insertedRows += $rows;
+            $appliedFiles[] = $this->relativeToProject($path);
+            $appliedTables[] = $table;
+         }
+      });
+
+      return [
+         'files' => $appliedFiles,
+         'tables' => array_values(array_unique($appliedTables)),
+         'inserted_rows' => $insertedRows,
+      ];
+   }
+
+   /**
+    * @return array<int, string>
+    */
+   private function resolveSeedFiles(string $target): array
+   {
+      $dir = rtrim($this->projectRoot, '/\\') . '/database/seeds';
+      if (!is_dir($dir)) {
+         return [];
+      }
+
+      $entries = scandir($dir);
+      if (!is_array($entries)) {
+         return [];
+      }
+
+      $files = [];
+      foreach ($entries as $entry) {
+         if ($entry === '.' || $entry === '..') {
+            continue;
+         }
+
+         $path = $dir . '/' . $entry;
+         if (is_file($path) && str_ends_with(strtolower($entry), '.php')) {
+            $files[] = $path;
+         }
+      }
+
+      sort($files, SORT_STRING);
+      if ($target === 'all') {
+         return $files;
+      }
+
+      $requestedFile = $this->seedFileNameForTable($target) . '.php';
+      $requestedPath = $dir . '/' . $requestedFile;
+      if (is_file($requestedPath)) {
+         return [$requestedPath];
+      }
+
+      foreach ($files as $path) {
+         $seed = $this->loadSeedFile($path);
+         if (strtolower($seed['table']) === $target) {
+            return [$path];
+         }
+      }
+
+      return [];
+   }
+
+   /**
+    * @param string $path
+    * @return array{table:string,records:array<int,array<string,mixed>>}
+    */
+   private function loadSeedFile(string $path): array
+   {
+      $payload = include $path;
+      if (!is_array($payload)) {
+         throw new ToolingException(sprintf('Seed file must return an array: %s', $this->relativeToProject($path)));
+      }
+
+      $table = $payload['table'] ?? null;
+      $records = $payload['records'] ?? null;
+      if (!is_string($table) || trim($table) === '') {
+         throw new ToolingException(sprintf('Seed file table is missing: %s', $this->relativeToProject($path)));
+      }
+      if (!is_array($records)) {
+         throw new ToolingException(sprintf('Seed file records must be an array: %s', $this->relativeToProject($path)));
+      }
+
+      $normalizedRecords = [];
+      foreach ($records as $index => $record) {
+         if (!is_array($record)) {
+            throw new ToolingException(sprintf('Seed record #%d must be an array in %s', $index, $this->relativeToProject($path)));
+         }
+
+         $normalized = [];
+         foreach ($record as $column => $value) {
+            if (!is_string($column) || trim($column) === '') {
+               throw new ToolingException(sprintf('Seed record has invalid column key in %s', $this->relativeToProject($path)));
+            }
+            if (!preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+               throw new ToolingException(sprintf('Seed record column has unsupported characters ("%s") in %s', $column, $this->relativeToProject($path)));
+            }
+            $normalized[$column] = $value;
+         }
+
+         $normalizedRecords[] = $normalized;
+      }
+
+      return [
+         'table' => trim($table),
+         'records' => $normalizedRecords,
+      ];
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $records
+    */
+   private function insertSeedRecords(ConnectionInterface $connection, DatabaseDriver $driver, string $table, array $records): int
+   {
+      $count = 0;
+      foreach ($records as $record) {
+         if ($record === []) {
+            continue;
+         }
+
+         $columns = [];
+         $placeholders = [];
+         $params = [];
+         $index = 0;
+         foreach ($record as $column => $value) {
+            $columns[] = $this->quoteIdentifier($column, $driver);
+            $param = 'p' . $index;
+            $placeholders[] = ':' . $param;
+            $params[$param] = $value;
+            $index++;
+         }
+
+         $sql = sprintf(
+            'INSERT INTO %s (%s) VALUES (%s)',
+            $this->qualifiedTableName($table, $driver),
+            implode(', ', $columns),
+            implode(', ', $placeholders)
+         );
+         $connection->execute($sql, $params);
+         $count++;
+      }
+
+      return $count;
+   }
+
+   private function qualifiedTableName(string $table, DatabaseDriver $driver): string
+   {
+      $parts = $this->splitSchemaAndTable($table);
+      if ($parts['schema'] === '' || $parts['schema'] === 'public') {
+         return $this->quoteIdentifier($parts['table'], $driver);
+      }
+
+      return $this->quoteIdentifier($parts['schema'], $driver) . '.' . $this->quoteIdentifier($parts['table'], $driver);
+   }
+
+   private function quoteIdentifier(string $identifier, DatabaseDriver $driver): string
+   {
+      $clean = trim($identifier);
+      if ($clean === '' || preg_match('/^[A-Za-z0-9_]+$/', $clean) !== 1) {
+         throw new ToolingException(sprintf('Unsupported SQL identifier "%s".', $identifier));
+      }
+
+      if (in_array($driver, [DatabaseDriver::MySQL, DatabaseDriver::MariaDB], true)) {
+         return '`' . $clean . '`';
+      }
+
+      return '"' . $clean . '"';
+   }
+
+   /**
+    * @return array<string, mixed>
+    */
+   private function clearCacheScope(string $scope): array
+   {
+      $targets = $this->cacheTargetsForScope($scope);
+      $deletedFiles = 0;
+      $deletedDirs = 0;
+      $missing = 0;
+      $cleared = [];
+      $skippedOutsideProject = [];
+
+      foreach ($targets as $target) {
+         if ($target === '') {
+            continue;
+         }
+
+         if (!file_exists($target)) {
+            $missing++;
+            continue;
+         }
+
+         if (!$this->isPathWithinProject($target)) {
+            $skippedOutsideProject[] = $this->relativeToProject($target);
+            continue;
+         }
+
+         if (is_dir($target) && !is_link($target)) {
+            [$files, $dirs] = $this->clearDirectoryContents($target);
+            $deletedFiles += $files;
+            $deletedDirs += $dirs;
+            $cleared[] = $this->relativeToProject($target);
+            continue;
+         }
+
+         if (@unlink($target) === false) {
+            throw new ToolingException(sprintf('Failed to remove cache file: %s', $target));
+         }
+         $deletedFiles++;
+         $cleared[] = $this->relativeToProject($target);
+      }
+
+      if (in_array($scope, ['all', 'route'], true)) {
+         Route::clear();
+      }
+
+      return [
+         'scope' => $scope,
+         'cleared' => array_values(array_unique($cleared)),
+         'skipped_outside_project' => array_values(array_unique($skippedOutsideProject)),
+         'deleted_files' => $deletedFiles,
+         'deleted_dirs' => $deletedDirs,
+         'missing_paths' => $missing,
+      ];
+   }
+
+   /**
+    * @return array<int, string>
+    */
+   private function cacheTargetsForScope(string $scope): array
+   {
+      $root = rtrim($this->projectRoot, '/\\');
+      $routeTargets = [
+         $root . '/var/cache/routes',
+         $root . '/var/cache/routes.php',
+         $root . '/var/cache/routes.json',
+      ];
+      $httpTargets = [$root . '/var/cache/http'];
+      $viewTargets = [
+         $this->envPath('VIEW_TWIG_CACHE_PATH', $root . '/var/cache/twig'),
+         $this->envPath('VIEW_LATTE_TEMP_PATH', $root . '/var/cache/latte'),
+      ];
+
+      return match ($scope) {
+         'route' => $routeTargets,
+         'http' => $httpTargets,
+         'view' => $viewTargets,
+         default => [$root . '/var/cache'],
+      };
+   }
+
+   private function envPath(string $envKey, string $default): string
+   {
+      $raw = $this->envString($envKey);
+      if ($raw === '') {
+         return $default;
+      }
+
+      if (str_starts_with($raw, '/') || preg_match('/^[A-Za-z]:[\/\\\\]/', $raw) === 1) {
+         return $raw;
+      }
+
+      return rtrim($this->projectRoot, '/\\') . '/' . ltrim($raw, '/\\');
+   }
+
+   private function isPathWithinProject(string $path): bool
+   {
+      $root = realpath($this->projectRoot);
+      $absolute = realpath($path);
+      if (!is_string($root) || !is_string($absolute)) {
+         return false;
+      }
+
+      $root = rtrim($root, '/\\');
+      return $absolute === $root || str_starts_with($absolute, $root . DIRECTORY_SEPARATOR);
+   }
+
+   /**
+    * @return array{0:int,1:int}
+    */
+   private function clearDirectoryContents(string $dir): array
+   {
+      $files = 0;
+      $dirs = 0;
+      $entries = scandir($dir);
+      if (!is_array($entries)) {
+         throw new ToolingException(sprintf('Failed to scan cache directory: %s', $dir));
+      }
+
+      foreach ($entries as $entry) {
+         if ($entry === '.' || $entry === '..') {
+            continue;
+         }
+
+         $path = $dir . '/' . $entry;
+         if (is_dir($path) && !is_link($path)) {
+            [$childFiles, $childDirs] = $this->clearDirectoryContents($path);
+            $files += $childFiles;
+            $dirs += $childDirs;
+            if (@rmdir($path) === false) {
+               throw new ToolingException(sprintf('Failed to remove cache directory: %s', $path));
+            }
+            $dirs++;
+            continue;
+         }
+
+         if (@unlink($path) === false) {
+            throw new ToolingException(sprintf('Failed to remove cache file: %s', $path));
+         }
+         $files++;
+      }
+
+      return [$files, $dirs];
    }
 
    /**

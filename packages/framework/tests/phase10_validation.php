@@ -78,6 +78,10 @@ function runUxTesting(): void
       str_contains($dashboardResponse->getBody(), 'Generate APP_KEY'),
       'Dashboard should expose APP_KEY generator action.'
    );
+   assertTrue(
+      str_contains($dashboardResponse->getBody(), 'Clear All Cache'),
+      'Dashboard should expose cache maintenance actions.'
+   );
 
    $previewRequest = new Request('GET', '/__dev/tooling/generate/preview', [], [
       'generator' => 'controller',
@@ -337,12 +341,324 @@ PHP
    assertTrue($exitCode === 0, 'CLI schema:connections command should return zero.');
 }
 
+/**
+ * @return void
+ */
+function runCliHealthCommand(): void
+{
+   $root = '/tmp/celeris-phase10-cli-health-' . bin2hex(random_bytes(6));
+   @mkdir($root, 0777, true);
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $exitCode = $app->run(['celeris', 'health', '--json']);
+   assertTrue($exitCode === 0, 'CLI health command should return zero.');
+}
+
+/**
+ * @return void
+ */
+function runCliCacheClearCommands(): void
+{
+   $root = '/tmp/celeris-phase10-cli-cache-' . bin2hex(random_bytes(6));
+   @mkdir($root . '/var/cache/http', 0777, true);
+   @mkdir($root . '/var/cache/routes', 0777, true);
+
+   file_put_contents($root . '/var/cache/routes/routes.json', '{"ok":true}');
+   file_put_contents($root . '/var/cache/http/response.cache', 'ok');
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $routeExit = $app->run(['celeris', 'route:clear']);
+   assertTrue($routeExit === 0, 'CLI route:clear command should return zero.');
+   assertTrue(!is_file($root . '/var/cache/routes/routes.json'), 'CLI route:clear command should clear route cache files.');
+   assertTrue(is_file($root . '/var/cache/http/response.cache'), 'CLI route:clear command should not clear HTTP cache files.');
+
+   $httpExit = $app->run(['celeris', 'http:cache:clear']);
+   assertTrue($httpExit === 0, 'CLI http:cache:clear command should return zero.');
+   assertTrue(!is_file($root . '/var/cache/http/response.cache'), 'CLI http:cache:clear command should clear HTTP cache files.');
+
+   @mkdir($root . '/var/cache/http', 0777, true);
+   file_put_contents($root . '/var/cache/http/response.cache', 'ok');
+   $allExit = $app->run(['celeris', 'cache:clear', '--scope=all']);
+   assertTrue($allExit === 0, 'CLI cache:clear command should return zero.');
+   assertTrue(!is_file($root . '/var/cache/http/response.cache'), 'CLI cache:clear command should clear all cache files.');
+}
+
+/**
+ * @return void
+ */
+function runCliSeedCommand(): void
+{
+   $root = '/tmp/celeris-phase10-cli-seed-' . bin2hex(random_bytes(6));
+   @mkdir($root . '/config', 0777, true);
+   @mkdir($root . '/database/seeds', 0777, true);
+
+   $dbPath = $root . '/var/test.sqlite';
+   @mkdir(dirname($dbPath), 0777, true);
+
+   file_put_contents($root . '/config/app.php', <<<'PHP'
+<?php
+return [
+   'name' => 'CLI Seed Test',
+   'env' => 'development',
+];
+PHP
+);
+   file_put_contents($root . '/config/database.php', <<<PHP
+<?php
+return [
+   'default' => 'sqlite',
+   'connections' => [
+      'sqlite' => [
+         'driver' => 'sqlite',
+         'path' => '{$dbPath}',
+      ],
+   ],
+];
+PHP
+);
+   file_put_contents($root . '/database/seeds/contacts.php', <<<'PHP'
+<?php
+
+return [
+   'table' => 'contacts',
+   'records' => [
+      ['name' => 'Alice Seed'],
+      ['name' => 'Bob Seed'],
+   ],
+];
+PHP
+);
+
+   $pdo = new PDO('sqlite:' . $dbPath);
+   $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+   $pdo->exec('CREATE TABLE contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $exitCode = $app->run(['celeris', 'seed', 'contacts', '--connection=sqlite']);
+   assertTrue($exitCode === 0, 'CLI seed command should return zero.');
+
+   $rows = $pdo->query('SELECT COUNT(*) FROM contacts')->fetchColumn();
+   assertTrue((int) $rows === 2, 'CLI seed command should insert records from table seed file.');
+}
+
+/**
+ * @return void
+ */
+function runCliMigrateCommands(): void
+{
+   $root = '/tmp/celeris-phase10-cli-migrate-' . bin2hex(random_bytes(6));
+   @mkdir($root . '/config', 0777, true);
+   @mkdir($root . '/app/Database/Migrations', 0777, true);
+   @mkdir($root . '/var', 0777, true);
+
+   $dbPath = $root . '/var/migrate.sqlite';
+
+   file_put_contents($root . '/config/app.php', <<<'PHP'
+<?php
+return [
+   'name' => 'CLI Migrate Test',
+   'env' => 'development',
+];
+PHP
+);
+   file_put_contents($root . '/config/database.php', <<<PHP
+<?php
+return [
+   'default' => 'sqlite',
+   'connections' => [
+      'sqlite' => [
+         'driver' => 'sqlite',
+         'path' => '{$dbPath}',
+      ],
+   ],
+];
+PHP
+);
+   file_put_contents($root . '/app/Database/Migrations/CreateWidgetsTableMigration.php', <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Database\Migrations;
+
+use Celeris\Framework\Database\Migration\SqlMigration;
+
+final class CreateWidgetsTableMigration extends SqlMigration
+{
+   public function version(): string
+   {
+      return '20260302_000001';
+   }
+
+   public function description(): string
+   {
+      return 'Create widgets table';
+   }
+
+   protected function buildUp(): void
+   {
+      $this->addSql('CREATE TABLE widgets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+   }
+
+   protected function buildDown(): void
+   {
+      $this->addDownSql('DROP TABLE IF EXISTS widgets');
+   }
+}
+PHP
+);
+   file_put_contents($root . '/app/Database/Migrations/SeedWidgetsTableMigration.php', <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Database\Migrations;
+
+use Celeris\Framework\Database\Migration\SqlMigration;
+
+final class SeedWidgetsTableMigration extends SqlMigration
+{
+   public function version(): string
+   {
+      return '20260302_000002';
+   }
+
+   public function description(): string
+   {
+      return 'Seed widgets table';
+   }
+
+   protected function buildUp(): void
+   {
+      $this->addSql("INSERT INTO widgets (name) VALUES ('Widget One')");
+   }
+
+   protected function buildDown(): void
+   {
+      $this->addDownSql("DELETE FROM widgets WHERE name = 'Widget One'");
+   }
+}
+PHP
+);
+
+   $app = new ToolingCliApplication(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      'App'
+   );
+
+   $createExit = $app->run(['celeris', 'migrate', 'CreateWidgetsTableMigration.php', '--connection=sqlite']);
+   assertTrue($createExit === 0, 'CLI migrate specific file should return zero.');
+
+   $pdo = new PDO('sqlite:' . $dbPath);
+   $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+   $tableExists = $pdo->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='widgets'")->fetchColumn();
+   assertTrue((int) $tableExists === 1, 'CLI migrate specific file should apply the requested migration.');
+
+   $seedExit = $app->run(['celeris', 'migrate', 'SeedWidgetsTableMigration', '--connection=sqlite']);
+   assertTrue($seedExit === 0, 'CLI migrate specific file without extension should return zero.');
+   $rowsAfterSeed = $pdo->query('SELECT COUNT(*) FROM widgets')->fetchColumn();
+   assertTrue((int) $rowsAfterSeed === 1, 'CLI migrate specific seed migration should insert data.');
+
+   $statusExit = $app->run(['celeris', 'migrate:status', '--connection=sqlite', '--json']);
+   assertTrue($statusExit === 0, 'CLI migrate:status command should return zero.');
+
+   $rollbackExit = $app->run(['celeris', 'migrate:rollback', 'SeedWidgetsTableMigration.php', '--connection=sqlite']);
+   assertTrue($rollbackExit === 0, 'CLI migrate:rollback specific file should return zero.');
+   $rowsAfterRollback = $pdo->query('SELECT COUNT(*) FROM widgets')->fetchColumn();
+   assertTrue((int) $rowsAfterRollback === 0, 'CLI migrate:rollback should revert the requested migration.');
+
+   $freshExit = $app->run(['celeris', 'migrate:fresh', '--connection=sqlite']);
+   assertTrue($freshExit === 0, 'CLI migrate:fresh command should return zero.');
+   $rowsAfterFresh = $pdo->query('SELECT COUNT(*) FROM widgets')->fetchColumn();
+   assertTrue((int) $rowsAfterFresh === 1, 'CLI migrate:fresh should rebuild and re-run migrations.');
+}
+
+/**
+ * @return void
+ */
+function runCliHelpSnapshot(): void
+{
+   $binary = __DIR__ . '/../bin/celeris';
+   $command = sprintf('php %s help 2>&1', escapeshellarg($binary));
+
+   $output = [];
+   $exitCode = 0;
+   exec($command, $output, $exitCode);
+
+   assertTrue($exitCode === 0, 'CLI help command should return zero.');
+   $text = implode("\n", $output);
+
+   $expected = [
+      'app-key',
+      'routes:list',
+      'health',
+      'summary',
+      'list-generators',
+      'graph',
+      'validate',
+      'generate',
+      'environment:get',
+      'environment:save',
+      'schema:connections',
+      'schema:tables',
+      'schema:describe',
+      'migrate',
+      'migrate:rollback',
+      'migrate:fresh',
+      'migrate:status',
+      'scaffold:preview',
+      'scaffold:apply',
+      'seed',
+      'cache:clear',
+      'route:clear',
+      'http:cache:clear',
+      'compat:check',
+      'compat:baseline:save',
+   ];
+
+   foreach ($expected as $entry) {
+      assertTrue(
+         str_contains($text, $entry),
+         sprintf('CLI help output should include command "%s".', $entry),
+      );
+   }
+}
+
 $checks = [
    'UxTesting' => 'runUxTesting',
    'DiffGenerationCorrectness' => 'runDiffGenerationCorrectness',
    'DependencyGraphAccuracy' => 'runDependencyGraphAccuracy',
    'CliAppKeyCommand' => 'runCliAppKeyCommand',
    'CliSchemaConnectionsCommand' => 'runCliSchemaConnectionsCommand',
+   'CliHealthCommand' => 'runCliHealthCommand',
+   'CliCacheClearCommands' => 'runCliCacheClearCommands',
+   'CliSeedCommand' => 'runCliSeedCommand',
+   'CliMigrateCommands' => 'runCliMigrateCommands',
+   'CliHelpSnapshot' => 'runCliHelpSnapshot',
 ];
 
 $failed = false;

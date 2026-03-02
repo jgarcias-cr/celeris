@@ -3238,18 +3238,24 @@ php packages/framework/bin/celeris migrate all --connection=pgsql
 php packages/framework/bin/celeris migrate CreateContactsTableMigration.php --connection=pgsql
 ```
 
+Warning: this changes schema state. Run against dev/staging first.
+
 #### `migrate:rollback`
 
 ```bash
 php packages/framework/bin/celeris migrate:rollback all --connection=pgsql
-php packages/framework/bin/celeris migrate:rollback SeedContactsTableMigration.php --connection=pgsql
+php packages/framework/bin/celeris migrate:rollback CreateContactsTableMigration.php --connection=pgsql
 ```
+
+Warning: this can remove schema/data introduced by the selected migration(s).
 
 #### `migrate:fresh`
 
 ```bash
 php packages/framework/bin/celeris migrate:fresh --connection=pgsql
 ```
+
+Warning: this performs rollback + re-run and is destructive by nature.
 
 #### `migrate:status`
 
@@ -3289,6 +3295,8 @@ php packages/framework/bin/celeris seed contacts --connection=pgsql
 php packages/framework/bin/celeris seed contacts --connection=pgsql --json
 ```
 
+Warning: seed scripts may insert duplicate or conflicting data depending on script design.
+
 `seed all` runs every `*.php` file in `database/seeds/` (sorted by filename).
 `seed <table>` targets `database/seeds/<table>.php`.
 
@@ -3299,6 +3307,8 @@ php packages/framework/bin/celeris cache:clear
 php packages/framework/bin/celeris cache:clear --scope=route
 php packages/framework/bin/celeris cache:clear --scope=http --json
 ```
+
+Warning: clearing cache can invalidate warmed state and route bindings.
 
 Supported scopes: `all`, `route`, `http`, `view`.
 
@@ -3354,6 +3364,30 @@ php vendor/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=mo
 # 4) Save baseline and check compatibility on later changes
 php vendor/bin/celeris compat:baseline:save contacts --connection=pgsql
 php vendor/bin/celeris compat:check contacts --connection=pgsql
+```
+
+#### Stub quickstart (API/MVC)
+
+Run from `packages/api-stub` or `packages/mvc-stub`:
+
+```bash
+# 1) Apply all migration files from app/Database/Migrations
+php celeris migrate all --connection=pgsql
+
+# 2) Check migration state (applied vs pending)
+php celeris migrate:status --connection=pgsql
+
+# 3) Seed data from database/seeds/*.php
+php celeris seed all --connection=pgsql
+
+# 4) Run one specific migration file
+php celeris migrate CreateContactsTableMigration.php --connection=pgsql
+
+# 5) Roll back one specific migration file
+php celeris migrate:rollback CreateContactsTableMigration.php --connection=pgsql
+
+# 6) Rebuild from scratch (rollback all known + re-run all)
+php celeris migrate:fresh --connection=pgsql
 ```
 
 What to use in scaffolded apps:

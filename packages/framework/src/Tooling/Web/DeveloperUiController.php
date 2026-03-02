@@ -560,7 +560,9 @@ pre {
   </section>
   <section class="card">
     <div class="tabbar">
-      <button id="tabScaffoldBtn" class="tab-button primary active" type="button">Scaffold</button>
+      <button id="tabScaffoldBtn" class="tab-button primary active" type="button">Schema &amp; Scaffold</button>
+      <button id="tabDatabaseBtn" class="tab-button" type="button">Database Ops</button>
+      <button id="tabCacheBtn" class="tab-button" type="button">Cache Ops</button>
       <button id="tabRoutesBtn" class="tab-button" type="button">Routes</button>
       <button id="tabEnvBtn" class="tab-button" type="button">Environment</button>
       <button id="tabAppKeyBtn" class="tab-button" type="button">Security</button>
@@ -661,6 +663,50 @@ pre {
       </div>
     </section>
   </div>
+  <div id="databaseTab" class="tab-panel">
+    <section class="card">
+      <h2>Database Operations</h2>
+      <p class="muted" style="margin-top:0.25rem;">Run migrations and seeding with explicit targets.</p>
+      <p class="muted" style="margin-top:0.35rem; color:#8b1e1e;"><strong>Warning:</strong> These operations change schema/data. Run in development/staging first and confirm your target connection.</p>
+      <div class="row">
+        <div>
+          <label for="opsConnection">Connection</label>
+          <select id="opsConnection"></select>
+        </div>
+        <div>
+          <label for="migrationTarget">Migration Target</label>
+          <input id="migrationTarget" type="text" placeholder="all or CreateUsersTableMigration.php">
+        </div>
+        <div>
+          <label for="seedTarget">Seed Target</label>
+          <input id="seedTarget" type="text" placeholder="all or table name">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="migrateRunBtn" class="primary">Migrate</button>
+        <button id="migrateRollbackBtn">Rollback</button>
+        <button id="migrateFreshBtn">Fresh</button>
+        <button id="migrateStatusBtn">Status</button>
+        <button id="seedRunBtn">Seed</button>
+      </div>
+      <div id="dbOpsStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <pre id="dbOpsOutput">(no database operation run yet)</pre>
+    </section>
+  </div>
+  <div id="cacheTab" class="tab-panel">
+    <section class="card">
+      <h2>Cache Operations</h2>
+      <p class="muted" style="margin-top:0.25rem;">Clear app cache directories and route bindings.</p>
+      <p class="muted" style="margin-top:0.35rem; color:#8b1e1e;"><strong>Warning:</strong> Clearing cache can invalidate route bindings and warm state. Use in maintenance windows for production-like environments.</p>
+      <div class="actions">
+        <button id="cacheClearAllBtn" class="primary">Clear All Cache</button>
+        <button id="cacheClearRouteBtn">Route Clear</button>
+        <button id="cacheClearHttpBtn">HTTP Cache Clear</button>
+      </div>
+      <div id="cacheStatus" class="status" style="margin-top:0.7rem;">Idle</div>
+      <pre id="cacheOutput">(no cache clear run yet)</pre>
+    </section>
+  </div>
   <div id="routesTab" class="tab-panel">
     <section class="card">
       <h2>Routes Explorer</h2>
@@ -684,17 +730,6 @@ pre {
           </tbody>
         </table>
       </div>
-    </section>
-    <section class="card">
-      <h2>Cache Maintenance</h2>
-      <p class="muted" style="margin-top:0.25rem;">Clear app cache directories and route bindings from one place.</p>
-      <div class="actions">
-        <button id="cacheClearAllBtn" class="primary">Clear All Cache</button>
-        <button id="cacheClearRouteBtn">Route Clear</button>
-        <button id="cacheClearHttpBtn">HTTP Cache Clear</button>
-      </div>
-      <div id="cacheStatus" class="status" style="margin-top:0.7rem;">Idle</div>
-      <pre id="cacheOutput">(no cache clear run yet)</pre>
     </section>
   </div>
   <div id="environmentTab" class="tab-panel">
@@ -774,13 +809,27 @@ const elements = {
   compatSaveBtn: document.getElementById('compatSaveBtn'),
   compatPanel: document.getElementById('compatPanel'),
   tabScaffoldBtn: document.getElementById('tabScaffoldBtn'),
+  tabDatabaseBtn: document.getElementById('tabDatabaseBtn'),
+  tabCacheBtn: document.getElementById('tabCacheBtn'),
   tabRoutesBtn: document.getElementById('tabRoutesBtn'),
   tabEnvBtn: document.getElementById('tabEnvBtn'),
   tabAppKeyBtn: document.getElementById('tabAppKeyBtn'),
   scaffoldTab: document.getElementById('scaffoldTab'),
+  databaseTab: document.getElementById('databaseTab'),
+  cacheTab: document.getElementById('cacheTab'),
   routesTab: document.getElementById('routesTab'),
   environmentTab: document.getElementById('environmentTab'),
   appKeyTab: document.getElementById('appKeyTab'),
+  opsConnection: document.getElementById('opsConnection'),
+  migrationTarget: document.getElementById('migrationTarget'),
+  seedTarget: document.getElementById('seedTarget'),
+  migrateRunBtn: document.getElementById('migrateRunBtn'),
+  migrateRollbackBtn: document.getElementById('migrateRollbackBtn'),
+  migrateFreshBtn: document.getElementById('migrateFreshBtn'),
+  migrateStatusBtn: document.getElementById('migrateStatusBtn'),
+  seedRunBtn: document.getElementById('seedRunBtn'),
+  dbOpsStatus: document.getElementById('dbOpsStatus'),
+  dbOpsOutput: document.getElementById('dbOpsOutput'),
   routesRefreshBtn: document.getElementById('routesRefreshBtn'),
   routesStatus: document.getElementById('routesStatus'),
   routesRows: document.getElementById('routesRows'),
@@ -1000,6 +1049,11 @@ function setLoading(active) {
   if (elements.dbApplyBtn) elements.dbApplyBtn.disabled = active;
   if (elements.compatCheckBtn) elements.compatCheckBtn.disabled = active;
   if (elements.compatSaveBtn) elements.compatSaveBtn.disabled = active;
+  if (elements.migrateRunBtn) elements.migrateRunBtn.disabled = active;
+  if (elements.migrateRollbackBtn) elements.migrateRollbackBtn.disabled = active;
+  if (elements.migrateFreshBtn) elements.migrateFreshBtn.disabled = active;
+  if (elements.migrateStatusBtn) elements.migrateStatusBtn.disabled = active;
+  if (elements.seedRunBtn) elements.seedRunBtn.disabled = active;
   if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.disabled = active;
   if (elements.routesRefreshBtn) elements.routesRefreshBtn.disabled = active;
   if (elements.cacheClearAllBtn) elements.cacheClearAllBtn.disabled = active;
@@ -1338,6 +1392,12 @@ function setCacheStatus(message, ok) {
   elements.cacheStatus.className = 'status ' + (ok ? 'ok' : 'error');
 }
 
+function setDbOpsStatus(message, ok) {
+  if (!elements.dbOpsStatus) return;
+  elements.dbOpsStatus.textContent = message;
+  elements.dbOpsStatus.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
 function setEnvStatus(message, ok) {
   if (!elements.envStatus) return;
   elements.envStatus.textContent = message;
@@ -1440,15 +1500,21 @@ function saveEnvironment() {
 
 function showTab(tabName) {
   const scaffoldActive = tabName === 'scaffold';
+  const databaseActive = tabName === 'database';
+  const cacheActive = tabName === 'cache';
   const routesActive = tabName === 'routes';
   const envActive = tabName === 'environment';
   const appKeyActive = tabName === 'security';
 
   if (elements.scaffoldTab) elements.scaffoldTab.classList.toggle('active', scaffoldActive);
+  if (elements.databaseTab) elements.databaseTab.classList.toggle('active', databaseActive);
+  if (elements.cacheTab) elements.cacheTab.classList.toggle('active', cacheActive);
   if (elements.routesTab) elements.routesTab.classList.toggle('active', routesActive);
   if (elements.environmentTab) elements.environmentTab.classList.toggle('active', envActive);
   if (elements.appKeyTab) elements.appKeyTab.classList.toggle('active', appKeyActive);
   if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.classList.toggle('active', scaffoldActive);
+  if (elements.tabDatabaseBtn) elements.tabDatabaseBtn.classList.toggle('active', databaseActive);
+  if (elements.tabCacheBtn) elements.tabCacheBtn.classList.toggle('active', cacheActive);
   if (elements.tabRoutesBtn) elements.tabRoutesBtn.classList.toggle('active', routesActive);
   if (elements.tabEnvBtn) elements.tabEnvBtn.classList.toggle('active', envActive);
   if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.classList.toggle('active', appKeyActive);
@@ -1496,6 +1562,143 @@ function loadRoutes() {
     });
 }
 
+function selectedOpsConnection() {
+  if (elements.opsConnection && elements.opsConnection.value) return elements.opsConnection.value;
+  if (elements.dbConnection && elements.dbConnection.value) return elements.dbConnection.value;
+  return '';
+}
+
+function initDatabaseOpsPanel() {
+  request('/schema/connections')
+    .then((data) => {
+      if (!elements.opsConnection) return;
+      elements.opsConnection.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Select a connection';
+      placeholder.selected = true;
+      elements.opsConnection.appendChild(placeholder);
+      (Array.isArray(data.items) ? data.items : []).forEach((row) => {
+        const option = document.createElement('option');
+        option.value = row.name;
+        const suffix = row.default ? ' (default)' : '';
+        option.textContent = row.name + ' [' + (row.driver || 'unknown') + ']' + suffix;
+        elements.opsConnection.appendChild(option);
+      });
+    })
+    .catch((error) => {
+      setDbOpsStatus('Connection init failed: ' + error.message, false);
+    });
+}
+
+function runMigration(target, action) {
+  const connection = selectedOpsConnection();
+  if (!connection) {
+    setDbOpsStatus('Select a database connection first.', false);
+    return;
+  }
+
+  const safeTarget = target && String(target).trim() !== '' ? String(target).trim() : 'all';
+  const actionPath = action === 'rollback' ? '/migrations/rollback' : '/migrations/run';
+  const verb = action === 'rollback' ? 'rollback' : 'migrate';
+  const warning = 'This operation changes database schema/data. Continue?';
+  if (!window.confirm('[Warning] ' + warning + '\\nAction: ' + verb + '\\nTarget: ' + safeTarget + '\\nConnection: ' + connection)) {
+    return;
+  }
+
+  setLoading(true);
+  request(actionPath, { method: 'POST', body: { connection: connection, target: safeTarget } })
+    .then((data) => {
+      setDbOpsStatus('Database operation completed: ' + verb + ' ' + safeTarget + '.', true);
+      if (elements.dbOpsOutput) {
+        elements.dbOpsOutput.textContent = JSON.stringify(data, null, 2);
+      }
+    })
+    .catch((error) => {
+      setDbOpsStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+function runMigrationFresh() {
+  const connection = selectedOpsConnection();
+  if (!connection) {
+    setDbOpsStatus('Select a database connection first.', false);
+    return;
+  }
+  if (!window.confirm('[Warning] migrate:fresh will rollback all known migrations and re-run them.\\nConnection: ' + connection + '\\nContinue?')) {
+    return;
+  }
+
+  setLoading(true);
+  request('/migrations/fresh', { method: 'POST', body: { connection: connection } })
+    .then((data) => {
+      setDbOpsStatus('Fresh migration completed.', true);
+      if (elements.dbOpsOutput) {
+        elements.dbOpsOutput.textContent = JSON.stringify(data, null, 2);
+      }
+    })
+    .catch((error) => {
+      setDbOpsStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+function runMigrationStatus() {
+  const connection = selectedOpsConnection();
+  if (!connection) {
+    setDbOpsStatus('Select a database connection first.', false);
+    return;
+  }
+
+  setLoading(true);
+  request('/migrations/status?connection=' + encodeURIComponent(connection))
+    .then((data) => {
+      setDbOpsStatus('Migration status loaded.', true);
+      if (elements.dbOpsOutput) {
+        elements.dbOpsOutput.textContent = JSON.stringify(data, null, 2);
+      }
+    })
+    .catch((error) => {
+      setDbOpsStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+function runSeedTarget(target) {
+  const connection = selectedOpsConnection();
+  if (!connection) {
+    setDbOpsStatus('Select a database connection first.', false);
+    return;
+  }
+
+  const safeTarget = target && String(target).trim() !== '' ? String(target).trim() : 'all';
+  if (!window.confirm('[Warning] Seeding inserts records and can duplicate data depending on script design.\\nTarget: ' + safeTarget + '\\nConnection: ' + connection + '\\nContinue?')) {
+    return;
+  }
+
+  setLoading(true);
+  request('/seed/run', { method: 'POST', body: { connection: connection, target: safeTarget } })
+    .then((data) => {
+      setDbOpsStatus('Seeding completed for target ' + safeTarget + '.', true);
+      if (elements.dbOpsOutput) {
+        elements.dbOpsOutput.textContent = JSON.stringify(data, null, 2);
+      }
+    })
+    .catch((error) => {
+      setDbOpsStatus(error.message, false);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
 function generateAppKey() {
   const force = !!(elements.appKeyForce && elements.appKeyForce.checked);
   setLoading(true);
@@ -1517,6 +1720,16 @@ function generateAppKey() {
 }
 
 function clearCache(scope) {
+  const warningMap = {
+    all: 'Clears all local cache directories and route bindings.',
+    route: 'Clears route cache and static route bindings.',
+    http: 'Clears HTTP response cache.'
+  };
+  const warning = warningMap[scope] || 'Clears cache data.';
+  if (!window.confirm('[Warning] ' + warning + '\\nScope: ' + scope + '\\nContinue?')) {
+    return;
+  }
+
   setLoading(true);
   request('/cache/clear', { method: 'POST', body: { scope: scope } })
     .then((data) => {
@@ -1561,12 +1774,22 @@ window.addEventListener('keydown', (event) => {
 });
 if (elements.compatCheckBtn) elements.compatCheckBtn.addEventListener('click', compatibilityCheck);
 if (elements.compatSaveBtn) elements.compatSaveBtn.addEventListener('click', compatibilitySaveBaseline);
+if (elements.migrateRunBtn) elements.migrateRunBtn.addEventListener('click', () => runMigration(elements.migrationTarget ? elements.migrationTarget.value : 'all', 'run'));
+if (elements.migrateRollbackBtn) elements.migrateRollbackBtn.addEventListener('click', () => runMigration(elements.migrationTarget ? elements.migrationTarget.value : 'all', 'rollback'));
+if (elements.migrateFreshBtn) elements.migrateFreshBtn.addEventListener('click', runMigrationFresh);
+if (elements.migrateStatusBtn) elements.migrateStatusBtn.addEventListener('click', runMigrationStatus);
+if (elements.seedRunBtn) elements.seedRunBtn.addEventListener('click', () => runSeedTarget(elements.seedTarget ? elements.seedTarget.value : 'all'));
 if (elements.appKeyGenerateBtn) elements.appKeyGenerateBtn.addEventListener('click', generateAppKey);
 if (elements.routesRefreshBtn) elements.routesRefreshBtn.addEventListener('click', loadRoutes);
 if (elements.cacheClearAllBtn) elements.cacheClearAllBtn.addEventListener('click', () => clearCache('all'));
 if (elements.cacheClearRouteBtn) elements.cacheClearRouteBtn.addEventListener('click', () => clearCache('route'));
 if (elements.cacheClearHttpBtn) elements.cacheClearHttpBtn.addEventListener('click', () => clearCache('http'));
 if (elements.tabScaffoldBtn) elements.tabScaffoldBtn.addEventListener('click', () => showTab('scaffold'));
+if (elements.tabDatabaseBtn) elements.tabDatabaseBtn.addEventListener('click', () => {
+  showTab('database');
+  runMigrationStatus();
+});
+if (elements.tabCacheBtn) elements.tabCacheBtn.addEventListener('click', () => showTab('cache'));
 if (elements.tabRoutesBtn) elements.tabRoutesBtn.addEventListener('click', () => {
   showTab('routes');
   loadRoutes();
@@ -1581,6 +1804,7 @@ if (elements.envSaveBtn) elements.envSaveBtn.addEventListener('click', saveEnvir
 if (elements.artifactChecks) elements.artifactChecks.addEventListener('change', syncRoutingTypeState);
 
 initScaffoldPanel();
+initDatabaseOpsPanel();
 syncRoutingTypeState();
 showTab('scaffold');
 </script>

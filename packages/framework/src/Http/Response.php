@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: implement response behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when response functionality is required.
+ * Immutable HTTP response model returned by handlers and middleware.
+ *
+ * A response contains status, headers, body, and outgoing cookies. It is transport-
+ * level only; formatting decisions are made upstream by handlers/builders/finalizers.
  */
 final class Response
 {
@@ -222,6 +223,5 @@ final class Response
       return $copy;
    }
 }
-
 
 

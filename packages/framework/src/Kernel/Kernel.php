@@ -67,9 +67,10 @@ use ReflectionParameter;
 use RuntimeException;
 
 /**
- * Purpose: implement kernel behavior for the Kernel subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by kernel components when kernel functionality is required.
+ * Implement kernel behavior for the Kernel subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class Kernel implements KernelInterface
 {

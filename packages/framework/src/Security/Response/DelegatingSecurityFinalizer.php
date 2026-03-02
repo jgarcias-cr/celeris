@@ -10,9 +10,10 @@ use Celeris\Framework\Http\Response;
 use Celeris\Framework\Http\ResponseFinalizerInterface;
 
 /**
- * Purpose: implement delegating security finalizer behavior for the Security subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by security components when delegating security finalizer functionality is required.
+ * Implement delegating security finalizer behavior for the Security subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DelegatingSecurityFinalizer implements ResponseFinalizerInterface
 {

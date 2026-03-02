@@ -7,9 +7,10 @@ namespace Celeris\Framework\Config;
 use RuntimeException;
 
 /**
- * Purpose: load and normalize environment loader data from configured sources.
- * How: reads source inputs, validates shape, and returns normalized runtime objects.
- * Used in framework: invoked by config components when environment loader functionality is required.
+ * Load and normalize environment loader data from configured sources.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class EnvironmentLoader
 {

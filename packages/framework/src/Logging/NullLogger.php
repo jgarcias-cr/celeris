@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Logging;
 
 /**
- * Purpose: provide a no-op logger for environments where writing logs is disabled.
- * How: accepts log calls and intentionally performs no side effects.
- * Used in framework: safe fallback when a concrete logger cannot be created.
+ * Provide a no-op logger for environments where writing logs is disabled.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class NullLogger implements LoggerInterface
 {

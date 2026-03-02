@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\ActiveRecord\Validation;
 
 /**
- * Purpose: carry normalized Active Record validation output.
- * How: stores deterministic error entries keyed by model property name.
- * Used in framework: inspected by the Active Record manager to decide whether to persist or throw.
+ * Carry normalized Active Record validation output.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ActiveRecordValidationResult
 {

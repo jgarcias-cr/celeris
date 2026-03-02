@@ -9,9 +9,10 @@ use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Security\SecurityException;
 
 /**
- * Purpose: orchestrate auth engine workflows within Security.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by security components when auth engine functionality is required.
+ * Orchestrate auth engine workflows within Security.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class AuthEngine
 {

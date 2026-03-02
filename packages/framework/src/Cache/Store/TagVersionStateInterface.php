@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Cache\Store;
 
 /**
- * Purpose: define the contract for tag version state interface behavior in the Cache subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete cache services and resolved via dependency injection.
+ * Define the contract for tag version state interface behavior in the Cache subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface TagVersionStateInterface
 {

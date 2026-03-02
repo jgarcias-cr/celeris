@@ -8,9 +8,10 @@ use Attribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 /**
- * Purpose: implement string type behavior for the Validation subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by validation components when string type functionality is required.
+ * Implement string type behavior for the Validation subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class StringType
 {

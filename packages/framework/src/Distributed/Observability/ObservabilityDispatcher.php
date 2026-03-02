@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Distributed\Observability;
 
 /**
- * Purpose: route observability dispatcher events/messages to registered handlers.
- * How: maintains registrations and invokes listeners in deterministic order.
- * Used in framework: invoked by distributed components when observability dispatcher functionality is required.
+ * Route observability dispatcher events/messages to registered handlers.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ObservabilityDispatcher
 {

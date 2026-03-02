@@ -8,9 +8,10 @@ use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\Response;
 
 /**
- * Purpose: implement w3 c trace context propagator behavior for the Distributed subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by distributed components when w3 c trace context propagator functionality is required.
+ * Implement w3 c trace context propagator behavior for the Distributed subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class W3CTraceContextPropagator implements TracePropagatorInterface
 {

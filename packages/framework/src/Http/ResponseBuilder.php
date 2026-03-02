@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: compose response builder output from incremental inputs.
- * How: accumulates options explicitly and emits a finalized immutable result.
- * Used in framework: invoked by http components when response builder functionality is required.
+ * Fluent helper for constructing immutable `Response` instances.
+ *
+ * It is useful in handlers where incremental composition is clearer than instantiating
+ * `Response` directly with many constructor arguments.
  */
 final class ResponseBuilder
 {
@@ -157,6 +158,5 @@ final class ResponseBuilder
       );
    }
 }
-
 
 

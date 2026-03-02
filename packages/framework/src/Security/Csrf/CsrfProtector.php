@@ -9,9 +9,10 @@ use Celeris\Framework\Http\RequestContext;
 use Celeris\Framework\Security\SecurityException;
 
 /**
- * Purpose: implement csrf protector behavior for the Security subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by security components when csrf protector functionality is required.
+ * Implement csrf protector behavior for the Security subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class CsrfProtector
 {

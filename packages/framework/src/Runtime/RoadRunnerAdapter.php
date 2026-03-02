@@ -10,9 +10,10 @@ use Celeris\Framework\Http\Response;
 use InvalidArgumentException;
 
 /**
- * Purpose: bridge framework contracts with an external/runtime road runner adapter integration.
- * How: translates data and control flow between internal abstractions and external protocols.
- * Used in framework: selected by runtime or integration layers for environment-specific I/O.
+ * Bridge framework contracts with an external/runtime road runner adapter integration.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class RoadRunnerAdapter implements WorkerAdapterInterface
 {

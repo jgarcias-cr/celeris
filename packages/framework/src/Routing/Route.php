@@ -7,9 +7,10 @@ namespace Celeris\Framework\Routing;
 use RuntimeException;
 
 /**
- * Purpose: expose a static route registration API for ergonomic bootstrap wiring.
- * How: delegates every call to a bound RouteCollector instance.
- * Used in framework: optional facade-like routing syntax on top of RouteCollector.
+ * Expose a static route registration API for ergonomic bootstrap wiring.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class Route
 {

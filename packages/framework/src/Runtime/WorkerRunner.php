@@ -10,9 +10,10 @@ use Celeris\Framework\Security\SecurityException;
 use Throwable;
 
 /**
- * Purpose: implement worker runner behavior for the Runtime subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by runtime components when worker runner functionality is required.
+ * Implement worker runner behavior for the Runtime subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class WorkerRunner
 {

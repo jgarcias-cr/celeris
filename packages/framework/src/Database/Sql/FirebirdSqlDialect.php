@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Sql;
 
 /**
- * Purpose: shape pagination SQL for Firebird compatibility.
- * How: appends ROWS range clauses derived from limit/offset values.
- * Used in framework: selected when DatabaseDriver::Firebird is active.
+ * Shape pagination SQL for Firebird compatibility.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class FirebirdSqlDialect implements SqlDialectInterface
 {

@@ -20,9 +20,10 @@ use ReflectionClass;
 use ReflectionNamedType;
 
 /**
- * Purpose: orchestrate CRUD, query, hydration, and validation for the Active Record compatibility layer.
- * How: delegates persistence to `EntityManager`, builds explicit queries, and keeps model state transitions deterministic.
- * Used in framework: bound to `ActiveRecordModel` and called by static/instance AR helpers.
+ * Orchestrate CRUD, query, hydration, and validation for the Active Record compatibility layer.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ActiveRecordManager
 {

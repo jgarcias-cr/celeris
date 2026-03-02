@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ORM;
 use Celeris\Framework\Database\DatabaseException;
 
 /**
- * Purpose: define supported identifier generation strategies for ORM primary keys.
- * How: provides normalized enum values and strict parsing from config/attributes.
- * Used in framework: consumed by metadata and EntityManager insert workflows.
+ * Define supported identifier generation strategies for ORM primary keys.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 enum IdGenerationStrategy: string
 {

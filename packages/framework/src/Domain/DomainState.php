@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Domain;
 
 /**
- * Purpose: model the allowed domain state values used by Domain logic.
- * How: uses native enum cases to keep branching and serialization type-safe and explicit.
- * Used in framework: referenced by domain logic, serialization, and guard conditions.
+ * Model the allowed domain state values used by Domain logic.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 enum DomainState: string
 {

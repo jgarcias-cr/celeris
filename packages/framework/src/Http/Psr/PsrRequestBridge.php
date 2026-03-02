@@ -10,9 +10,10 @@ use Celeris\Framework\Http\UploadedFile;
 use InvalidArgumentException;
 
 /**
- * Purpose: implement psr request bridge behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when psr request bridge functionality is required.
+ * Implement psr request bridge behavior for the Http subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class PsrRequestBridge
 {

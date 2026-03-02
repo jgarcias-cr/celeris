@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: implement cookies behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when cookies functionality is required.
+ * Immutable cookie collection for request-side cookie values.
+ *
+ * The class normalizes and exposes cookie name/value pairs with predictable lookup
+ * semantics. It represents incoming cookies only; outgoing `Set-Cookie` headers are
+ * modeled separately by `SetCookie`.
  */
 final class Cookies
 {
@@ -121,7 +123,6 @@ final class Cookies
       return $copy;
    }
 }
-
 
 
 

@@ -8,9 +8,10 @@ use Closure;
 use RuntimeException;
 
 /**
- * Purpose: implement bootstrap manager behavior for the Kernel subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by kernel components when bootstrap manager functionality is required.
+ * Implement bootstrap manager behavior for the Kernel subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 class BootstrapManager
 {

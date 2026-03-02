@@ -7,9 +7,10 @@ namespace Celeris\Framework\Container;
 use Closure;
 
 /**
- * Purpose: implement service definition behavior for the Container subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by container components when service definition functionality is required.
+ * Implement service definition behavior for the Container subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ServiceDefinition
 {

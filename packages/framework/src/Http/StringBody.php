@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: implement string body behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when string body functionality is required.
+ * Buffered response body backed by a plain string.
+ *
+ * This is the default body type for most HTTP responses where full payload buffering
+ * is acceptable.
  */
 final class StringBody implements ResponseBodyInterface
 {
@@ -52,7 +53,6 @@ final class StringBody implements ResponseBodyInterface
       $write($this->content);
    }
 }
-
 
 
 

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Connection;
 
 /**
- * Purpose: define the contract for connection interface behavior in the Database subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete database services and resolved via dependency injection.
+ * Define the contract for connection interface behavior in the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface ConnectionInterface
 {

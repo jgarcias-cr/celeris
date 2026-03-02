@@ -10,9 +10,10 @@ use Celeris\Framework\Database\Connection\PdoConnectionFactory;
 use Celeris\Framework\Database\Testing\ArrayConnection;
 
 /**
- * Purpose: implement database bootstrap behavior for the Database subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by database components when database bootstrap functionality is required.
+ * Implement database bootstrap behavior for the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DatabaseBootstrap
 {

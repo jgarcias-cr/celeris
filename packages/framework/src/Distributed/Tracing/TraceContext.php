@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Distributed\Tracing;
 
 /**
- * Purpose: carry trace context state across a single execution scope.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: passed through call chains to avoid hidden globals and retain deterministic state.
+ * Carry trace context state across a single execution scope.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class TraceContext
 {

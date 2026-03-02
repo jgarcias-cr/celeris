@@ -7,9 +7,10 @@ namespace Celeris\Framework\Security\Auth;
 use Celeris\Framework\Http\Request;
 
 /**
- * Purpose: implement credential extractor behavior for the Security subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by security components when credential extractor functionality is required.
+ * Implement credential extractor behavior for the Security subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class CredentialExtractor
 {

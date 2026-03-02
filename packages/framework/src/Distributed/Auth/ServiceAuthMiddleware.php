@@ -10,9 +10,10 @@ use Celeris\Framework\Http\Response;
 use Celeris\Framework\Middleware\MiddlewareInterface;
 
 /**
- * Purpose: enforce service auth middleware concerns around request handling.
- * How: runs before and/or after the next pipeline stage and may short-circuit with a response.
- * Used in framework: registered in request pipelines to apply cross-cutting behavior per request.
+ * Enforce service auth middleware concerns around request handling.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ServiceAuthMiddleware implements MiddlewareInterface
 {

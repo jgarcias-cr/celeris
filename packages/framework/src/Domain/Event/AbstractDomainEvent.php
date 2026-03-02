@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Domain\Event;
 
 /**
- * Purpose: implement abstract domain event behavior for the Domain subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by domain components when abstract domain event functionality is required.
+ * Implement abstract domain event behavior for the Domain subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 abstract class AbstractDomainEvent implements DomainEventInterface
 {

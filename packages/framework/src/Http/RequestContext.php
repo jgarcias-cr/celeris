@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: carry request context state across a single execution scope.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: passed through call chains to avoid hidden globals and retain deterministic state.
+ * Per-request context bag carried through the kernel call chain.
+ *
+ * This object stores request metadata (request id, timing, route/auth context, and
+ * attributes) without relying on global state. It is designed for explicit propagation
+ * across middleware, handlers, and response finalizers.
  */
 final class RequestContext
 {
@@ -187,6 +189,5 @@ final class RequestContext
       return $this->attributes;
    }
 }
-
 
 

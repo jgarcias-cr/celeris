@@ -18,9 +18,10 @@ use ReflectionProperty;
 use UnitEnum;
 
 /**
- * Purpose: implement dto mapper behavior for the Serialization subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by serialization components when dto mapper functionality is required.
+ * Implement dto mapper behavior for the Serialization subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DtoMapper
 {

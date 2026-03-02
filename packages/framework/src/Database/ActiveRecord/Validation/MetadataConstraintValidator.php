@@ -8,9 +8,10 @@ use Celeris\Framework\Database\ActiveRecord\ActiveRecordModel;
 use Celeris\Framework\Database\ORM\EntityMetadata;
 
 /**
- * Purpose: enforce baseline persistence constraints and model-defined validation rules for Active Record.
- * How: validates non-null metadata columns first, then runs optional per-field and model-level rule callbacks.
- * Used in framework: default validator used by Active Record manager when no custom validator is configured.
+ * Enforce baseline persistence constraints and model-defined validation rules for Active Record.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class MetadataConstraintValidator implements ActiveRecordValidatorInterface
 {

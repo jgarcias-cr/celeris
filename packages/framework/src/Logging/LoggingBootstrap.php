@@ -7,9 +7,10 @@ namespace Celeris\Framework\Logging;
 use Celeris\Framework\Config\ConfigRepository;
 
 /**
- * Purpose: build framework logger instances from runtime config and project context.
- * How: resolves a fixed project log path and creates a file logger with level filtering.
- * Used in framework: invoked by Kernel during container rebuild and boot.
+ * Build framework logger instances from runtime config and project context.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class LoggingBootstrap
 {

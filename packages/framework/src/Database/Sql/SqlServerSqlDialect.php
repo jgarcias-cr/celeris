@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Sql;
 
 /**
- * Purpose: shape pagination SQL for SQL Server compatibility.
- * How: uses TOP for limit-only queries and OFFSET/FETCH when offset is present.
- * Used in framework: selected when DatabaseDriver::SQLServer is active.
+ * Shape pagination SQL for SQL Server compatibility.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class SqlServerSqlDialect implements SqlDialectInterface
 {

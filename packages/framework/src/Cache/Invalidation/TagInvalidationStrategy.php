@@ -9,9 +9,10 @@ use Celeris\Framework\Cache\Intent\CacheIntentType;
 use Celeris\Framework\Cache\Store\CacheStoreInterface;
 
 /**
- * Purpose: implement tag invalidation strategy behavior for the Cache subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by cache components when tag invalidation strategy functionality is required.
+ * Implement tag invalidation strategy behavior for the Cache subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class TagInvalidationStrategy implements InvalidationStrategyInterface
 {

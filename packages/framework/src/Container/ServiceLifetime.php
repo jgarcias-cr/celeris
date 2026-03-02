@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Container;
 
 /**
- * Purpose: model the allowed service lifetime values used by Container logic.
- * How: uses native enum cases to keep branching and serialization type-safe and explicit.
- * Used in framework: referenced by container logic, serialization, and guard conditions.
+ * Model the allowed service lifetime values used by Container logic.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 enum ServiceLifetime: string
 {

@@ -7,9 +7,11 @@ namespace Celeris\Framework\Http;
 use JsonException;
 
 /**
- * Purpose: implement request behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when request functionality is required.
+ * Immutable HTTP request value object used by middleware and handlers.
+ *
+ * It carries transport-level input (method, path, headers, query/body, cookies, files,
+ * and server params) from runtime adapters into the kernel pipeline. `withXxx` methods
+ * return cloned instances to keep request state predictable in worker mode.
  */
 final class Request
 {
@@ -492,6 +494,5 @@ final class Request
       return null;
    }
 }
-
 
 

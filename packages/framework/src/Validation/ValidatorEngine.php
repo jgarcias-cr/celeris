@@ -15,9 +15,10 @@ use ReflectionClass;
 use ReflectionProperty;
 
 /**
- * Purpose: orchestrate validator engine workflows within Validation.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by validation components when validator engine functionality is required.
+ * Orchestrate validator engine workflows within Validation.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ValidatorEngine
 {

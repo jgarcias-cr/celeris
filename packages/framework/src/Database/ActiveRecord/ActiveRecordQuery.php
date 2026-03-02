@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\ActiveRecord;
 
 /**
- * Purpose: offer an explicit query DSL for Active Record models.
- * How: accumulates deterministic filters/sorting/paging and delegates execution to `ActiveRecordManager`.
- * Used in framework: returned by `ActiveRecordModel::query()` for API-style model retrieval.
+ * Offer an explicit query DSL for Active Record models.
  *
- * @template TModel of ActiveRecordModel
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
+ *
+ * @template TModel of ActiveRecordModel.
  */
 final class ActiveRecordQuery
 {

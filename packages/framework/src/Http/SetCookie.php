@@ -7,9 +7,10 @@ namespace Celeris\Framework\Http;
 use DateTimeInterface;
 
 /**
- * Purpose: implement set cookie behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when set cookie functionality is required.
+ * Value object representing one outgoing `Set-Cookie` header.
+ *
+ * It captures cookie attributes (path, domain, flags, expiration, same-site) and can
+ * render the final header string when attached to a response.
  */
 final class SetCookie
 {
@@ -179,7 +180,6 @@ final class SetCookie
       return implode('; ', $parts);
    }
 }
-
 
 
 

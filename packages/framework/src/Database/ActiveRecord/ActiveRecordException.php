@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ActiveRecord;
 use Celeris\Framework\Database\ORM\OrmException;
 
 /**
- * Purpose: represent failures raised by the optional Active Record compatibility layer.
- * How: extends ORM exceptions so AR-specific errors can be handled without affecting mapper-style flows.
- * Used in framework: thrown by Active Record model, manager, query, and validation components.
+ * Represent failures raised by the optional Active Record compatibility layer.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 class ActiveRecordException extends OrmException
 {

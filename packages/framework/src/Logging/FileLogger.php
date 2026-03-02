@@ -8,9 +8,10 @@ use JsonSerializable;
 use Throwable;
 
 /**
- * Purpose: append structured log records to a fixed file path.
- * How: writes one JSON object per line with severity filtering.
- * Used in framework: default application logger for MVC/API stubs.
+ * Append structured log records to a fixed file path.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class FileLogger implements LoggerInterface
 {

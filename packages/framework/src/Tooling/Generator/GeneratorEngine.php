@@ -8,9 +8,10 @@ use Celeris\Framework\Tooling\Diff\UnifiedDiffBuilder;
 use Celeris\Framework\Tooling\ToolingException;
 
 /**
- * Purpose: orchestrate generator engine workflows within Tooling.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by tooling components when generator engine functionality is required.
+ * Orchestrate generator engine workflows within Tooling.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class GeneratorEngine
 {

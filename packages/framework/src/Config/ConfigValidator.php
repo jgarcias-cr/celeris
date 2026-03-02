@@ -7,9 +7,10 @@ namespace Celeris\Framework\Config;
 use Closure;
 
 /**
- * Purpose: implement config validator behavior for the Config subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by config components when config validator functionality is required.
+ * Implement config validator behavior for the Config subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ConfigValidator
 {

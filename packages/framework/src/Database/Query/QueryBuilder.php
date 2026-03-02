@@ -9,9 +9,10 @@ use Celeris\Framework\Database\Sql\SqlDialectFactory;
 use Celeris\Framework\Database\Sql\SqlDialectInterface;
 
 /**
- * Purpose: compose query builder output from incremental inputs.
- * How: accumulates options explicitly and emits a finalized immutable result.
- * Used in framework: invoked by database components when query builder functionality is required.
+ * Compose query builder output from incremental inputs.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class QueryBuilder
 {

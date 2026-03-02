@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: model the allowed http status values used by Http logic.
- * How: uses native enum cases to keep branching and serialization type-safe and explicit.
- * Used in framework: referenced by http logic, serialization, and guard conditions.
+ * Canonical HTTP status codes used across the framework.
+ *
+ * The enum gives handlers and builders a typed alternative to raw integers while still
+ * mapping directly to wire-level status values.
  */
 enum HttpStatus: int
 {
@@ -49,6 +50,5 @@ enum HttpStatus: int
       };
    }
 }
-
 
 

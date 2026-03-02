@@ -7,9 +7,10 @@ namespace Celeris\Framework\Domain\Event;
 use InvalidArgumentException;
 
 /**
- * Purpose: route domain event dispatcher events/messages to registered handlers.
- * How: maintains registrations and invokes listeners in deterministic order.
- * Used in framework: invoked by domain components when domain event dispatcher functionality is required.
+ * Route domain event dispatcher events/messages to registered handlers.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DomainEventDispatcher
 {

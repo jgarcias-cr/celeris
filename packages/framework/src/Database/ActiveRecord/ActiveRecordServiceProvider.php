@@ -16,9 +16,10 @@ use Celeris\Framework\Database\ORM\MetadataFactory;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 
 /**
- * Purpose: register and boot the optional Active Record compatibility services.
- * How: wires resolver/validator/manager services and binds the manager to `ActiveRecordModel` during boot.
- * Used in framework: registered by applications that want AR ergonomics in addition to mapper-style ORM.
+ * Register and boot the optional Active Record compatibility services.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ActiveRecordServiceProvider implements BootableServiceProviderInterface
 {

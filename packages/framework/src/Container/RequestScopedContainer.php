@@ -7,9 +7,10 @@ namespace Celeris\Framework\Container;
 use Celeris\Framework\Http\RequestContext;
 
 /**
- * Purpose: implement request scoped container behavior for the Container subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by container components when request scoped container functionality is required.
+ * Implement request scoped container behavior for the Container subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class RequestScopedContainer implements ContainerInterface
 {

@@ -8,9 +8,10 @@ use InvalidArgumentException;
 use RuntimeException;
 
 /**
- * Purpose: implement router behavior for the Routing subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by routing components when router functionality is required.
+ * Implement router behavior for the Routing subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class Router
 {
@@ -244,9 +245,10 @@ final class Router
 }
 
 /**
- * Purpose: implement router node behavior for the Routing subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by routing components when router node functionality is required.
+ * Implement router node behavior for the Routing subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class RouterNode
 {

@@ -9,9 +9,10 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
- * Purpose: compose dependency graph builder output from incremental inputs.
- * How: accumulates options explicitly and emits a finalized immutable result.
- * Used in framework: invoked by tooling components when dependency graph builder functionality is required.
+ * Compose dependency graph builder output from incremental inputs.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DependencyGraphBuilder
 {

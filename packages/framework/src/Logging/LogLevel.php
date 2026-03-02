@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Logging;
 
 /**
- * Purpose: centralize supported log levels and ordering for filtering.
- * How: defines canonical level names and numeric severity ranking.
- * Used in framework: consumed by logger implementations for threshold checks.
+ * Centralize supported log levels and ordering for filtering.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class LogLevel
 {

@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ActiveRecord\Exception;
 use Celeris\Framework\Database\ActiveRecord\ActiveRecordException;
 
 /**
- * Purpose: signal that an Active Record lookup expected a row but none matched the given identifier.
- * How: carries model class and primary key details in a deterministic message.
- * Used in framework: raised by `findOrFail` APIs in Active Record manager/model components.
+ * Signal that an Active Record lookup expected a row but none matched the given identifier.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ModelNotFoundException extends ActiveRecordException
 {

@@ -7,9 +7,10 @@ namespace Celeris\Framework\Security;
 use RuntimeException;
 
 /**
- * Purpose: represent a domain-specific failure for Security operations.
- * How: extends the exception model with context that callers and handlers can inspect.
- * Used in framework: thrown by security components and surfaced through kernel error handling.
+ * Represent a domain-specific failure for Security operations.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class SecurityException extends RuntimeException
 {

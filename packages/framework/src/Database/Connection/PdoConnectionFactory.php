@@ -11,9 +11,10 @@ use PDO;
 use PDOException;
 
 /**
- * Purpose: build configured pdo connection factory instances for runtime wiring.
- * How: encapsulates construction rules so callers avoid scattered wiring logic.
- * Used in framework: invoked by database components when pdo connection factory functionality is required.
+ * Build configured pdo connection factory instances for runtime wiring.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class PdoConnectionFactory
 {

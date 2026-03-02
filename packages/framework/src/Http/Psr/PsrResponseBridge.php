@@ -8,9 +8,10 @@ use Celeris\Framework\Http\Response;
 use InvalidArgumentException;
 
 /**
- * Purpose: implement psr response bridge behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when psr response bridge functionality is required.
+ * Implement psr response bridge behavior for the Http subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class PsrResponseBridge
 {

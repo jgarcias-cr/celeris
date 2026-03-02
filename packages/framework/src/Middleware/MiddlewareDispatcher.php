@@ -12,9 +12,10 @@ use InvalidArgumentException;
 use ReflectionFunction;
 
 /**
- * Purpose: route middleware dispatcher events/messages to registered handlers.
- * How: maintains registrations and invokes listeners in deterministic order.
- * Used in framework: invoked by middleware components when middleware dispatcher functionality is required.
+ * Route middleware dispatcher events/messages to registered handlers.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class MiddlewareDispatcher
 {

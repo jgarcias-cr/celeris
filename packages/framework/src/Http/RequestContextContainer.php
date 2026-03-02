@@ -8,9 +8,10 @@ use RuntimeException;
 use SplObjectStorage;
 
 /**
- * Purpose: implement request context container behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when request context container functionality is required.
+ * Runtime holder for the current `RequestContext`.
+ *
+ * It tracks nested context scopes on the main thread and fiber-aware stacks so code
+ * can safely resolve the active context during request processing and cleanup.
  */
 final class RequestContextContainer
 {
@@ -180,7 +181,6 @@ final class RequestContextContainer
       return \Fiber::getCurrent();
    }
 }
-
 
 
 

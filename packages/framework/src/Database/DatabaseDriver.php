@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database;
 
 /**
- * Purpose: model the allowed database driver values used by Database logic.
- * How: uses native enum cases to keep branching and serialization type-safe and explicit.
- * Used in framework: referenced by database logic, serialization, and guard conditions.
+ * Model the allowed database driver values used by Database logic.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 enum DatabaseDriver: string
 {

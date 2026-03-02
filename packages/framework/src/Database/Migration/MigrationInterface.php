@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\Migration;
 use Celeris\Framework\Database\Connection\ConnectionInterface;
 
 /**
- * Purpose: define the contract for migration interface behavior in the Database subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete database services and resolved via dependency injection.
+ * Define the contract for migration interface behavior in the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface MigrationInterface
 {

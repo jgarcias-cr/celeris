@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ORM;
 use Celeris\Framework\Database\Connection\ConnectionInterface;
 
 /**
- * Purpose: orchestrate orm engine workflows within Database.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by database components when orm engine functionality is required.
+ * Orchestrate orm engine workflows within Database.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class OrmEngine
 {

@@ -9,9 +9,10 @@ use Celeris\Framework\Database\Connection\PdoConnection;
 use Celeris\Framework\Database\DatabaseDriver;
 
 /**
- * Purpose: resolve SQL dialects from runtime database connection instances.
- * How: inspects known connection implementations and falls back to generic dialect.
- * Used in framework: invoked by DBAL/ORM/ActiveRecord query builder creation.
+ * Resolve SQL dialects from runtime database connection instances.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class SqlDialectResolver
 {

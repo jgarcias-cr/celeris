@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ORM;
 use Celeris\Framework\Database\DatabaseException;
 
 /**
- * Purpose: represent a domain-specific failure for Database operations.
- * How: extends the exception model with context that callers and handlers can inspect.
- * Used in framework: thrown by database components and surfaced through kernel error handling.
+ * Represent a domain-specific failure for Database operations.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 class OrmException extends DatabaseException
 {

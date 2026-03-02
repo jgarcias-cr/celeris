@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: implement response pipeline behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when response pipeline functionality is required.
+ * Ordered pipeline that applies response finalizers.
+ *
+ * The kernel uses this after handler execution so cross-cutting response behavior stays
+ * centralized and deterministic.
  */
 final class ResponsePipeline
 {
@@ -42,7 +43,6 @@ final class ResponsePipeline
       return $response;
    }
 }
-
 
 
 

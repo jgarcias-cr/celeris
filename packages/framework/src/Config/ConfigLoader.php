@@ -7,9 +7,10 @@ namespace Celeris\Framework\Config;
 use UnexpectedValueException;
 
 /**
- * Purpose: load and normalize config loader data from configured sources.
- * How: reads source inputs, validates shape, and returns normalized runtime objects.
- * Used in framework: invoked by config components when config loader functionality is required.
+ * Load and normalize config loader data from configured sources.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ConfigLoader
 {

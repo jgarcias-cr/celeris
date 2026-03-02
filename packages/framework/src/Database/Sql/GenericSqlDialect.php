@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Sql;
 
 /**
- * Purpose: apply ANSI-style LIMIT/OFFSET behavior for generic SQL dialects.
- * How: appends clauses in deterministic order when values are provided.
- * Used in framework: default dialect and for mysql/mariadb/pgsql/sqlite.
+ * Apply ANSI-style LIMIT/OFFSET behavior for generic SQL dialects.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class GenericSqlDialect implements SqlDialectInterface
 {

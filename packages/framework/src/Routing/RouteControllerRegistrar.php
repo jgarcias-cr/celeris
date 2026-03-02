@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Routing;
 
 /**
- * Purpose: provide a fluent controller-first route mapping API.
- * How: delegates to RouteCollector::add() so matching/dispatch behavior is unchanged.
- * Used in framework: optional ergonomics layer for route registration.
+ * Provide a fluent controller-first route mapping API.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class RouteControllerRegistrar
 {

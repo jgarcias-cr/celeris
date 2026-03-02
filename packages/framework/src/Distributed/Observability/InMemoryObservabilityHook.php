@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Distributed\Observability;
 
 /**
- * Purpose: implement in memory observability hook behavior for the Distributed subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by distributed components when in memory observability hook functionality is required.
+ * Implement in memory observability hook behavior for the Distributed subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class InMemoryObservabilityHook implements ObservabilityHookInterface
 {

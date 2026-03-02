@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Logging;
 
 /**
- * Purpose: define the contract for logger behavior in the Logging subsystem.
- * How: exposes level-specific helpers and a generic log method.
- * Used in framework: injected into application services and controllers via dependency injection.
+ * Define the contract for logger behavior in the Logging subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface LoggerInterface
 {

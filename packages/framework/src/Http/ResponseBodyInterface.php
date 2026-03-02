@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: define the contract for response body interface behavior in the Http subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete http services and resolved via dependency injection.
+ * Contract for response body implementations.
+ *
+ * Bodies may be buffered (`StringBody`) or streaming (`StreamBody`), but both must
+ * expose a common API so `Response` emission remains uniform.
  */
 interface ResponseBodyInterface
 {
@@ -30,7 +31,6 @@ interface ResponseBodyInterface
     */
    public function emit(callable $write): void;
 }
-
 
 
 

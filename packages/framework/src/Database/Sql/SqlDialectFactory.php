@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\Sql;
 use Celeris\Framework\Database\DatabaseDriver;
 
 /**
- * Purpose: create SQL dialect implementations from database driver values.
- * How: maps driver enum cases to concrete dialect classes.
- * Used in framework: called by DBAL/ORM resolver paths.
+ * Create SQL dialect implementations from database driver values.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class SqlDialectFactory
 {

@@ -9,9 +9,10 @@ use Celeris\Framework\Cache\Intent\CacheIntentType;
 use Celeris\Framework\Cache\Store\CacheStoreInterface;
 
 /**
- * Purpose: implement namespace invalidation strategy behavior for the Cache subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by cache components when namespace invalidation strategy functionality is required.
+ * Implement namespace invalidation strategy behavior for the Cache subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class NamespaceInvalidationStrategy implements InvalidationStrategyInterface
 {

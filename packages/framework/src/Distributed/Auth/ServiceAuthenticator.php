@@ -7,9 +7,10 @@ namespace Celeris\Framework\Distributed\Auth;
 use Celeris\Framework\Http\Request;
 
 /**
- * Purpose: implement service authenticator behavior for the Distributed subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by distributed components when service authenticator functionality is required.
+ * Implement service authenticator behavior for the Distributed subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ServiceAuthenticator
 {

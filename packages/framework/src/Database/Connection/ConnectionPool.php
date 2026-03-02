@@ -8,9 +8,10 @@ use Celeris\Framework\Database\DatabaseConfig;
 use Celeris\Framework\Database\DatabaseException;
 
 /**
- * Purpose: implement connection pool behavior for the Database subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by database components when connection pool functionality is required.
+ * Implement connection pool behavior for the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ConnectionPool
 {

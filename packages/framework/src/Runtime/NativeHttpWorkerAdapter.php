@@ -13,9 +13,10 @@ use JsonException;
 use RuntimeException;
 
 /**
- * Purpose: bridge framework contracts with a native socket-based worker runtime integration.
- * How: hosts a lightweight HTTP/1.1 server loop and translates frames into RuntimeRequest objects.
- * Used in framework: selected by runtime layers that want worker mode WITHOUT external runtime dependencies.
+ * Bridge framework contracts with a native socket-based worker runtime integration.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
 {

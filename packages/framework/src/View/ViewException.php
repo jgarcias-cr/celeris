@@ -7,9 +7,10 @@ namespace Celeris\Framework\View;
 use RuntimeException;
 
 /**
- * Purpose: represent a domain-specific failure for View operations.
- * How: extends the exception model with context that callers and handlers can inspect.
- * Used in framework: thrown by view components and surfaced through application error handling.
+ * Represent a domain-specific failure for View operations.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ViewException extends RuntimeException
 {

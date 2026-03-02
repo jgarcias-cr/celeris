@@ -30,9 +30,10 @@ use Celeris\Framework\Security\RateLimit\RateLimiter;
 use Celeris\Framework\Security\Response\SecurityHeadersFinalizer;
 
 /**
- * Purpose: implement security kernel guard behavior for the Security subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by security components when security kernel guard functionality is required.
+ * Implement security kernel guard behavior for the Security subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class SecurityKernelGuard
 {

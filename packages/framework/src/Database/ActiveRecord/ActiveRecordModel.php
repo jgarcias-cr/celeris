@@ -10,9 +10,10 @@ use ReflectionClass;
 use ReflectionNamedType;
 
 /**
- * Purpose: provide an optional Active Record facade over the existing Data Mapper ORM.
- * How: exposes static query/fetch methods, instance persistence methods, and magic property accessors.
- * Used in framework: extended by entities that want AR ergonomics while still using explicit metadata attributes.
+ * Provide an optional Active Record facade over the existing Data Mapper ORM.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 abstract class ActiveRecordModel
 {

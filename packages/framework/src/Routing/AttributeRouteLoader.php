@@ -10,9 +10,10 @@ use ReflectionClass;
 use ReflectionMethod;
 
 /**
- * Purpose: load and normalize attribute route loader data from configured sources.
- * How: reads source inputs, validates shape, and returns normalized runtime objects.
- * Used in framework: invoked by routing components when attribute route loader functionality is required.
+ * Load and normalize attribute route loader data from configured sources.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class AttributeRouteLoader
 {

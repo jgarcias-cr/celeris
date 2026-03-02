@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\Migration;
 use Celeris\Framework\Database\Connection\ConnectionInterface;
 
 /**
- * Purpose: implement sql migration behavior for the Database subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by database components when sql migration functionality is required.
+ * Implement sql migration behavior for the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 abstract class SqlMigration implements MigrationInterface
 {

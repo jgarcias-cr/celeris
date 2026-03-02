@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: implement content negotiator behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when content negotiator functionality is required.
+ * Resolves the best response media type from an `Accept` header.
+ *
+ * This helper is used when handlers can return multiple content types and need a
+ * deterministic choice based on client preference and quality factors. It is
+ * intentionally small and transport-focused: parsing/matching only, no response IO.
  */
 final class ContentNegotiator
 {
@@ -132,7 +134,6 @@ final class ContentNegotiator
       return $rangeMain === $candidateMain && ($rangeSub === '*' || $rangeSub === $candidateSub);
    }
 }
-
 
 
 

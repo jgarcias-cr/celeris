@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Http;
 
 /**
- * Purpose: define the contract for response finalizer interface behavior in the Http subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete http services and resolved via dependency injection.
+ * Contract for post-handler response transformation.
+ *
+ * Finalizers run after a handler returns and can add/normalize transport concerns such
+ * as security or cache headers without mutating handler code.
  */
 interface ResponseFinalizerInterface
 {
@@ -21,7 +22,6 @@ interface ResponseFinalizerInterface
     */
    public function finalize(RequestContext $ctx, Request $request, Response $response): Response;
 }
-
 
 
 

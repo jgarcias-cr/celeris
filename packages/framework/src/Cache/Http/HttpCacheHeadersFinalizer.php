@@ -10,9 +10,10 @@ use Celeris\Framework\Http\Response;
 use Celeris\Framework\Http\ResponseFinalizerInterface;
 
 /**
- * Purpose: implement http cache headers finalizer behavior for the Cache subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by cache components when http cache headers finalizer functionality is required.
+ * Implement http cache headers finalizer behavior for the Cache subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class HttpCacheHeadersFinalizer implements ResponseFinalizerInterface
 {

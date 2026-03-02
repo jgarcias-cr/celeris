@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\ORM\Event;
 
 /**
- * Purpose: implement abstract persistence event behavior for the Database subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by database components when abstract persistence event functionality is required.
+ * Implement abstract persistence event behavior for the Database subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 abstract class AbstractPersistenceEvent implements PersistenceEventInterface
 {

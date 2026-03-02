@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Database\Sql;
 
 /**
- * Purpose: shape pagination SQL for Oracle compatibility.
- * How: wraps source SQL with ROWNUM filtering to emulate limit/offset behavior.
- * Used in framework: selected when DatabaseDriver::Oracle is active.
+ * Shape pagination SQL for Oracle compatibility.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class OracleSqlDialect implements SqlDialectInterface
 {

@@ -8,9 +8,10 @@ use Celeris\Framework\Database\ActiveRecord\ActiveRecordModel;
 use Celeris\Framework\Database\ORM\EntityMetadata;
 
 /**
- * Purpose: define Active Record validation behavior before persistence.
- * How: accepts a model plus its metadata and returns a normalized validation result.
- * Used in framework: called by Active Record manager to enforce constraints consistently.
+ * Define Active Record validation behavior before persistence.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface ActiveRecordValidatorInterface
 {

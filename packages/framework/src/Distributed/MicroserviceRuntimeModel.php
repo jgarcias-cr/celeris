@@ -23,9 +23,10 @@ use Celeris\Framework\Middleware\MiddlewareInterface;
 use Celeris\Framework\Middleware\Pipeline;
 
 /**
- * Purpose: implement microservice runtime model behavior for the Distributed subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by distributed components when microservice runtime model functionality is required.
+ * Implement microservice runtime model behavior for the Distributed subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class MicroserviceRuntimeModel
 {

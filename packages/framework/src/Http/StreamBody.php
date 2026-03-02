@@ -8,9 +8,10 @@ use Closure;
 use InvalidArgumentException;
 
 /**
- * Purpose: implement stream body behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when stream body functionality is required.
+ * Streaming response body implementation.
+ *
+ * Use this when response data should be emitted incrementally (large exports, chunked
+ * output, SSE-style streams) instead of being fully buffered in memory.
  */
 final class StreamBody implements ResponseBodyInterface
 {
@@ -109,7 +110,6 @@ final class StreamBody implements ResponseBodyInterface
       $this->buffer = implode('', $chunks);
    }
 }
-
 
 
 

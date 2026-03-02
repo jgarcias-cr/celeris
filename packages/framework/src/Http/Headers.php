@@ -8,9 +8,11 @@ use IteratorAggregate;
 use Traversable;
 
 /**
- * Purpose: implement headers behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when headers functionality is required.
+ * Immutable, case-insensitive HTTP header map.
+ *
+ * `Headers` is shared by `Request` and `Response` so both sides of the pipeline use
+ * the same normalization and lookup behavior. It preserves multiple values per header
+ * while providing convenient single-value accessors.
  */
 final class Headers implements IteratorAggregate
 {
@@ -181,7 +183,6 @@ final class Headers implements IteratorAggregate
       return [trim($value)];
    }
 }
-
 
 
 

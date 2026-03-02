@@ -8,9 +8,10 @@ use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
 /**
- * Purpose: implement route group behavior for the Routing subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by routing components when route group functionality is required.
+ * Implement route group behavior for the Routing subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class RouteGroup
 {

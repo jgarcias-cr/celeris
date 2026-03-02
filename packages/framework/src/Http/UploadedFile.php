@@ -7,9 +7,10 @@ namespace Celeris\Framework\Http;
 use RuntimeException;
 
 /**
- * Purpose: implement uploaded file behavior for the Http subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by http components when uploaded file functionality is required.
+ * Immutable representation of an uploaded file from an HTTP request.
+ *
+ * It stores client metadata and upload state and provides safe move/stream helpers for
+ * request handlers and storage services.
  */
 final class UploadedFile
 {
@@ -193,7 +194,6 @@ final class UploadedFile
       return new self(null, $clientFilename, $clientMediaType, $size, $error, $streamContents);
    }
 }
-
 
 
 

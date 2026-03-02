@@ -120,6 +120,9 @@ function runMultiServiceIntegrationTests(): void
 
    assertTrue($entryResponse->getStatus() === 202, 'Cross-service call should return accepted response.');
    assertTrue($delivered instanceof MessageEnvelope, 'Event-driven message should be published to bus.');
+   if (!$delivered instanceof MessageEnvelope) {
+      throw new RuntimeException('Event-driven message should be published to bus.');
+   }
    assertTrue($delivered->topic() === 'orders.events', 'Published message should target expected topic.');
    assertTrue((string) $delivered->header('service') === 'service-b', 'Message should contain publishing service name.');
 

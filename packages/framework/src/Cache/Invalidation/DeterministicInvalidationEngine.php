@@ -8,9 +8,10 @@ use Celeris\Framework\Cache\Intent\CacheIntent;
 use Celeris\Framework\Cache\Store\CacheStoreInterface;
 
 /**
- * Purpose: orchestrate deterministic invalidation engine workflows within Cache.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by cache components when deterministic invalidation engine functionality is required.
+ * Orchestrate deterministic invalidation engine workflows within Cache.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DeterministicInvalidationEngine
 {

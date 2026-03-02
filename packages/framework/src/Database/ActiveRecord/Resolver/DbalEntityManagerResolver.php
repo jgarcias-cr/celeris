@@ -11,9 +11,10 @@ use Celeris\Framework\Database\ORM\MetadataFactory;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 
 /**
- * Purpose: build fresh `EntityManager` instances from DBAL connections for Active Record operations.
- * How: resolves a concrete connection by name and instantiates a new entity manager each time.
- * Used in framework: default resolver for worker-safe Active Record execution without cross-request identity map leakage.
+ * Build fresh `EntityManager` instances from DBAL connections for Active Record operations.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class DbalEntityManagerResolver implements EntityManagerResolverInterface
 {

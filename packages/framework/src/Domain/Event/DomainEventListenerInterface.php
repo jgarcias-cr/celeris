@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Domain\Event;
 
 /**
- * Purpose: define the contract for domain event listener interface behavior in the Domain subsystem.
- * How: declares typed method signatures that implementations must fulfill.
- * Used in framework: implemented by concrete domain services and resolved via dependency injection.
+ * Define the contract for domain event listener interface behavior in the Domain subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 interface DomainEventListenerInterface
 {

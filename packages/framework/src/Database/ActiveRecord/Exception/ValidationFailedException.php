@@ -7,9 +7,10 @@ namespace Celeris\Framework\Database\ActiveRecord\Exception;
 use Celeris\Framework\Database\ActiveRecord\ActiveRecordException;
 
 /**
- * Purpose: capture Active Record validation failures before persistence is attempted.
- * How: stores a normalized error map keyed by property name so callers can build deterministic responses.
- * Used in framework: thrown by Active Record manager when metadata constraints or custom model rules fail.
+ * Capture Active Record validation failures before persistence is attempted.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class ValidationFailedException extends ActiveRecordException
 {

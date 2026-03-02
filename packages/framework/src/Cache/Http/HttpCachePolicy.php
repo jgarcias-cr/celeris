@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Celeris\Framework\Cache\Http;
 
 /**
- * Purpose: implement http cache policy behavior for the Cache subsystem.
- * How: encapsulates its responsibilities behind explicit methods and typed dependencies.
- * Used in framework: invoked by cache components when http cache policy functionality is required.
+ * Implement http cache policy behavior for the Cache subsystem.
+ *
+ * It provides focused behavior for this type within the framework.
+ * In practice, it is used by adjacent modules through explicit dependencies.
  */
 final class HttpCachePolicy
 {

@@ -43,7 +43,7 @@ use Celeris\Framework\Routing\RouteGroup;
 use Celeris\Framework\Routing\RouteMetadata;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
-use Celeris\Framework\Tooling\ToolingPlatform;
+use Celeris\Framework\Tooling\ToolingBootstrap;
 
 $basePath = dirname(__DIR__);
 
@@ -77,8 +77,7 @@ if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorker
 }
 $kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
 $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
-$tooling = ToolingPlatform::fromProjectRoot($basePath);
-$tooling->mountWebUiRoutes($kernel->routes(), '/__dev/tooling');
+ToolingBootstrap::mountIfEnabled($kernel, $basePath);
 $kernel->routes()->get(
    '/',
    static function (ConfigRepository $config): Response {

@@ -26,6 +26,7 @@ Framework Core Layout (`packages/framework`)
     - `Domain/`, `Notification/`, `Distributed/`, `Tooling/`, `View/`
   - `tests/` — framework validation tests
   - `bin/celeris` — tooling CLI entrypoint
+    CLI tooling is intentionally invokable without mounting the web tooling UI.
 
 Application Stub Layout (`packages/api-stub`, `packages/mvc-stub`)
   - `app/` — app services/controllers/models
@@ -33,6 +34,7 @@ Application Stub Layout (`packages/api-stub`, `packages/mvc-stub`)
   - `public/` — front controller/static assets
   - `bin/` — operational scripts (for example notification worker/replay scripts)
   - `.env.example` — env template
+    Web tooling is opt-in through `TOOLING_WEB_ENABLED=true`.
 
 Notes
   - This repository is package-oriented; root-level `src/` and `public/` are not the primary structure.

@@ -3406,24 +3406,35 @@ Generator output safety pattern:
 
 ### 15.2 Web tooling endpoint
 
-You can mount `DeveloperUiController` as route handler:
+Recommended pattern for apps that want the web UI during development:
 
 ```php
-use Celeris\Framework\Tooling\ToolingPlatform;
+use Celeris\Framework\Tooling\ToolingBootstrap;
 
-$platform = ToolingPlatform::fromProjectRoot(__DIR__ . '/..');
-$platform->mountWebUiRoutes($kernel->routes(), '/__dev/tooling');
+ToolingBootstrap::mountIfEnabled($kernel, __DIR__ . '/..');
 ```
 
-The tooling UI is only available when `APP_ENV=development`. In other environments it returns `404`.
+This keeps the web UI out of runtime route registration unless the app explicitly enables it.
+
+Recommended usage model:
+- CLI tooling remains intentionally available through `php celeris ...`.
+- Web tooling is development-only and should be mounted explicitly from app bootstrap.
+- Production apps should leave the web tooling disabled unless there is a deliberate operational reason to expose it.
+
+If mounted, the tooling UI is available when the web tooling gate allows it. Otherwise it returns `404`.
 
 Environment toggles:
-- `TOOLING_ENABLED=true|false` forces tooling on/off regardless of `APP_ENV`.
+- `TOOLING_WEB_ENABLED=true|false` forces web tooling on/off regardless of `APP_ENV`.
+- `TOOLING_ENABLED=true|false` remains supported as a legacy fallback for compatibility.
 - `TOOLING_ALLOWED_ENVS=development,staging` allows tooling in specific environments.
 
 Apply-operation auditing:
 - `TOOLING_AUDIT_ENABLED=true|false` enables/disables audit logging (default `true`).
 - `TOOLING_AUDIT_PATH=var/log/tooling-audit.log` sets the audit log location (defaults to `var/log/tooling-audit.log` under project root).
+
+Stub defaults:
+- API and MVC stubs do not mount web tooling unless `TOOLING_WEB_ENABLED=true`.
+- The bundled `php celeris ...` wrapper still works without enabling the web UI.
 
 Audit records are written as JSON lines with request metadata and generator details.
 

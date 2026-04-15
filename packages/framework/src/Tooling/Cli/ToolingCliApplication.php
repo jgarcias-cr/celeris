@@ -996,12 +996,12 @@ final class ToolingCliApplication
 
       $previousEnv = $_ENV['APP_ENV'] ?? null;
       $previousServerEnv = $_SERVER['APP_ENV'] ?? null;
-      $previousToolingEnabled = $_ENV['TOOLING_ENABLED'] ?? null;
-      $previousServerToolingEnabled = $_SERVER['TOOLING_ENABLED'] ?? null;
+      $previousWebToolingEnabled = $_ENV['TOOLING_WEB_ENABLED'] ?? null;
+      $previousServerWebToolingEnabled = $_SERVER['TOOLING_WEB_ENABLED'] ?? null;
       $_ENV['APP_ENV'] = (string) ($previousEnv ?? 'development');
       $_SERVER['APP_ENV'] = (string) ($previousServerEnv ?? $_ENV['APP_ENV']);
-      $_ENV['TOOLING_ENABLED'] = 'true';
-      $_SERVER['TOOLING_ENABLED'] = 'true';
+      $_ENV['TOOLING_WEB_ENABLED'] = 'true';
+      $_SERVER['TOOLING_WEB_ENABLED'] = 'true';
 
       try {
          $json = '';
@@ -1049,15 +1049,15 @@ final class ToolingCliApplication
          } else {
             $_SERVER['APP_ENV'] = $previousServerEnv;
          }
-         if ($previousToolingEnabled === null) {
-            unset($_ENV['TOOLING_ENABLED']);
+         if ($previousWebToolingEnabled === null) {
+            unset($_ENV['TOOLING_WEB_ENABLED']);
          } else {
-            $_ENV['TOOLING_ENABLED'] = $previousToolingEnabled;
+            $_ENV['TOOLING_WEB_ENABLED'] = $previousWebToolingEnabled;
          }
-         if ($previousServerToolingEnabled === null) {
-            unset($_SERVER['TOOLING_ENABLED']);
+         if ($previousServerWebToolingEnabled === null) {
+            unset($_SERVER['TOOLING_WEB_ENABLED']);
          } else {
-            $_SERVER['TOOLING_ENABLED'] = $previousServerToolingEnabled;
+            $_SERVER['TOOLING_WEB_ENABLED'] = $previousServerWebToolingEnabled;
          }
       }
    }

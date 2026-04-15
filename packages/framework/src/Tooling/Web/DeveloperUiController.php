@@ -38,7 +38,8 @@ final class DeveloperUiController
 {
    private const API_VERSION = 'v1';
    private const ENV_KEY = 'APP_ENV';
-   private const ENABLED_KEY = 'TOOLING_ENABLED';
+   private const WEB_ENABLED_KEY = 'TOOLING_WEB_ENABLED';
+   private const LEGACY_ENABLED_KEY = 'TOOLING_ENABLED';
    private const ALLOWED_ENVS_KEY = 'TOOLING_ALLOWED_ENVS';
    private const AUDIT_ENABLED_KEY = 'TOOLING_AUDIT_ENABLED';
    private const AUDIT_PATH_KEY = 'TOOLING_AUDIT_PATH';
@@ -5206,7 +5207,12 @@ PHP;
 
    private function isToolingEnabled(): bool
    {
-      $explicit = $this->envFlag(self::ENABLED_KEY);
+      $explicit = $this->envFlag(self::WEB_ENABLED_KEY);
+      if ($explicit !== null) {
+         return $explicit;
+      }
+
+      $explicit = $this->envFlag(self::LEGACY_ENABLED_KEY);
       if ($explicit !== null) {
          return $explicit;
       }

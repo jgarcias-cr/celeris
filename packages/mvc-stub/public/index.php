@@ -39,7 +39,7 @@ use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Kernel\Kernel;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
-use Celeris\Framework\Tooling\ToolingPlatform;
+use Celeris\Framework\Tooling\ToolingBootstrap;
 
 $basePath = dirname(__DIR__);
 
@@ -74,8 +74,7 @@ if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorker
 $kernel->registerController(ContactPageController::class);
 $kernel->registerController(HomePageController::class);
 
-$tooling = ToolingPlatform::fromProjectRoot($basePath);
-$tooling->mountWebUiRoutes($kernel->routes(), '/__dev/tooling');
+ToolingBootstrap::mountIfEnabled($kernel, $basePath);
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());
 $runner->run();

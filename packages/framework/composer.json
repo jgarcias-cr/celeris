@@ -2,6 +2,11 @@
    "name": "celeris/framework",
    "description": "Celeris framework core (minimal)",
    "type": "library",
+   "keywords": [
+      "framework",
+      "php",
+      "celeris"
+   ],
    "bin": [
       "bin/celeris"
    ],
@@ -22,6 +27,13 @@
    "autoload": {
       "psr-4": {
          "Celeris\\Framework\\": "src/"
+      }
+   },
+   "minimum-stability": "dev",
+   "prefer-stable": true,
+   "extra": {
+      "branch-alias": {
+         "dev-main": "1.x-dev"
       }
    }
 }

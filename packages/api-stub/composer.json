@@ -2,9 +2,16 @@
    "name": "celeris/api",
    "description": "Celeris API base application scaffold for building service-oriented and REST APIs.",
    "type": "project",
+   "keywords": [
+      "framework",
+      "api",
+      "skeleton",
+      "starter",
+      "celeris"
+   ],
    "require": {
       "php": ">=8.4",
-      "celeris/framework": "*"
+      "celeris/framework": "^1.0@dev"
    },
    "suggest": {
       "celeris/notification-dispatch-worker": "Enable outbox dispatch worker services via NotificationDispatchWorkerServiceProvider.",
@@ -23,5 +30,12 @@
       "post-create-project-cmd": [
          "@app:key"
       ]
+   },
+   "minimum-stability": "dev",
+   "prefer-stable": true,
+   "extra": {
+      "branch-alias": {
+         "dev-main": "1.x-dev"
+      }
    }
 }

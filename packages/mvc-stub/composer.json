@@ -2,9 +2,16 @@
    "name": "celeris/mvc",
    "description": "Celeris MVC base application scaffold for building server-rendered web applications.",
    "type": "project",
+   "keywords": [
+      "framework",
+      "mvc",
+      "skeleton",
+      "starter",
+      "celeris"
+   ],
    "require": {
       "php": ">=8.4",
-      "celeris/framework": "*"
+      "celeris/framework": "^1.0@dev"
    },
    "suggest": {
       "celeris/notification-dispatch-worker": "Enable outbox dispatch worker services via NotificationDispatchWorkerServiceProvider.",
@@ -30,5 +37,12 @@
          "@app:key",
          "@php -r \"echo 'Next step: run npm install && npm run build to compile frontend assets.' . PHP_EOL;\""
       ]
+   },
+   "minimum-stability": "dev",
+   "prefer-stable": true,
+   "extra": {
+      "branch-alias": {
+         "dev-main": "1.x-dev"
+      }
    }
 }

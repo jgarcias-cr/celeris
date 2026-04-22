@@ -1,12 +1,16 @@
 {
-  "name": "celeris/framework",
-  "description": "Monorepo for celeris framework and examples",
+  "name": "celeris/dev",
+  "description": "Local development workspace for the Celeris monorepo",
   "type": "project",
   "require": {
     "php": ">=8.4",
     "celeris/framework": "*",
-    "celeris/mvc": "*",
-    "celeris/api": "*"
+    "celeris/queue-manager": "*",
+    "celeris/notification-smtp": "*",
+    "celeris/notification-in-app": "*",
+    "celeris/notification-outbox": "*",
+    "celeris/notification-realtime-gateway-websocket": "*",
+    "celeris/notification-dispatch-worker": "*"
   },
   "repositories": [
     { "type": "path", "url": "packages/framework", "options": { "symlink": true } },
@@ -21,7 +25,6 @@
   ],
   "autoload": {
     "psr-4": {
-      "App\\": "src/",
       "Celeris\\Framework\\": "packages/framework/src/"
     }
   },

@@ -13,3 +13,9 @@
 # SQLite runtime files
 *.sqlite
 *.db
+
+# Website documentation (not part of framework)
+docs/
+
+# Local Docker configuration
+docker/

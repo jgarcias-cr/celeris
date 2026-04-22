@@ -1,5 +1,5 @@
 {
-  "name": "celeris2/monorepo",
+  "name": "celeris/framework",
   "description": "Monorepo for celeris framework and examples",
   "type": "project",
   "require": {

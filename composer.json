@@ -2,6 +2,7 @@
   "name": "celeris/dev",
   "description": "Local development workspace for the Celeris monorepo",
   "type": "project",
+  "license": "MIT",
   "require": {
     "php": ">=8.4",
     "celeris/framework": "*",

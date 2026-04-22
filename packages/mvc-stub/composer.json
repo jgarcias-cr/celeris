@@ -2,6 +2,7 @@
    "name": "celeris/mvc",
    "description": "Celeris MVC base application scaffold for building server-rendered web applications.",
    "type": "project",
+   "license": "MIT",
    "keywords": [
       "framework",
       "mvc",

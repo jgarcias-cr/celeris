@@ -2,6 +2,7 @@
    "name": "celeris/framework",
    "description": "Celeris framework core (minimal)",
    "type": "library",
+   "license": "MIT",
    "keywords": [
       "framework",
       "php",

@@ -469,7 +469,7 @@ function runCliMigrateCommands(): void
 {
    $root = '/tmp/celeris-phase10-cli-migrate-' . bin2hex(random_bytes(6));
    @mkdir($root . '/config', 0777, true);
-   @mkdir($root . '/app/Database/Migrations', 0777, true);
+   @mkdir($root . '/database/migrations', 0777, true);
    @mkdir($root . '/var', 0777, true);
 
    $dbPath = $root . '/var/migrate.sqlite';
@@ -495,7 +495,7 @@ return [
 ];
 PHP
 );
-   file_put_contents($root . '/app/Database/Migrations/CreateWidgetsTableMigration.php', <<<'PHP'
+   file_put_contents($root . '/database/migrations/CreateWidgetsTableMigration.php', <<<'PHP'
 <?php
 
 declare(strict_types=1);
@@ -528,7 +528,7 @@ final class CreateWidgetsTableMigration extends SqlMigration
 }
 PHP
 );
-   file_put_contents($root . '/app/Database/Migrations/SeedWidgetsTableMigration.php', <<<'PHP'
+   file_put_contents($root . '/database/migrations/SeedWidgetsTableMigration.php', <<<'PHP'
 <?php
 
 declare(strict_types=1);

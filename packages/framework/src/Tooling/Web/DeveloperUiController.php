@@ -3170,7 +3170,7 @@ HTML;
 
    private function migrationsDirectory(): string
    {
-      return rtrim($this->projectRoot, '/\\') . '/app/Database/Migrations';
+      return rtrim($this->projectRoot, '/\\') . '/database/migrations';
    }
 
    /**

@@ -1,5 +1,5 @@
 {
-  "name": "celeris/dev",
+  "name": "celeris/monorepo",
   "description": "Local development workspace for the Celeris monorepo",
   "type": "project",
   "license": "MIT",
@@ -29,6 +29,5 @@
       "Celeris\\Framework\\": "packages/framework/src/"
     }
   },
-  "minimum-stability": "dev",
   "prefer-stable": true
 }

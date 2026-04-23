@@ -1,0 +1,143 @@
+name: Split Packages
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'framework-v*'
+      - 'api-v*'
+      - 'mvc-v*'
+    paths:
+      - 'packages/framework/**'
+      - 'packages/api-stub/**'
+      - 'packages/mvc-stub/**'
+      - '.github/workflows/split-packages.yml'
+      - 'scripts/publish-split-package.sh'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - framework
+          - api
+          - mvc
+      target_ref:
+        description: Optional git ref or SHA to split from
+        required: false
+        type: string
+      publish_tag:
+        description: Optional release tag to create in the split repository, e.g. v1.0.0
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: split-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: framework
+            prefix: packages/framework
+            repository_variable: CELERIS_FRAMEWORK_REPO
+            tag_prefix: framework-v
+          - package: api
+            prefix: packages/api-stub
+            repository_variable: CELERIS_API_REPO
+            tag_prefix: api-v
+          - package: mvc
+            prefix: packages/mvc-stub
+            repository_variable: CELERIS_MVC_REPO
+            tag_prefix: mvc-v
+
+    env:
+      SPLIT_PUSH_TOKEN: ${{ secrets.MONOREPO_SPLIT_TOKEN }}
+      TARGET_REPOSITORY: ${{ vars[matrix.repository_variable] }}
+
+    steps:
+      - name: Validate configuration
+        run: |
+          if [[ -z "${SPLIT_PUSH_TOKEN}" ]]; then
+            echo "Missing required secret: MONOREPO_SPLIT_TOKEN" >&2
+            exit 1
+          fi
+
+          if [[ -z "${TARGET_REPOSITORY}" ]]; then
+            echo "Missing required repository variable: ${{ matrix.repository_variable }}" >&2
+            exit 1
+          fi
+
+      - name: Check out monorepo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Decide publish plan
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+          INPUT_TARGET_REF: ${{ inputs.target_ref }}
+          INPUT_PUBLISH_TAG: ${{ inputs.publish_tag }}
+          MATRIX_PACKAGE: ${{ matrix.package }}
+          MATRIX_TAG_PREFIX: ${{ matrix.tag_prefix }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          should_publish=false
+          source_ref="${GIT_SHA}"
+          target_branch=""
+          target_tag=""
+
+          if [[ "${EVENT_NAME}" == "push" && "${REF_TYPE}" == "branch" ]]; then
+            should_publish=true
+            target_branch="main"
+          elif [[ "${EVENT_NAME}" == "push" && "${REF_TYPE}" == "tag" ]]; then
+            if [[ "${REF_NAME}" == "${MATRIX_TAG_PREFIX}"* ]]; then
+              should_publish=true
+              target_tag="${REF_NAME#${MATRIX_TAG_PREFIX}}"
+            fi
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ "${INPUT_PACKAGE}" == "all" || "${INPUT_PACKAGE}" == "${MATRIX_PACKAGE}" ]]; then
+              should_publish=true
+              target_branch="main"
+              if [[ -n "${INPUT_PUBLISH_TAG}" ]]; then
+                target_tag="${INPUT_PUBLISH_TAG}"
+              fi
+              if [[ -n "${INPUT_TARGET_REF}" ]]; then
+                source_ref="${INPUT_TARGET_REF}"
+              fi
+            fi
+          fi
+
+          {
+            echo "should_publish=${should_publish}"
+            echo "source_ref=${source_ref}"
+            echo "target_branch=${target_branch}"
+            echo "target_tag=${target_tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Publish split package
+        if: steps.plan.outputs.should_publish == 'true'
+        env:
+          TARGET_BRANCH: ${{ steps.plan.outputs.target_branch }}
+          TARGET_TAG: ${{ steps.plan.outputs.target_tag }}
+        run: |
+          bash scripts/publish-split-package.sh \
+            "${{ matrix.prefix }}" \
+            "${TARGET_REPOSITORY}" \
+            "${{ steps.plan.outputs.source_ref }}"

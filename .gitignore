@@ -16,6 +16,11 @@
 
 # Website documentation (not part of framework)
 docs/
+!docs/
+docs/*
+!docs/runbooks/
+docs/runbooks/*
+!docs/runbooks/monorepo-split-publishing.md
 
 # Local Docker configuration
 docker/

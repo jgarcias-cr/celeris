@@ -86,8 +86,9 @@ $kernel->routes()->get(
    '/',
    static function (ConfigRepository $config): Response {
       $frameworkVersion = 'unknown';
-      if (class_exists(\Composer\InstalledVersions::class) && \Composer\InstalledVersions::isInstalled('celeris/framework')) {
-         $frameworkVersion = \Composer\InstalledVersions::getPrettyVersion('celeris/framework') ?? 'unknown';
+      $installedVersionsClass = 'Composer\\InstalledVersions';
+      if (class_exists($installedVersionsClass) && $installedVersionsClass::isInstalled('celeris/framework')) {
+         $frameworkVersion = $installedVersionsClass::getPrettyVersion('celeris/framework') ?? 'unknown';
       }
 
       $payload = [

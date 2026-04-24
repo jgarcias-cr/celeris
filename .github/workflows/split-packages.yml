@@ -52,15 +52,15 @@ jobs:
           - package: framework
             prefix: packages/framework
             repository_variable: CELERIS_FRAMEWORK_REPO
-            tag_prefix: framework-v
+            tag_prefix: framework-
           - package: api
             prefix: packages/api-stub
             repository_variable: CELERIS_API_REPO
-            tag_prefix: api-v
+            tag_prefix: api-
           - package: mvc
             prefix: packages/mvc-stub
             repository_variable: CELERIS_MVC_REPO
-            tag_prefix: mvc-v
+            tag_prefix: mvc-
 
     env:
       SPLIT_PUSH_TOKEN: ${{ secrets.MONOREPO_SPLIT_TOKEN }}

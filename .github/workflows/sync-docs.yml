@@ -28,6 +28,7 @@ jobs:
         run: |
           mkdir -p packages/api-stub/docs
           cp docs/database-engines.md packages/api-stub/docs/
+          cp docs/local-project-install.md packages/api-stub/docs/
           cp docs/user-manual.md packages/api-stub/docs/
           cp -r docs/examples packages/api-stub/docs/
 
@@ -35,6 +36,7 @@ jobs:
         run: |
           mkdir -p packages/mvc-stub/docs
           cp docs/database-engines.md packages/mvc-stub/docs/
+          cp docs/local-project-install.md packages/mvc-stub/docs/
           cp docs/user-manual.md packages/mvc-stub/docs/
           cp -r docs/examples packages/mvc-stub/docs/
 

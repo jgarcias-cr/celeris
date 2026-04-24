@@ -22,5 +22,11 @@ docs/*
 docs/runbooks/*
 !docs/runbooks/monorepo-split-publishing.md
 
+# Allow synced documentation in stub packages
+!packages/api-stub/docs/
+!packages/mvc-stub/docs/
+!packages/api-stub/docs/**
+!packages/mvc-stub/docs/**
+
 # Local Docker configuration
 docker/

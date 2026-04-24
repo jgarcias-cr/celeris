@@ -2,6 +2,15 @@
 
 set -euo pipefail
 
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -26,29 +35,29 @@ if [[ $# -lt 2 || $# -gt 3 ]]; then
   exit 1
 fi
 
+require_cmd git
+
 prefix="$1"
 target_repository="$2"
 source_ref="${3:-HEAD}"
 target_branch="${TARGET_BRANCH:-}"
 target_tag="${TARGET_TAG:-}"
 split_push_token="${SPLIT_PUSH_TOKEN:-}"
+force_push="${FORCE_PUSH:-}"
 
 if [[ -z "$split_push_token" ]]; then
-  echo "SPLIT_PUSH_TOKEN is required." >&2
-  exit 1
+  die "SPLIT_PUSH_TOKEN is required."
 fi
 
 if [[ -z "$target_branch" && -z "$target_tag" ]]; then
-  echo "Set TARGET_BRANCH, TARGET_TAG, or both." >&2
-  exit 1
+  die "Set TARGET_BRANCH, TARGET_TAG, or both."
 fi
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 if [[ ! -d "$prefix" ]]; then
-  echo "Package prefix does not exist: $prefix" >&2
-  exit 1
+  die "Package prefix does not exist: $prefix"
 fi
 
 remote_name="split-${target_repository//[^[:alnum:]]/-}"
@@ -62,14 +71,27 @@ trap cleanup EXIT
 
 git remote add "$remote_name" "$remote_url"
 
-split_commit="$(git subtree split --prefix="$prefix" "$source_ref")"
+if ! git subtree --help >/dev/null 2>&1; then
+  die "git subtree is not available in this environment."
+fi
+
+if ! git ls-remote "$remote_name" >/dev/null 2>&1; then
+  die "Unable to access target repository ${target_repository}. Check MONOREPO_SPLIT_TOKEN permissions and that the repo exists."
+fi
+
+split_commit="$(git subtree split --prefix="$prefix" "$source_ref")" || die "git subtree split failed for prefix ${prefix} at ref ${source_ref}."
+
+push_flags=()
+if [[ "${force_push}" == "1" || "${force_push}" == "true" || "${force_push}" == "TRUE" ]]; then
+  push_flags+=(--force)
+fi
 
 if [[ -n "$target_branch" ]]; then
   echo "Pushing ${prefix} to ${target_repository}@${target_branch} from ${source_ref}"
-  git push --force "$remote_name" "${split_commit}:refs/heads/${target_branch}"
+  git push "${push_flags[@]}" "$remote_name" "${split_commit}:refs/heads/${target_branch}" || die "Push to ${target_repository}@${target_branch} failed."
 fi
 
 if [[ -n "$target_tag" ]]; then
   echo "Pushing ${prefix} tag ${target_tag} to ${target_repository} from ${source_ref}"
-  git push --force "$remote_name" "${split_commit}:refs/tags/${target_tag}"
+  git push "${push_flags[@]}" "$remote_name" "${split_commit}:refs/tags/${target_tag}" || die "Push tag ${target_tag} to ${target_repository} failed."
 fi

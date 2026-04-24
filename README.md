@@ -88,3 +88,35 @@ This repository is the development workspace for Celeris. The publishable packag
 - `celeris/mvc`
 
 The root package exists for local development and package orchestration.
+
+### Monorepo Package Splits
+
+The GitHub Actions workflow `.github/workflows/split-packages.yml` keeps the public package repositories in sync with this monorepo using `git subtree split`:
+
+- `packages/framework` → `celeris/framework`
+- `packages/api-stub` → `celeris/api`
+- `packages/mvc-stub` → `celeris/mvc`
+
+**Required GitHub configuration (monorepo)**
+
+- Secret: `MONOREPO_SPLIT_TOKEN` (PAT with push access to the split repositories)
+- Variables:
+  - `CELERIS_FRAMEWORK_REPO` (e.g. `jgarcias-cr/celeris-framework`)
+  - `CELERIS_API_REPO` (e.g. `jgarcias-cr/celeris-api`)
+  - `CELERIS_MVC_REPO` (e.g. `jgarcias-cr/celeris-mvc`)
+
+**Manual runs**
+
+Use GitHub → Actions → Split Packages → Run workflow to publish `all` or a single package.
+
+**Release tags**
+
+Create a tag in the monorepo and push it:
+
+- `framework-vX.Y.Z` publishes tag `vX.Y.Z` to `celeris/framework`
+- `api-vX.Y.Z` publishes tag `vX.Y.Z` to `celeris/api`
+- `mvc-vX.Y.Z` publishes tag `vX.Y.Z` to `celeris/mvc`
+
+**Branch protection**
+
+If you enable branch protection that blocks force-pushes on the split repositories, keep `FORCE_PUSH` unset. If you need to allow overwriting history for a one-off repair, set `FORCE_PUSH=true` in the workflow environment before running.

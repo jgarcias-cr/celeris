@@ -37,10 +37,14 @@ jobs:
           cp docs/user-manual.md packages/mvc-stub/docs/
           cp -r docs/examples packages/mvc-stub/docs/
 
+      - name: Stage documentation changes
+        run: |
+          git add packages/api-stub/docs/ packages/mvc-stub/docs/
+
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet; then
+          if git diff --cached --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -51,6 +55,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/api-stub/docs/ packages/mvc-stub/docs/
           git commit -m "docs: sync documentation to stubs"
           git push origin main

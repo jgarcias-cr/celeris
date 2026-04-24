@@ -1,0 +1,59 @@
+name: Sync Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/database-engines.md'
+      - 'docs/local-project-install.md'
+      - 'docs/user-manual.md'
+      - 'docs/examples/**'
+      - '.github/workflows/sync-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync docs to api-stub
+        run: |
+          mkdir -p packages/api-stub/docs
+          cp docs/database-engines.md packages/api-stub/docs/
+          cp docs/local-project-install.md packages/api-stub/docs/
+          cp docs/user-manual.md packages/api-stub/docs/
+          cp -r docs/examples packages/api-stub/docs/
+
+      - name: Sync docs to mvc-stub
+        run: |
+          mkdir -p packages/mvc-stub/docs
+          cp docs/database-engines.md packages/mvc-stub/docs/
+          cp docs/local-project-install.md packages/mvc-stub/docs/
+          cp docs/user-manual.md packages/mvc-stub/docs/
+          cp -r docs/examples packages/mvc-stub/docs/
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/api-stub/docs/ packages/mvc-stub/docs/
+          git commit -m "docs: sync documentation to stubs"
+          git push origin main

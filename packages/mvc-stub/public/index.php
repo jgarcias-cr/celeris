@@ -36,6 +36,8 @@ use App\Http\Controllers\ContactPageController;
 use App\Http\Controllers\HomePageController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
+use Celeris\Framework\Http\Cors\CorsPreflightMiddleware;
+use Celeris\Framework\Http\Cors\CorsResponseFinalizer;
 use Celeris\Framework\Kernel\Kernel;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
@@ -55,6 +57,8 @@ $kernel = new Kernel(
    ),
    registerBuiltinRoutes: false,
 );
+$kernel->getPipeline()->add(new CorsPreflightMiddleware());
+$kernel->getResponsePipeline()->add(new CorsResponseFinalizer());
 $kernel->registerProvider(new AppServiceProvider());
 if (class_exists(\Celeris\Notification\Smtp\SmtpNotificationServiceProvider::class)) {
    $kernel->registerProvider(new \Celeris\Notification\Smtp\SmtpNotificationServiceProvider());

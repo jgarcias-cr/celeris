@@ -732,7 +732,6 @@ return [
                 'subject' => 'admin-1',
                 'roles' => ['admin'],
                 'permissions' => ['contacts:read', 'contacts:write'],
-                'contact_ids' => [1, 2],
                 'token_id' => 'opaque-admin-id',
             ],
         ],
@@ -750,7 +749,6 @@ return [
             'subject' => 'web-user-1',
             'roles' => ['user'],
             'permissions' => ['contacts:read'],
-            'contact_ids' => [1],
         ],
     ],
 
@@ -2954,7 +2952,7 @@ Security pipeline in `SecurityKernelGuard` enforces, in order:
 - Cookie sessions (`CookieSessionStrategy`)
 - mTLS (`MutualTlsStrategy`)
 
-### 11.2 Authorization with attributes and policies
+### 11.2 Authorization with attributes
 
 ```php
 use Celeris\Framework\Security\Authorization\Authorize;
@@ -2980,53 +2978,6 @@ final class AdminController
     }
 }
 ```
-
-Attribute-based authorization is a good fit for route-wide checks such as roles,
-permissions, or authentication strategy requirements.
-
-For model-aware authorization, prefer application policies that extend the
-framework `ModelPolicy` base class:
-
-```php
-use App\Models\Contact;
-use Celeris\Framework\Http\RequestContext;
-use Celeris\Framework\Security\Authorization\ModelPolicy;
-
-final class ContactPolicy extends ModelPolicy
-{
-    public function create(RequestContext $ctx): bool
-    {
-        return $this->allows($ctx, null, 'contacts:write');
-    }
-
-    public function view(RequestContext $ctx, Contact $contact): bool
-    {
-        return $this->allows($ctx, $contact, 'contacts:read');
-    }
-
-    public function update(RequestContext $ctx, Contact $contact): bool
-    {
-        return $this->allows($ctx, $contact, 'contacts:write');
-    }
-
-    public function delete(RequestContext $ctx, Contact $contact): bool
-    {
-        return $this->allows($ctx, $contact, 'contacts:write');
-    }
-}
-```
-
-`ModelPolicy::allows()` is framework-provided and works with a generic model
-object. By default it:
-
-- grants access to principals with the `admin` role
-- grants access when the required permission is present
-- treats `resource:write` as satisfying `resource:read`
-- checks ownership claims inferred from the model class name
-
-For example, a `Contact` model maps to a `contact_ids` auth claim by default.
-You can override `ownershipClaimKey()` in your policy when your claim naming
-scheme differs.
 
 ### 11.3 Token revocation
 
@@ -3063,62 +3014,11 @@ or strict mode:
 $kernel->getValidator()->assertValid($dto);
 ```
 
-### 12.2 Form requests in MVC handlers
-
-For MVC form submissions, use `Celeris\Framework\Http\FormRequest` and keep
-request-specific authorization and rules close to the controller boundary:
-
-```php
-use App\Models\Contact;
-use App\Policies\ContactPolicy;
-use Celeris\Framework\Http\FormRequest;
-use Celeris\Framework\Http\RequestContext;
-
-final class UpdateContactRequest extends FormRequest
-{
-    public function __construct(private ContactPolicy $policy) {}
-
-    public function authorize(RequestContext $ctx, mixed $resource = null): bool
-    {
-        return $resource instanceof Contact
-            && $this->policy->update($ctx, $resource);
-    }
-
-    public function rules(): array
-    {
-        return [
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'phone' => ['nullable', 'string', 'min:7', 'max:30'],
-            'address' => ['nullable', 'string', 'min:5', 'max:255'],
-            'age' => ['required', 'integer', 'between:0,130'],
-        ];
-    }
-}
-```
-
-Request lifecycle:
-
-1. `authorize()` returns a boolean.
-2. `authorizeOrFail()` throws `AuthorizationException` (`403`) when authorization fails.
-3. `validateRequest()` runs authorization first, then evaluates `rules()`.
-4. `validated()` returns normalized request input when validation passes.
-
-Typical MVC usage:
-
-```php
-$contact = $this->service->getOrFail($id);
-$payload = $requestObject->validateRequest($ctx, $request, $contact);
-```
-
-### 12.3 DTO mapping in handlers
+### 12.2 DTO mapping in handlers
 
 If a handler parameter is typed with a class annotated `#[Dto]`, the kernel maps request payload/query into it automatically and validates it.
 
-DTO mapping is usually the better fit for APIs. `FormRequest` is usually the
-better fit for server-rendered MVC forms.
-
-### 12.4 Deterministic serialization
+### 12.3 Deterministic serialization
 
 ```php
 $serializer = $kernel->getSerializer();

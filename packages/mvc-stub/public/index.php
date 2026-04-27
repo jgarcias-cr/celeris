@@ -44,16 +44,18 @@ use Celeris\Framework\Runtime\WorkerRunner;
 use Celeris\Framework\Tooling\ToolingBootstrap;
 
 $basePath = dirname(__DIR__);
+$environmentLoader = new EnvironmentLoader(
+   is_file($basePath . '/.env') ? $basePath . '/.env' : null,
+   is_dir($basePath . '/secrets') ? $basePath . '/secrets' : null,
+   true,
+   true,
+);
+$environmentLoader->load();
 
 $kernel = new Kernel(
    configLoader: new ConfigLoader(
       $basePath . '/config',
-      new EnvironmentLoader(
-         is_file($basePath . '/.env') ? $basePath . '/.env' : null,
-         is_dir($basePath . '/secrets') ? $basePath . '/secrets' : null,
-         false,
-         true,
-      ),
+      $environmentLoader,
    ),
    registerBuiltinRoutes: false,
 );

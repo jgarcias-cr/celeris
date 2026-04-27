@@ -21,6 +21,7 @@ It is a good fit for:
 - Server-rendered application bootstrap with a working homepage and contacts CRUD flow
 - Attribute-based controller routing
 - MVC layering with controllers, services, repositories, and models already separated
+- Form request objects and model policies for explicit validation and authorization
 - Multiple view engine options with configuration for `php`, `twig`, `plates`, and `latte`
 - Shared layouts and partials for starter UI composition
 - Asset build scripts for JavaScript, CSS, and static images
@@ -104,9 +105,11 @@ Compiled assets are written under `public/assets`.
 
 - `public/index.php` boots the HTTP kernel and registers page controllers
 - `app/Http/Controllers` contains page controllers
+- `app/Http/Requests` contains form request classes with `authorize()` and `rules()`
 - `app/Services` holds application use cases
 - `app/Repositories` contains persistence-facing code
 - `app/Models` contains view-facing domain models
+- `app/Policies` contains model action policies such as `view`, `create`, `update`, and `delete`
 - `app/Views` contains layouts, partials, and page templates
 - `config` centralizes app, view, database, and security behavior
 - `database/migrations` and `database/seeds` contain starter persistence files

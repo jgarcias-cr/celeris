@@ -269,20 +269,89 @@ button:disabled {
 }
 #artifactChecks {
   margin-top: 0.7rem;
+}
+.artifact-checks-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+.artifact-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.35rem 0.7rem;
+  gap: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+  background: #fffef8;
 }
-#artifactChecks label {
+.artifact-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.artifact-column-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--accent);
+}
+.artifact-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.artifact-item {
   display: flex;
   align-items: flex-start;
   gap: 0.45rem;
   color: var(--ink);
   font-size: 0.82rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
-#artifactChecks input[type="checkbox"] {
+.artifact-item:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+.artifact-item.artifact-core {
+  font-weight: 500;
+}
+.artifact-item.artifact-optional {
+  opacity: 0.85;
+}
+.artifact-item.artifact-test {
+  padding-left: 1.5rem;
+  border-left: 2px solid var(--accent);
+}
+.artifact-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.03);
+}
+.artifact-item.disabled::before {
+  content: "🔒";
+  display: inline-block;
+  margin-right: 0.3rem;
+  font-size: 0.75rem;
+}
+.artifact-spacer {
+  height: 0.7rem;
+}
+.artifact-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.artifact-item input[type="checkbox"] {
   width: auto;
   margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+.artifact-item.disabled input[type="checkbox"] {
+  cursor: not-allowed;
 }
 .hint {
   display: block;
@@ -594,18 +663,31 @@ pre {
         <button id="dbReloadBtn">Reload Tables</button>
       </div>
     </div>
-    <div id="artifactChecks">
-      <label><input type="checkbox" value="model" checked><span>Model<span class="hint">Entity constants and table schema metadata.</span></span></label>
-      <label><input type="checkbox" value="repository" checked><span>Repository<span class="hint">Data-access abstraction for table operations.</span></span></label>
-      <label><input type="checkbox" value="service" checked><span>Service<span class="hint">Business logic with required/default validation.</span></span></label>
-      <label><input type="checkbox" value="controller" checked><span>Controller<span class="hint">HTTP endpoints for the generated resource.</span></span></label>
-      <label><input type="checkbox" value="dto.request" checked><span>DTO Request<span class="hint">Typed input contract for create/update payloads.</span></span></label>
-      <label><input type="checkbox" value="dto.response" checked><span>DTO Response<span class="hint">Typed output contract returned to clients.</span></span></label>
-      <label><input type="checkbox" value="factory"><span>Factory<span class="hint">Realistic test-data builder for this table.</span></span></label>
-      <label><input type="checkbox" value="seed"><span>Seeder<span class="hint">Seed records for local/dev environments.</span></span></label>
-      <label><input type="checkbox" value="test.unit.repository"><span>Repo Test<span class="hint">Unit scaffold for repository behavior.</span></span></label>
-      <label><input type="checkbox" value="test.unit.service"><span>Service Test<span class="hint">Unit scaffold for service rules/defaults.</span></span></label>
-      <label><input type="checkbox" value="test.integration.controller"><span>Controller Test<span class="hint">Integration scaffold for HTTP contract checks.</span></span></label>
+    <div id="artifactChecks" class="artifact-checks-grid">
+      <div class="artifact-section">
+        <div class="artifact-column artifact-main">
+          <h4 class="artifact-column-title">Main Classes</h4>
+          <div class="artifact-items">
+            <label class="artifact-item artifact-core"><input type="checkbox" value="model" checked data-artifact="model"><span class="artifact-label">Model<span class="hint">Entity constants and table schema metadata.</span></span></label>
+            <label class="artifact-item artifact-core"><input type="checkbox" value="repository" checked data-artifact="repository"><span class="artifact-label">Repository<span class="hint">Data-access abstraction for table operations.</span></span></label>
+            <label class="artifact-item artifact-core"><input type="checkbox" value="service" checked data-artifact="service"><span class="artifact-label">Service<span class="hint">Business logic with required/default validation.</span></span></label>
+            <label class="artifact-item artifact-core"><input type="checkbox" value="controller" checked data-artifact="controller"><span class="artifact-label">Controller<span class="hint">HTTP endpoints for the generated resource.</span></span></label>
+            <div class="artifact-spacer"></div>
+            <label class="artifact-item artifact-optional"><input type="checkbox" value="dto.request" checked data-artifact="dto.request"><span class="artifact-label">DTO Request<span class="hint">Typed input contract for create/update payloads.</span></span></label>
+            <label class="artifact-item artifact-optional"><input type="checkbox" value="dto.response" checked data-artifact="dto.response"><span class="artifact-label">DTO Response<span class="hint">Typed output contract returned to clients.</span></span></label>
+            <label class="artifact-item artifact-optional"><input type="checkbox" value="factory" data-artifact="factory"><span class="artifact-label">Factory<span class="hint">Realistic test-data builder for this table.</span></span></label>
+            <label class="artifact-item artifact-optional"><input type="checkbox" value="seed" data-artifact="seed"><span class="artifact-label">Seeder<span class="hint">Seed records for local/dev environments.</span></span></label>
+          </div>
+        </div>
+        <div class="artifact-column artifact-tests">
+          <h4 class="artifact-column-title">Test Coverage</h4>
+          <div class="artifact-items">
+            <label class="artifact-item artifact-test artifact-test-repository" data-test-for="repository"><input type="checkbox" value="test.unit.repository" data-artifact="test.unit.repository"><span class="artifact-label">Repo Test<span class="hint">Unit scaffold for repository behavior.</span></span></label>
+            <label class="artifact-item artifact-test artifact-test-service" data-test-for="service"><input type="checkbox" value="test.unit.service" data-artifact="test.unit.service"><span class="artifact-label">Service Test<span class="hint">Unit scaffold for service rules/defaults.</span></span></label>
+            <label class="artifact-item artifact-test artifact-test-controller" data-test-for="controller"><input type="checkbox" value="test.integration.controller" data-artifact="test.integration.controller"><span class="artifact-label">Controller Test<span class="hint">Integration scaffold for HTTP contract checks.</span></span></label>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="actions">
       <button id="dbPreviewBtn" class="primary">DB Preview</button>
@@ -1090,6 +1172,175 @@ function syncRoutingTypeState() {
   }
 }
 
+// Artifact dependency definitions
+const ARTIFACT_DEPENDENCIES = {
+  model: { requires: [], disables: ['repository', 'service', 'test.unit.repository', 'test.unit.service', 'controller'] },
+  repository: { requires: ['model'], disables: ['service', 'test.unit.service', 'test.unit.repository'] },
+  service: { requires: ['model', 'repository'], disables: ['test.unit.service'] },
+  controller: { requires: [], disables: ['test.integration.controller'] },
+  'test.unit.repository': { requires: ['repository'], disables: [] },
+  'test.unit.service': { requires: ['service', 'repository'], disables: [] },
+  'test.integration.controller': { requires: ['controller'], disables: [] },
+  'dto.request': { requires: [], disables: [] },
+  'dto.response': { requires: [], disables: [] },
+  factory: { requires: [], disables: [] },
+  seed: { requires: [], disables: [] },
+};
+
+function getArtifactInput(value) {
+  if (!elements.artifactChecks) return null;
+  return elements.artifactChecks.querySelector('input[type="checkbox"][value="' + value + '"]');
+}
+
+function getArtifactLabel(value) {
+  const input = getArtifactInput(value);
+  return input ? input.closest('label') : null;
+}
+
+function enforceDependencies() {
+  if (!elements.artifactChecks) return;
+  
+  const allInputs = elements.artifactChecks.querySelectorAll('input[type="checkbox"]');
+  const unchecked = [];
+  
+  // First pass: uncheck dependent artifacts
+  allInputs.forEach((input) => {
+    if (!input.checked) return;
+    
+    const value = input.value;
+    const deps = ARTIFACT_DEPENDENCIES[value];
+    if (!deps) return;
+    
+    // Check if this artifact's requirements are met
+    const requirementsMet = deps.requires.every((req) => {
+      const reqInput = getArtifactInput(req);
+      return reqInput && reqInput.checked;
+    });
+    
+    if (!requirementsMet) {
+      input.checked = false;
+      unchecked.push(value);
+    }
+  });
+  
+  // Second pass: uncheck artifacts that depend on unchecked items
+  let changes = true;
+  while (changes) {
+    changes = false;
+    allInputs.forEach((input) => {
+      if (!input.checked) return;
+      
+      const value = input.value;
+      const deps = ARTIFACT_DEPENDENCIES[value];
+      if (!deps) return;
+      
+      const requirementsMet = deps.requires.every((req) => {
+        const reqInput = getArtifactInput(req);
+        return reqInput && reqInput.checked;
+      });
+      
+      if (!requirementsMet) {
+        input.checked = false;
+        unchecked.push(value);
+        changes = true;
+      }
+    });
+  }
+  
+  // Disable artifacts based on unchecked items
+  allInputs.forEach((input) => {
+    const value = input.value;
+    const deps = ARTIFACT_DEPENDENCIES[value];
+    if (!deps) return;
+    
+    const canCheck = deps.requires.every((req) => {
+      const reqInput = getArtifactInput(req);
+      return reqInput && reqInput.checked;
+    });
+    
+    const label = getArtifactLabel(value);
+    if (!canCheck && !input.checked) {
+      input.disabled = true;
+      if (label) label.classList.add('disabled');
+    } else {
+      input.disabled = false;
+      if (label) label.classList.remove('disabled');
+    }
+  });
+  
+  // Show notification if artifacts were unchecked
+  if (unchecked.length > 0) {
+    const names = unchecked.map((v) => {
+      const label = getArtifactLabel(v);
+      if (label) {
+        const span = label.querySelector('span:not(.hint)');
+        return span ? span.textContent : v;
+      }
+      return v;
+    }).join(', ');
+    showNotification('Dependencies enforced: ' + names + ' unchecked');
+  }
+}
+
+function showNotification(message) {
+  // Create a simple toast/notification
+  const existing = document.getElementById('dependency-notification');
+  if (existing) existing.remove();
+  
+  const notification = document.createElement('div');
+  notification.id = 'dependency-notification';
+  notification.style.cssText = 'position: fixed; top: 1rem; right: 1rem; background: #2196F3; color: white; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; z-index: 50; max-width: 300px;';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 6000);
+}
+
+function initArtifactDependencies() {
+  if (!elements.artifactChecks) return;
+  
+  const checkboxes = elements.artifactChecks.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      enforceDependencies();
+      syncRoutingTypeState();
+    });
+  });
+  
+  // Initial enforcement
+  enforceDependencies();
+}
+
+function validateArtifactDependencies(artifacts) {
+  if (!Array.isArray(artifacts)) {
+    return 'Invalid artifacts list';
+  }
+
+  // Check each artifact's requirements
+  for (let i = 0; i < artifacts.length; i++) {
+    const artifact = artifacts[i];
+    const deps = ARTIFACT_DEPENDENCIES[artifact];
+    
+    if (!deps) {
+      continue; // Unknown artifact, let server validate
+    }
+    
+    // Check if all required artifacts are in the selection
+    for (let j = 0; j < deps.requires.length; j++) {
+      const required = deps.requires[j];
+      if (!artifacts.includes(required)) {
+        return 'Invalid selection: "' + artifact + '" requires "' + required + '" to be selected';
+      }
+    }
+  }
+  
+  return null; // Valid
+}
+
 function request(path, options) {
   const init = Object.assign({ method: 'GET', headers: {} }, options || {});
   if (init.body && typeof init.body !== 'string') {
@@ -1269,6 +1520,12 @@ function scaffoldPreview() {
     return;
   }
 
+  const validationError = validateArtifactDependencies(payload.artifacts);
+  if (validationError) {
+    setPreviewStatus(validationError, false);
+    return;
+  }
+
   setLoading(true);
   request('/scaffold/preview', { method: 'POST', body: payload })
     .then((data) => {
@@ -1297,6 +1554,13 @@ function scaffoldApply() {
     setPreviewStatus('Select at least one artifact.', false);
     return;
   }
+
+  const validationError = validateArtifactDependencies(payload.artifacts);
+  if (validationError) {
+    setPreviewStatus(validationError, false);
+    return;
+  }
+
   if (!window.confirm('Apply DB scaffold for table ' + payload.table + '?')) {
     return;
   }
@@ -1802,9 +2066,9 @@ if (elements.tabEnvBtn) elements.tabEnvBtn.addEventListener('click', () => {
 if (elements.tabAppKeyBtn) elements.tabAppKeyBtn.addEventListener('click', () => showTab('security'));
 if (elements.envReloadBtn) elements.envReloadBtn.addEventListener('click', loadEnvironment);
 if (elements.envSaveBtn) elements.envSaveBtn.addEventListener('click', saveEnvironment);
-if (elements.artifactChecks) elements.artifactChecks.addEventListener('change', syncRoutingTypeState);
 
 initScaffoldPanel();
+initArtifactDependencies();
 initDatabaseOpsPanel();
 syncRoutingTypeState();
 showTab('scaffold');

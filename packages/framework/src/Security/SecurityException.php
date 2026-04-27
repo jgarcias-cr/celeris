@@ -12,7 +12,7 @@ use RuntimeException;
  * It provides focused behavior for this type within the framework.
  * In practice, it is used by adjacent modules through explicit dependencies.
  */
-final class SecurityException extends RuntimeException
+class SecurityException extends RuntimeException
 {
    /** @var array<string, string|array<int, string>> */
    private array $headers;
@@ -44,7 +44,6 @@ final class SecurityException extends RuntimeException
       return $this->headers;
    }
 }
-
 
 
 

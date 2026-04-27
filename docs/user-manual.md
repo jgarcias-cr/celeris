@@ -3092,7 +3092,15 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 
 ### 15.1 CLI
 
-`packages/framework/bin/celeris` supports:
+In installed apps and scaffolded projects, use the local wrapper:
+
+```bash
+php celeris <command> [options]
+```
+
+That wrapper resolves the installed CLI binary automatically. When working directly inside the framework source tree, the underlying binary is `packages/framework/bin/celeris`.
+
+The CLI supports:
 - `app-key`
 - `routes:list`
 - `health`
@@ -3119,74 +3127,68 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 - `compat:check`
 - `compat:baseline:save`
 
-General form:
-
-```bash
-php packages/framework/bin/celeris <command> [options]
-```
-
 #### `app-key`
 
 ```bash
-php packages/framework/bin/celeris app-key --show
-php packages/framework/bin/celeris app-key --force --env=.env --json
+php celeris app-key --show
+php celeris app-key --force --env=.env --json
 ```
 
 #### `routes:list`
 
 ```bash
-php packages/framework/bin/celeris routes:list
-php packages/framework/bin/celeris routes:list --json
+php celeris routes:list
+php celeris routes:list --json
 ```
 
 #### `health`
 
 ```bash
-php packages/framework/bin/celeris health
-php packages/framework/bin/celeris health --json
+php celeris health
+php celeris health --json
 ```
 
 #### `summary`
 
 ```bash
-php packages/framework/bin/celeris summary
-php packages/framework/bin/celeris summary --json
+php celeris summary
+php celeris summary --json
 ```
 
 #### `list-generators`
 
 ```bash
-php packages/framework/bin/celeris list-generators
-php packages/framework/bin/celeris list-generators --json
+php celeris list-generators
+php celeris list-generators --json
 ```
 
 #### `graph`
 
 ```bash
-php packages/framework/bin/celeris graph
-php packages/framework/bin/celeris graph --format=dot
-php packages/framework/bin/celeris graph --format=json
+php celeris graph
+php celeris graph --format=dot
+php celeris graph --format=json
 ```
 
 #### `validate`
 
 ```bash
-php packages/framework/bin/celeris validate
-php packages/framework/bin/celeris validate --json
+php celeris validate
+php celeris validate --json
 ```
 
 #### `generate`
 
 ```bash
-php packages/framework/bin/celeris generate controller Contact --module=Contacts
-php packages/framework/bin/celeris generate controller Contact --module=Contacts --write
-php packages/framework/bin/celeris generate controller Contact --module=Contacts --routing-type=php --write --overwrite
+php celeris generate controller Contact --module=Contacts
+php celeris generate controller Contact --module=Contacts --write
+php celeris generate controller Contact --module=Contacts --routing-type=php --write --overwrite
 ```
 
 Use `generate module` only when you intentionally want a new module boundary (for example `Billing`, `Inventory`) with its own provider/controller skeleton:
 
 ```bash
-php packages/framework/bin/celeris generate module Billing --write
+php celeris generate module Billing --write
 ```
 
 In scaffolded API/MVC projects, this is usually not the default day-to-day command.
@@ -3195,8 +3197,8 @@ Most feature work should use DB scaffolding or targeted generators for models/re
 #### `environment:get`
 
 ```bash
-php packages/framework/bin/celeris environment:get
-php packages/framework/bin/celeris environment:get --json
+php celeris environment:get
+php celeris environment:get --json
 ```
 
 #### `environment:save`
@@ -3204,29 +3206,29 @@ php packages/framework/bin/celeris environment:get --json
 Prepare a JSON payload file (for example `env-update.json`) with the same shape returned by `environment:get --json`, then apply it:
 
 ```bash
-php packages/framework/bin/celeris environment:save --file=env-update.json
-php packages/framework/bin/celeris environment:save --file=env-update.json --json
+php celeris environment:save --file=env-update.json
+php celeris environment:save --file=env-update.json --json
 ```
 
 #### `schema:connections`
 
 ```bash
-php packages/framework/bin/celeris schema:connections
-php packages/framework/bin/celeris schema:connections --json
+php celeris schema:connections
+php celeris schema:connections --json
 ```
 
 #### `schema:tables`
 
 ```bash
-php packages/framework/bin/celeris schema:tables --connection=pgsql
-php packages/framework/bin/celeris schema:tables --connection=pgsql --json
+php celeris schema:tables --connection=pgsql
+php celeris schema:tables --connection=pgsql --json
 ```
 
 #### `schema:describe`
 
 ```bash
-php packages/framework/bin/celeris schema:describe contacts --connection=pgsql
-php packages/framework/bin/celeris schema:describe contacts --connection=pgsql --json
+php celeris schema:describe contacts --connection=pgsql
+php celeris schema:describe contacts --connection=pgsql --json
 ```
 
 Migration commands use files from `app/Database/Migrations`.
@@ -3234,8 +3236,8 @@ Migration commands use files from `app/Database/Migrations`.
 #### `migrate`
 
 ```bash
-php packages/framework/bin/celeris migrate all --connection=pgsql
-php packages/framework/bin/celeris migrate CreateContactsTableMigration.php --connection=pgsql
+php celeris migrate all --connection=pgsql
+php celeris migrate CreateContactsTableMigration.php --connection=pgsql
 ```
 
 Warning: this changes schema state. Run against dev/staging first.
@@ -3243,8 +3245,8 @@ Warning: this changes schema state. Run against dev/staging first.
 #### `migrate:rollback`
 
 ```bash
-php packages/framework/bin/celeris migrate:rollback all --connection=pgsql
-php packages/framework/bin/celeris migrate:rollback CreateContactsTableMigration.php --connection=pgsql
+php celeris migrate:rollback all --connection=pgsql
+php celeris migrate:rollback CreateContactsTableMigration.php --connection=pgsql
 ```
 
 Warning: this can remove schema/data introduced by the selected migration(s).
@@ -3252,7 +3254,7 @@ Warning: this can remove schema/data introduced by the selected migration(s).
 #### `migrate:fresh`
 
 ```bash
-php packages/framework/bin/celeris migrate:fresh --connection=pgsql
+php celeris migrate:fresh --connection=pgsql
 ```
 
 Warning: this performs rollback + re-run and is destructive by nature.
@@ -3260,22 +3262,22 @@ Warning: this performs rollback + re-run and is destructive by nature.
 #### `migrate:status`
 
 ```bash
-php packages/framework/bin/celeris migrate:status --connection=pgsql
-php packages/framework/bin/celeris migrate:status --connection=pgsql --json
+php celeris migrate:status --connection=pgsql
+php celeris migrate:status --connection=pgsql --json
 ```
 
 #### `scaffold:preview`
 
 ```bash
-php packages/framework/bin/celeris scaffold:preview contacts --connection=pgsql
-php packages/framework/bin/celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=attribute --json
+php celeris scaffold:preview contacts --connection=pgsql
+php celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=attribute --json
 ```
 
 #### `scaffold:apply`
 
 ```bash
-php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql
-php packages/framework/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=php --json
+php celeris scaffold:apply contacts --connection=pgsql
+php celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=php --json
 ```
 
 When `seed` is included in artifacts, Celeris generates table-based seed files in `database/seeds/`:
@@ -3290,9 +3292,9 @@ Each file returns:
 #### `seed`
 
 ```bash
-php packages/framework/bin/celeris seed all --connection=pgsql
-php packages/framework/bin/celeris seed contacts --connection=pgsql
-php packages/framework/bin/celeris seed contacts --connection=pgsql --json
+php celeris seed all --connection=pgsql
+php celeris seed contacts --connection=pgsql
+php celeris seed contacts --connection=pgsql --json
 ```
 
 Warning: seed scripts may insert duplicate or conflicting data depending on script design.
@@ -3303,9 +3305,9 @@ Warning: seed scripts may insert duplicate or conflicting data depending on scri
 #### `cache:clear`
 
 ```bash
-php packages/framework/bin/celeris cache:clear
-php packages/framework/bin/celeris cache:clear --scope=route
-php packages/framework/bin/celeris cache:clear --scope=http --json
+php celeris cache:clear
+php celeris cache:clear --scope=route
+php celeris cache:clear --scope=http --json
 ```
 
 Warning: clearing cache can invalidate warmed state and route bindings.
@@ -3315,8 +3317,8 @@ Supported scopes: `all`, `route`, `http`, `view`.
 #### `route:clear`
 
 ```bash
-php packages/framework/bin/celeris route:clear
-php packages/framework/bin/celeris route:clear --json
+php celeris route:clear
+php celeris route:clear --json
 ```
 
 `route:clear` is a focused alias for `cache:clear --scope=route`.
@@ -3324,8 +3326,8 @@ php packages/framework/bin/celeris route:clear --json
 #### `http:cache:clear`
 
 ```bash
-php packages/framework/bin/celeris http:cache:clear
-php packages/framework/bin/celeris http:cache:clear --json
+php celeris http:cache:clear
+php celeris http:cache:clear --json
 ```
 
 `http:cache:clear` is a focused alias for `cache:clear --scope=http`.
@@ -3333,15 +3335,15 @@ php packages/framework/bin/celeris http:cache:clear --json
 #### `compat:check`
 
 ```bash
-php packages/framework/bin/celeris compat:check contacts --connection=pgsql
-php packages/framework/bin/celeris compat:check contacts --connection=pgsql --json
+php celeris compat:check contacts --connection=pgsql
+php celeris compat:check contacts --connection=pgsql --json
 ```
 
 #### `compat:baseline:save`
 
 ```bash
-php packages/framework/bin/celeris compat:baseline:save contacts --connection=pgsql
-php packages/framework/bin/celeris compat:baseline:save contacts --connection=pgsql --json
+php celeris compat:baseline:save contacts --connection=pgsql
+php celeris compat:baseline:save contacts --connection=pgsql --json
 ```
 
 #### Recommended workflow in scaffolded API/MVC apps
@@ -3352,18 +3354,18 @@ Typical flow to add/extend CRUD for a table:
 
 ```bash
 # 1) Inspect available connections and tables
-php vendor/bin/celeris schema:connections
-php vendor/bin/celeris schema:tables --connection=pgsql
+php celeris schema:connections
+php celeris schema:tables --connection=pgsql
 
 # 2) Preview generated app artifacts for one table
-php vendor/bin/celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
+php celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
 
 # 3) Apply generation once preview looks correct
-php vendor/bin/celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
+php celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response
 
 # 4) Save baseline and check compatibility on later changes
-php vendor/bin/celeris compat:baseline:save contacts --connection=pgsql
-php vendor/bin/celeris compat:check contacts --connection=pgsql
+php celeris compat:baseline:save contacts --connection=pgsql
+php celeris compat:check contacts --connection=pgsql
 ```
 
 #### Stub quickstart (API/MVC)

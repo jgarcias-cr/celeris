@@ -6,7 +6,6 @@ namespace App\Services\Base;
 
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
-use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -65,34 +64,12 @@ class ContactServiceBase
     */
    protected function normalizePayload(array $payload): array
    {
-      $firstName = trim((string) ($payload['firstName'] ?? ''));
-      $lastName = trim((string) ($payload['lastName'] ?? ''));
-      $phone = trim((string) ($payload['phone'] ?? ''));
-      $address = trim((string) ($payload['address'] ?? ''));
-      $ageRaw = $payload['age'] ?? '';
-
-      if ($firstName === '') {
-         throw new InvalidArgumentException('First name is required.');
-      }
-      if ($lastName === '') {
-         throw new InvalidArgumentException('Last name is required.');
-      }
-
-      if (is_int($ageRaw)) {
-         $age = $ageRaw;
-      } else {
-         $age = filter_var((string) $ageRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
-         if ($age === false) {
-            throw new InvalidArgumentException('Age must be a non-negative integer.');
-         }
-      }
-
       return [
-         'firstName' => $firstName,
-         'lastName' => $lastName,
-         'phone' => $phone,
-         'address' => $address,
-         'age' => $age,
+         'firstName' => trim((string) ($payload['firstName'] ?? '')),
+         'lastName' => trim((string) ($payload['lastName'] ?? '')),
+         'phone' => trim((string) ($payload['phone'] ?? '')),
+         'address' => trim((string) ($payload['address'] ?? '')),
+         'age' => (int) ($payload['age'] ?? 0),
       ];
    }
 }

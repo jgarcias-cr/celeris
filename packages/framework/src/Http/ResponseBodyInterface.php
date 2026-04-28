@@ -27,6 +27,7 @@ interface ResponseBodyInterface
    public function toString(): string;
 
    /**
+    * Emit the body content.
     * @param callable(string): void $write
     */
    public function emit(callable $write): void;

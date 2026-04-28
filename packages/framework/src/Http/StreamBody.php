@@ -28,6 +28,9 @@ final class StreamBody implements ResponseBodyInterface
    }
 
    /**
+    * Create a StreamBody from an iterable of chunks.
+    * Each chunk will be cast to string before being emitted.
+    *
     * @param iterable<mixed> $chunks
     */
    public static function fromIterable(iterable $chunks): self
@@ -40,6 +43,11 @@ final class StreamBody implements ResponseBodyInterface
    }
 
    /**
+    * Create a StreamBody from a resource (e.g. file handle, stream).
+    * The resource will be read in chunks and emitted until EOF.
+    * The $chunkSize parameter controls how many bytes are read and emitted at a time (default 8192).
+    * Note: The caller is responsible for ensuring the resource is valid and open when the StreamBody is emitted.
+    * @param int $chunkSize Number of bytes to read and emit at a time (default 8192).
     * @param resource $resource
     */
    public static function fromResource(mixed $resource, int $chunkSize = 8192): self

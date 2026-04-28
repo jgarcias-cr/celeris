@@ -58,6 +58,7 @@ final class MiddlewareDispatcher
    }
 
    /**
+    * Handle dispatch.
     * @param array<int, string> $routeMiddleware
     * @param callable(RequestContext, Request): Response $final
     */
@@ -90,6 +91,7 @@ final class MiddlewareDispatcher
    }
 
    /**
+    * Handle inspect.
     * @param array<int, string> $routeMiddleware
     * @return array<int, array<string, mixed>>
     */
@@ -119,6 +121,8 @@ final class MiddlewareDispatcher
    }
 
    /**
+    * Handle global order.
+    *
     * @return array<int, string>
     */
    public function globalOrder(): array

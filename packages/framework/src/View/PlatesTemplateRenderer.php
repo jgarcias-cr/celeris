@@ -12,6 +12,9 @@ namespace Celeris\Framework\View;
  */
 final class PlatesTemplateRenderer implements TemplateRendererInterface
 {
+   /**
+    * Create a Plates template renderer for the given views directory.
+    */
    public function __construct(
       private object $platesEngine,
       private string $extension = 'php',

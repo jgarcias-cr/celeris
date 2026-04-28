@@ -12,6 +12,9 @@ use Throwable;
  */
 final class AppKeyManager
 {
+   /**
+    * Generate a fresh application key using secure random bytes.
+    */
    public function generate(int $bytes = 32): string
    {
       if ($bytes < 16) {
@@ -112,6 +115,9 @@ final class AppKeyManager
       ];
    }
 
+   /**
+    * Resolve the absolute path for the target environment file.
+    */
    private function resolvePath(string $root, string $envFile): string
    {
       $clean = trim($envFile);
@@ -127,6 +133,9 @@ final class AppKeyManager
       return $root . '/' . ltrim($clean, '/\\');
    }
 
+   /**
+    * Persist updated environment contents to disk.
+    */
    private function persist(string $targetPath, string $contents): void
    {
       $dir = dirname($targetPath);
@@ -139,6 +148,9 @@ final class AppKeyManager
       }
    }
 
+   /**
+    * Extract the current application key from environment file contents.
+    */
    private function extractAppKey(string $contents): ?string
    {
       if (!preg_match('/^APP_KEY[ \t]*=(.*)$/m', $contents, $matches)) {

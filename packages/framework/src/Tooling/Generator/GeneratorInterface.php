@@ -27,6 +27,10 @@ interface GeneratorInterface
    public function description(): string;
 
    /**
+    * Handle generation.
+    *
+    * @param GenerationRequest $request
+    *
     * @return array<int, GeneratedFileDraft>
     */
    public function generate(GenerationRequest $request): array;

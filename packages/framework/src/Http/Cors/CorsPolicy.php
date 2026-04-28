@@ -16,6 +16,27 @@ use InvalidArgumentException;
 final class CorsPolicy
 {
    /**
+    * Evaluate the CORS policy for the given request and context, returning a decision array with the results.
+    *
+    * The returned array will contain keys such as:
+    * - 'path_matched': bool
+    * - 'origin': string
+    * - 'preflight': bool
+    * - 'cors_allowed': bool
+    * - 'preflight_allowed': bool
+    * - 'allow_origin': string|null
+    * - 'supports_credentials': bool
+    * - 'allowed_methods': array<int, string>
+    * - 'allowed_headers': array<int, string>
+    * - 'exposed_headers': array<int, string>
+    * - 'max_age': int
+    * - 'vary': array<int, string>
+    * The exact structure and keys may vary based on the implementation, but it should provide enough information to apply CORS headers to the response.
+    *
+    * @param RequestContext $ctx The request context, which may contain attributes such as the container for resolving configuration.
+    * @param Request $request The incoming HTTP request to evaluate against the CORS policy.
+    * @throws InvalidArgumentException If the CORS configuration is invalid (e.g., wildcard origins with credentials support).
+    *
     * @return array<string, mixed>
     */
    public function evaluate(RequestContext $ctx, Request $request): array
@@ -83,6 +104,13 @@ final class CorsPolicy
       return $decision;
    }
 
+   /**
+    * Apply CORS headers to a normal response using the computed policy decision.
+    *
+    * @param Response $response The original HTTP response to which CORS headers should be applied.
+    * @param array<string, mixed> $decision The CORS policy decision array computed by the evaluate() method, containing keys such as 'cors_allowed', 'allow_origin', 'supports_credentials', 'exposed_headers', and 'vary'.
+    * @return Response A new HTTP response instance with the appropriate CORS headers applied based on the decision.
+    */
    public function applyActualHeaders(Response $response, array $decision): Response
    {
       if (($decision['cors_allowed'] ?? false) !== true || !is_string($decision['allow_origin'] ?? null)) {
@@ -102,6 +130,9 @@ final class CorsPolicy
       return $this->withVary($updated, is_array($decision['vary'] ?? null) ? $decision['vary'] : []);
    }
 
+   /**
+    * Apply preflight-specific CORS headers to the response.
+    */
    public function applyPreflightHeaders(Response $response, array $decision): Response
    {
       $updated = $this->applyActualHeaders($response, $decision);
@@ -128,6 +159,7 @@ final class CorsPolicy
    }
 
    /**
+    * Resolve CORS configuration from the request context, typically by accessing a configuration repository from the container. This method should return a normalized configuration array with keys such as 'paths', 'allowed_origins', 'allowed_methods', 'allowed_headers', 'exposed_headers', 'supports_credentials', and 'max_age'.
     * @return array<string, mixed>
     */
    private function resolveConfig(RequestContext $ctx): array
@@ -167,6 +199,9 @@ final class CorsPolicy
       ];
    }
 
+   /**
+    * Determine whether the request is a CORS preflight probe.
+    */
    private function isPreflightRequest(Request $request): bool
    {
       if ($request->getMethod() !== 'OPTIONS') {
@@ -198,6 +233,9 @@ final class CorsPolicy
    }
 
    /**
+    * Determine the appropriate Access-Control-Allow-Origin value based on the request origin and the configured allowed origins. This method should return the allowed origin to use in the response, or null if the origin is not allowed. It should also handle wildcard origins and credentials support according to CORS rules.
+    *
+    * @param string $origin The Origin header value from the incoming request.
     * @param array<int, string> $allowedOrigins
     */
    private function resolveAllowedOrigin(string $origin, array $allowedOrigins, bool $supportsCredentials): ?string
@@ -214,6 +252,7 @@ final class CorsPolicy
    }
 
    /**
+    * Determine the appropriate Access-Control-Allow-Headers value based on the requested headers and the configured allowed headers. This method should return a tuple where the first element is a boolean indicating whether the requested headers are allowed, and the second element is the list of headers to include in the Access-Control-Allow-Headers response header if allowed.
     * @param array<int, string> $requestedHeaders
     * @param array<int, string> $configuredHeaders
     * @return array{0: bool, 1: array<int, string>}
@@ -243,6 +282,9 @@ final class CorsPolicy
    }
 
    /**
+    * Parse a comma-separated header value into an array of trimmed strings. If the input is null or empty, an empty array is returned.
+    *
+    * @param string|null $value The raw header value to parse, which may be null or a comma-separated string.
     * @return array<int, string>
     */
    private function parseHeaderList(?string $value): array
@@ -255,6 +297,7 @@ final class CorsPolicy
    }
 
    /**
+    * Normalize a value that may be a string or an array of strings into a deduplicated array of trimmed strings. Empty strings are filtered out.
     * @param mixed $value
     * @return array<int, string>
     */
@@ -277,6 +320,8 @@ final class CorsPolicy
    }
 
    /**
+    * Normalize a value that may be a string or an array of strings into a deduplicated array of uppercase strings, suitable for HTTP methods. Empty strings are filtered out.
+    *
     * @param mixed $value
     * @return array<int, string>
     */
@@ -293,6 +338,9 @@ final class CorsPolicy
       return $normalized;
    }
 
+   /**
+    * Normalize a configured max-age value into a non-negative integer.
+    */
    private function normalizeMaxAge(mixed $value): int
    {
       if (is_int($value)) {
@@ -306,6 +354,11 @@ final class CorsPolicy
    }
 
    /**
+    * Add values to the Vary header, merging with any existing values and ensuring no duplicates. If the resulting list of Vary tokens is empty, the header will not be added.
+    * The Vary header is important for CORS responses to ensure that caches properly differentiate responses based on the
+    * Origin and other relevant request headers.
+    *
+    * @param Response $response The original HTTP response to which the Vary header should be added.
     * @param array<int, string> $values
     */
    private function withVary(Response $response, array $values): Response
@@ -318,6 +371,9 @@ final class CorsPolicy
       return $response->withHeader('vary', implode(', ', $merged));
    }
 
+   /**
+    * Add a response header only when it is not already present.
+    */
    private function withHeaderIfMissing(Response $response, string $name, string $value): Response
    {
       if ($response->getHeader($name) !== null) {

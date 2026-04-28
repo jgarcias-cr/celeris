@@ -31,6 +31,7 @@ final class Pipeline
    }
 
    /**
+    * Handle all.
     * @return array<int, MiddlewareInterface>
     */
    public function all(): array

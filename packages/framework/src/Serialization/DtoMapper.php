@@ -52,6 +52,7 @@ final class DtoMapper
    }
 
    /**
+    * Map payload to DTO instance.
     * @param array<string, mixed> $payload
     */
    public function map(string $className, array $payload, bool $validate = true): object
@@ -117,6 +118,10 @@ final class DtoMapper
    }
 
    /**
+    * Handle map property.
+    *
+    * @param object $instance
+    * @param ReflectionProperty $property
     * @param array<string, mixed> $payload
     */
    private function mapProperty(object $instance, ReflectionProperty $property, array $payload): void

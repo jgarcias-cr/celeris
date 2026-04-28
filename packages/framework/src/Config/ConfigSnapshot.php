@@ -25,6 +25,9 @@ final class ConfigSnapshot
       private float $loadedAt = 0.0,
    ) {}
 
+   /**
+    * Create an empty configuration snapshot.
+    */
    public static function empty(): self
    {
       return new self([], 'empty', [], [], microtime(true));

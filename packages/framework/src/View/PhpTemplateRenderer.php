@@ -12,6 +12,9 @@ namespace Celeris\Framework\View;
  */
 final class PhpTemplateRenderer implements TemplateRendererInterface
 {
+   /**
+    * Create a PHP template renderer for the given views directory.
+    */
    public function __construct(
       private string $viewsPath,
       private string $extension = 'php',
@@ -34,6 +37,9 @@ final class PhpTemplateRenderer implements TemplateRendererInterface
       return (string) ob_get_clean();
    }
 
+   /**
+    * Resolve the absolute file path for a logical template name.
+    */
    private function resolveTemplatePath(string $template): string
    {
       $basePath = rtrim($this->viewsPath, '/\\');

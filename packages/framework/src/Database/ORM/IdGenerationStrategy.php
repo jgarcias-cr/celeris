@@ -19,6 +19,9 @@ enum IdGenerationStrategy: string
    case Sequence = 'sequence';
    case None = 'none';
 
+   /**
+    * Resolve an identifier generation strategy from its string representation.
+    */
    public static function fromString(string $value): self
    {
       $normalized = strtolower(trim($value));

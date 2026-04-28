@@ -34,6 +34,7 @@ interface DomainEventInterface
    public function occurredAt(): \DateTimeImmutable;
 
    /**
+    * Handle payload.
     * @return array<string, mixed>
     */
    public function payload(): array;

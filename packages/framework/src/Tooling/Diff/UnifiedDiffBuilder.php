@@ -50,6 +50,7 @@ final class UnifiedDiffBuilder
    }
 
    /**
+    * Split content into lines, normalizing line endings.
     * @return array<int, string>
     */
    private function splitLines(string $content): array
@@ -63,6 +64,7 @@ final class UnifiedDiffBuilder
    }
 
    /**
+    * Generate operations for unified diff.
     * @param array<int, string> $oldLines
     * @param array<int, string> $newLines
     * @return array<int, array{prefix:string, line:string}>
@@ -108,6 +110,7 @@ final class UnifiedDiffBuilder
    }
 
    /**
+    * Compute the longest common subsequence matrix for two sets of lines.
     * @param array<int, string> $oldLines
     * @param array<int, string> $newLines
     * @return array<int, array<int, int>>

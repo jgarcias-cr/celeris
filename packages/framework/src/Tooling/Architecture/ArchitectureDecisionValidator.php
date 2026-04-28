@@ -50,6 +50,11 @@ final class ArchitectureDecisionValidator
    }
 
    /**
+    * Validate forbidden dependencies based on the provided adjacency list.
+    *
+    * This method checks if any module depends on another module that is listed as forbidden.
+    * If such a dependency is found, it adds a violation to the report.
+    *
     * @param array<string, array<int, string>> $adjacency
     */
    private function validateForbiddenDependencies(array $adjacency, ArchitectureValidationReport $report): void
@@ -68,6 +73,7 @@ final class ArchitectureDecisionValidator
    }
 
    /**
+    * Validate that there are no cycles in the module dependencies based on the provided adjacency list.
     * @param array<string, array<int, string>> $adjacency
     */
    private function validateNoCycles(array $adjacency, ArchitectureValidationReport $report): void
@@ -116,6 +122,10 @@ final class ArchitectureDecisionValidator
    }
 
    /**
+    * Build an adjacency list of module dependencies from the given dependency graph.
+    * The adjacency list is an associative array where the keys are module names and the values are arrays of module names that the key module depends on.
+    * Only edges of type 'module_dep' are considered for building the adjacency list.
+    * @param DependencyGraph $graph
     * @return array<string, array<int, string>>
     */
    private function moduleAdjacency(DependencyGraph $graph): array

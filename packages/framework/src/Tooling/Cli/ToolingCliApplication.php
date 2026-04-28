@@ -967,6 +967,9 @@ final class ToolingCliApplication
       return array_values(array_unique($items));
    }
 
+   /**
+    * Resolve a CLI input path relative to the project root when needed.
+    */
    private function resolveInputPath(string $path): string
    {
       if (str_starts_with($path, '/') || preg_match('/^[A-Za-z]:[\/\\\\]/', $path) === 1) {

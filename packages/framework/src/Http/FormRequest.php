@@ -37,7 +37,13 @@ abstract class FormRequest
       throw new AuthorizationException($this->authorizationMessage());
    }
 
+
    /**
+    * Extract and normalize form values from the request. This method handles both
+    * standard form submissions and raw body parsing for non-standard content types.
+    * The resulting array includes all fields defined in the validation rules, ensuring
+    * that missing fields are represented as empty strings.
+    *
     * @return array<string, string>
     */
    public function values(Request $request): array
@@ -73,6 +79,7 @@ abstract class FormRequest
 
       return $values;
    }
+   
 
    /**
     * Resolve the request lifecycle for form submissions.
@@ -91,7 +98,13 @@ abstract class FormRequest
       return $this->validated($this->values($request));
    }
 
+
    /**
+    * Validate the given values against the rules defined in the form request. 
+    * This method performs basic validation for common rules such 
+    * as `required`, `string`, `integer`, `min`, `max`, and `between`. 
+    * If validation fails, a `ValidationException` is thrown with details about the failed rules.
+    *
     * @param array<string, string> $values
     * @return array<string, string>
     * @throws ValidationException
@@ -176,11 +189,24 @@ abstract class FormRequest
       return $values;
    }
 
+
+   /**
+    * By default, this method converts snake_case field names to Title Case labels.
+    * For example, "first_name" becomes "First Name". Subclasses can override this
+    * method to provide custom labeling logic as needed.
+    *
+    * @param string $field The name of the form field (e.g., "first_name").
+    * @return string A human-friendly label for the field (e.g., "First Name").
+    */
    protected function label(string $field): string
    {
       return ucfirst(str_replace('_', ' ', $field));
    }
 
+
+   /**
+    * Return the default authorization failure message for the form request.
+    */
    protected function authorizationMessage(): string
    {
       return 'This action is unauthorized.';

@@ -53,6 +53,7 @@ final class DomainEventDispatcher
    }
 
    /**
+    * Handle dispatch many.
     * @param array<int, DomainEventInterface> $events
     */
    public function dispatchMany(array $events): void
@@ -63,6 +64,7 @@ final class DomainEventDispatcher
    }
 
    /**
+    * Handle history.
     * @return array<int, DomainEventInterface>
     */
    public function history(): array
@@ -81,6 +83,16 @@ final class DomainEventDispatcher
    }
 
    /**
+    * Handle listeners for event.
+    *
+    * Listeners are ordered as follows:
+    * 1. Global listeners registered with '*'.
+    * 2. Listeners registered for the event's class name.
+    * 3. Listeners registered for the event's name (if different from class name).
+    *
+    * This allows for flexible listener registration while ensuring a predictable execution order.
+    * The method ensures that all relevant listeners are collected and returned in the correct order for dispatching.
+    * @param DomainEventInterface $event
     * @return array<int, callable(DomainEventInterface): void>
     */
    private function listenersFor(DomainEventInterface $event): array
@@ -105,6 +117,7 @@ final class DomainEventDispatcher
    }
 
    /**
+    * Normalize listener to a callable that accepts a DomainEventInterface.
     * @return callable(DomainEventInterface): void
     */
    private function normalizeListener(callable|DomainEventListenerInterface $listener): callable

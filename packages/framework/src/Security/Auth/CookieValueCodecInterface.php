@@ -9,8 +9,14 @@ namespace Celeris\Framework\Security\Auth;
  */
 interface CookieValueCodecInterface
 {
+   /**
+    * Encode a raw cookie value for storage.
+    */
    public function encode(string $value): string;
 
+   /**
+    * Decode a stored cookie value back to its raw form when valid.
+    */
    public function decode(string $value): ?string;
 }
 

@@ -12,6 +12,9 @@ namespace Celeris\Framework\View;
  */
 final class TwigTemplateRenderer implements TemplateRendererInterface
 {
+   /**
+    * Create a Twig template renderer for the configured Twig environment.
+    */
    public function __construct(
       private object $twigEnvironment,
       private string $extension = 'twig',

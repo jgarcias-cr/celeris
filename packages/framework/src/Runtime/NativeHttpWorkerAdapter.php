@@ -265,6 +265,7 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle decode runtime request.
     * @param resource $client
     * @return ?RuntimeRequest
     */
@@ -390,6 +391,8 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle resolve parsed body.
+    *
     * @param array<string, array<int, string>> $headers
     * @return mixed
     */
@@ -419,6 +422,7 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle resolve content length.
     * @param array<string, array<int, string>> $headers
     * @return int
     */
@@ -437,6 +441,11 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle build server params.
+    *
+    * @param string $method
+    * @param string $target
+    * @param string $protocolVersion
     * @param resource $client
     * @return array<string, mixed>
     */
@@ -529,6 +538,7 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle write error and close.
     * @param resource $client
     */
    private function writeErrorAndClose(mixed $client, int $status, string $reason): void
@@ -559,6 +569,8 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle apply read timeout.
+    *
     * @param resource $stream
     */
    private function applyReadTimeout(mixed $stream): void
@@ -596,6 +608,9 @@ final class NativeHttpWorkerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Handle split address.
+    *
+    * @param string $address
     * @return array{string, int}
     */
    private static function splitAddress(string $address): array

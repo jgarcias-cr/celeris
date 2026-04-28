@@ -70,6 +70,7 @@ final class GenerationRequest
    }
 
    /**
+    * Handle options.
     * @return array<string, mixed>
     */
    public function options(): array

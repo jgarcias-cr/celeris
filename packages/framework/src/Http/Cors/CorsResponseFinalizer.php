@@ -14,11 +14,17 @@ use Celeris\Framework\Http\ResponseFinalizerInterface;
  */
 final class CorsResponseFinalizer implements ResponseFinalizerInterface
 {
+   /**
+    * Create the CORS response finalizer with an optional explicit policy.
+    */
    public function __construct(private ?CorsPolicy $policy = null)
    {
       $this->policy ??= new CorsPolicy();
    }
 
+   /**
+    * Apply CORS headers to the outgoing response when the request qualifies.
+    */
    public function finalize(RequestContext $ctx, Request $request, Response $response): Response
    {
       $decision = $this->policy->evaluate($ctx, $request);

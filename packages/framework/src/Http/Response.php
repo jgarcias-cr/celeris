@@ -46,7 +46,11 @@ final class Response
       return $this->status;
    }
 
-   /** @return array<string, string|array<int, string>> */
+   /** 
+    * Get the headers.
+    *
+    * @return array<string, string|array<int, string>> 
+    */
    public function getHeaders(): array
    {
       return $this->headers->toArray();
@@ -159,6 +163,7 @@ final class Response
    }
 
    /**
+    * Return a copy with the stream body.
     * @param callable(callable(string): void): void|iterable<mixed>|resource $stream
     */
    public function withStream(mixed $stream): self
@@ -181,6 +186,7 @@ final class Response
    }
 
    /**
+    * Get the cookies.
     * @return array<int, SetCookie>
     */
    public function getCookies(): array

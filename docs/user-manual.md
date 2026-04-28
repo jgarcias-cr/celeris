@@ -786,6 +786,8 @@ return [
 
 ### 3.2 Custom config loader + validator
 
+In bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\ConfigValidator;
@@ -941,6 +943,9 @@ This fails by design because a singleton cannot be built from a request-scoped d
 
 ### 4.3 Provider example
 
+This is a conceptual provider example showing an ORM-first/module-oriented application style.
+If you are using the generated API or MVC scaffolds, your provider will usually bind classes from `App\Models`, `App\Services`, `App\Repositories`, and generated controller wrappers instead.
+
 `app/AppServiceProvider.php`:
 
 ```php
@@ -979,8 +984,9 @@ final class AppServiceProvider implements ServiceProviderInterface
 }
 ```
 
-This is a repository-based provider example.
+This is a repository-based provider example for an ORM-first module.
 If you prefer service-first persistence, register `ContactService` directly with `EntityManager`/`DBAL` dependencies and skip `ContactRepository`.
+If you are following the scaffolded/traditional structure, use this only as an architectural reference, not as a description of generated files.
 
 Register provider in bootstrap:
 
@@ -1184,6 +1190,8 @@ You can use either approach or mix both in the same app.
 
 #### Attribute route example
 
+In bootstrap (`public/index.php`):
+
 ```php
 $kernel->registerController(ContactController::class);
 // or
@@ -1191,6 +1199,8 @@ $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/a
 ```
 
 #### PHP route example
+
+In bootstrap (`public/index.php`):
 
 ```php
 use Celeris\Framework\Routing\Route;
@@ -1221,6 +1231,8 @@ Route::group(new RouteGroup(prefix: '/api', middleware: ['api.auth']), function 
 
 `Route::...` is only syntax sugar; it delegates to the same `RouteCollector` methods used by `$kernel->routes()`, so matching/dispatch behavior and runtime performance remain the same.
 
+In bootstrap (`public/index.php`) without the static `Route` facade:
+
 ```php
 $kernel->routes()->get('/health', function (RequestContext $ctx, Request $request): Response {
     return new Response(200, ['content-type' => 'application/json'], '{"ok":true}');
@@ -1245,6 +1257,11 @@ $kernel->groupRoutes(new RouteGroup(prefix: '/api', middleware: ['api.auth']), f
 
 ### 6.1 Programmatic routing
 
+The examples in sections 6.1, 6.2, and 6.9 use a conceptual module-oriented namespace (`App\Contacts\...`) to illustrate routing patterns.
+They are architecture examples, not a description of the generated scaffold folder layout.
+
+In bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Routing\RouteGroup;
 use Celeris\Framework\Routing\RouteMetadata;
@@ -1252,11 +1269,11 @@ use Celeris\Framework\Routing\RouteMetadata;
 $kernel->groupRoutes(
     new RouteGroup(prefix: '/api', middleware: ['api.auth'], version: 'v1', tags: ['API']),
     function ($routes): void {
-        $routes->get('/contacts', [\App\Contacts\ContactController::class, 'index']);
+        $routes->get('/contacts', [\App\Contacts\Http\ContactController::class, 'index']);
 
         $routes->get(
             '/contacts/{id}',
-            [\App\Contacts\ContactController::class, 'show'],
+            [\App\Contacts\Http\ContactController::class, 'show'],
             metadata: new RouteMetadata(
                 name: 'contacts.show',
                 summary: 'Get one contact',
@@ -1268,6 +1285,8 @@ $kernel->groupRoutes(
 ```
 
 ### 6.2 Attribute routing
+
+In controller class (`app/Contacts/Http/ContactController.php`):
 
 ```php
 <?php
@@ -1301,6 +1320,8 @@ final class ContactController
 
 Register it:
 
+In bootstrap (`public/index.php`):
+
 ```php
 $kernel->registerController(\App\Contacts\Http\ContactController::class, new \Celeris\Framework\Routing\RouteGroup(prefix: '/api'));
 ```
@@ -1319,12 +1340,16 @@ The kernel resolves handler parameters in this order:
 
 Register middleware:
 
+In bootstrap (`public/index.php`):
+
 ```php
 $kernel->registerMiddleware('api.auth', new \App\Http\Middleware\RequireAuthMiddleware());
 $kernel->addGlobalMiddleware('api.auth'); // optional global execution
 ```
 
 `RequireAuthMiddleware` example:
+
+In middleware class (`app/Http/Middleware/RequireAuthMiddleware.php`):
 
 ```php
 <?php
@@ -1391,6 +1416,8 @@ By default, unresolved routes return framework `404 Not Found`.
 There is no dedicated `Route::fallback(...)` helper.  
 When you need custom fallback behavior, add a global pipeline middleware that rewrites 404 responses:
 
+In bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
@@ -1416,6 +1443,8 @@ $kernel->getPipeline()->add(new class implements MiddlewareInterface {
 
 #### Redirect pattern (with optional middleware)
 
+In bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Http\Response;
 
@@ -1436,6 +1465,8 @@ $kernel->routes()->get(
 
 #### View route pattern
 
+In bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\View\TemplateRendererInterface;
@@ -1447,6 +1478,8 @@ $kernel->routes()->get('/about', static function (TemplateRendererInterface $vie
 ```
 
 #### Resource-like registration pattern
+
+In route registrar (`app/Http/Routes/ContactResourceRoutes.php`):
 
 ```php
 use Celeris\Framework\Routing\RouteCollector;
@@ -1469,6 +1502,8 @@ final class ContactResourceRoutes
 
 Celeris supports multiple route files/registrars naturally.  
 A common approach is one route registrar per module, wired in bootstrap:
+
+In bootstrap (`public/index.php`):
 
 ```php
 <?php
@@ -1495,6 +1530,8 @@ $kernel->registerController(\App\Admin\Http\AdminController::class, new RouteGro
 ```
 
 Example registrar:
+
+In route registrar (`app/Contacts/Routes/ContactRoutes.php`):
 
 ```php
 <?php
@@ -1531,10 +1568,13 @@ final class ContactRoutes
 
 ## 7. API Project: End-to-End Example
 
-This section is a complete API-style setup with CRUD, service classes, validation, auth, transactions, and Data Mapper ORM.
-The framework supports two persistence styles:
-- Service-first: keep persistence operations directly in the service class (common for simple CRUD).
-- Service + repository: extract persistence to a repository when query complexity or reuse grows.
+This section shows the API scaffold as it is generated today from a DB-first workflow.
+It includes CRUD endpoints, DTO validation, auth, generated base classes, and the default service + repository layering produced by the scaffold.
+
+Important:
+- The generated API scaffold does not use the framework Data Mapper ORM by default.
+- The generated repository base is a starter placeholder shaped from your schema so you can replace or extend persistence behavior safely.
+- If you want to move the generated module onto `EntityManager`/Data Mapper later, see chapter 9.
 
 Install an API project:
 
@@ -1645,55 +1685,98 @@ Recommended optional additions as the API grows:
 - `app/Database/Migration/`
 - Database migrations used by `MigrationRunner`.
 
-### 7.2 Domain model (Data Mapper style)
+### 7.2 Generated model class
 
-`app/Contacts/Domain/Contact.php`:
+In the generated API scaffold, model classes live in `app/Models/`.
+The generated base class holds the schema-shaped properties and serializer helper, while the wrapper class is left for user code.
+
+`app/Models/Base/ContactBase.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts\Domain;
+namespace App\Models\Base;
 
-use Celeris\Framework\Database\ORM\Attribute\Column;
-use Celeris\Framework\Database\ORM\Attribute\Entity;
-use Celeris\Framework\Database\ORM\Attribute\Id;
-
-#[Entity(table: 'contacts')]
-final class Contact
+/**
+ * @generated by Celeris scaffolding. Do not edit directly.
+ * Extend this class in `App\Models\Contact`.
+ */
+class ContactBase
 {
-    #[Id(generated: false)]
-    #[Column('id')]
     public int $id;
-
-    #[Column('first_name')]
     public string $firstName;
-
-    #[Column('last_name')]
     public string $lastName;
-
-    #[Column('phone')]
     public string $phone;
-
-    #[Column('address')]
     public string $address;
-
-    #[Column('age')]
     public int $age;
+
+    public function __construct(
+        int $id,
+        string $firstName,
+        string $lastName,
+        string $phone,
+        string $address,
+        int $age,
+    ) {
+        $this->id = $id;
+        $this->firstName = $firstName;
+        $this->lastName = $lastName;
+        $this->phone = $phone;
+        $this->address = $address;
+        $this->age = $age;
+    }
+
+    /** @return array<string, int|string> */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'first_name' => $this->firstName,
+            'last_name' => $this->lastName,
+            'phone' => $this->phone,
+            'address' => $this->address,
+            'age' => $this->age,
+        ];
+    }
+}
+```
+
+`app/Models/Contact.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Models\Base\ContactBase;
+
+/**
+ * User-editable contact model.
+ *
+ * Add domain-specific helpers/behavior here. Regeneration updates the
+ * paired base class only (`App\Models\Base\ContactBase`).
+ */
+final class Contact extends ContactBase
+{
 }
 ```
 
 ### 7.3 DTOs + validation
 
-`app/Contacts/Dto/CreateContactDto.php`:
+The generated DTOs live in `app/Http/DTOs/` and reflect the scaffolded create/update input shape.
+
+`app/Http/DTOs/CreateContactDto.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts\Dto;
+namespace App\Http\DTOs;
 
 use Celeris\Framework\Serialization\Attribute\Dto;
 use Celeris\Framework\Serialization\Attribute\MapFrom;
@@ -1729,106 +1812,148 @@ final class CreateContactDto
 }
 ```
 
-`app/Contacts/Dto/UpdateContactDto.php` is similar with optional fields or strict required values depending your policy.
-
-### 7.4 Persistence styles: service-first or repository + service
-
-Most teams start with service-first persistence for simple CRUD because it is faster to read and maintain.
-When the module grows, extract a repository without changing controller contracts.
-
-Option A: service-first persistence (no repository yet).
-
-`app/Services/ContactService.php` can inject `EntityManager` and/or `DBAL` directly and implement `list`, `getOrFail`, `create`, `update`, `remove` in one place.
-
-Option B: repository + service split (shown below), useful for complex/reused queries.
-
-`app/Contacts/ContactRepository.php`:
+`app/Http/DTOs/UpdateContactDto.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts;
+namespace App\Http\DTOs;
 
-use App\Contacts\Domain\Contact;
-use Celeris\Framework\Database\DBAL;
-use Celeris\Framework\Database\ORM\EntityManager;
+use Celeris\Framework\Serialization\Attribute\Dto;
+use Celeris\Framework\Serialization\Attribute\MapFrom;
+use Celeris\Framework\Validation\Attribute\Length;
+use Celeris\Framework\Validation\Attribute\Range;
+use Celeris\Framework\Validation\Attribute\StringType;
 
-final class ContactRepository
+/**
+ * Input DTO for partial/full contact updates.
+ *
+ * Nullable properties indicate optional fields so callers can update
+ * only the values they provide, while validation still applies to
+ * any values that are present.
+ */
+#[Dto]
+final class UpdateContactDto
 {
     public function __construct(
-        private EntityManager $em,
-        private DBAL $dbal,
+        #[StringType, Length(min: 1, max: 100)]
+        #[MapFrom('first_name')]
+        public ?string $firstName = null,
+
+        #[StringType, Length(min: 1, max: 100)]
+        #[MapFrom('last_name')]
+        public ?string $lastName = null,
+
+        #[StringType, Length(min: 7, max: 30)]
+        public ?string $phone = null,
+
+        #[StringType, Length(min: 5, max: 255)]
+        public ?string $address = null,
+
+        #[Range(min: 0, max: 130)]
+        public ?int $age = null,
     ) {}
+}
+```
 
-    /** @return array<int, array<string, mixed>> */
-    public function list(int $limit = 100, int $offset = 0): array
+### 7.4 Generated repository + service scaffolds
+
+The current DB-first scaffold generates repository and service layers by default.
+This gives you a stable place to add business rules and replace placeholder persistence without editing generated wrappers.
+
+The generated repository base is intentionally simple. It demonstrates the CRUD shape produced from the discovered schema, but it is not a Data Mapper or DBAL-backed implementation.
+
+`app/Repositories/Base/ContactRepositoryBase.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repositories\Base;
+
+use App\Models\Contact;
+
+/**
+ * @generated by Celeris scaffolding. Do not edit directly.
+ * Extend this class in `App\Repositories\ContactRepository`.
+ */
+class ContactRepositoryBase
+{
+    /** @var array<int, Contact> */
+    private array $rows = [];
+
+    public function __construct()
     {
-        $query = $this->dbal->queryBuilder()
-            ->select(['id', 'first_name', 'last_name', 'phone', 'address', 'age'])
-            ->from('contacts')
-            ->orderBy('id ASC')
-            ->limit($limit)
-            ->offset($offset)
-            ->build();
+        $this->rows[1] = new Contact(1, 'Ada', 'Lovelace', '+1-555-0100', 'Analytical St', 36);
+    }
 
-        return $this->dbal->connection()->fetchAll($query->sql(), $query->params());
+    /** @return array<int, Contact> */
+    public function all(): array
+    {
+        return array_values($this->rows);
     }
 
     public function find(int $id): ?Contact
     {
-        $entity = $this->em->find(Contact::class, $id);
-        return $entity instanceof Contact ? $entity : null;
+        return $this->rows[$id] ?? null;
     }
 
-    public function insert(Contact $contact): void
+    public function save(Contact $contact): Contact
     {
-        $this->em->persist($contact);
-        $this->em->flush();
+        $this->rows[$contact->id] = $contact;
+        return $contact;
     }
 
-    public function update(Contact $contact): void
+    public function delete(int $id): bool
     {
-        $this->em->markDirty($contact);
-        $this->em->flush();
-    }
+        if (!isset($this->rows[$id])) {
+            return false;
+        }
 
-    public function delete(Contact $contact): void
-    {
-        $this->em->remove($contact);
-        $this->em->flush();
+        unset($this->rows[$id]);
+        return true;
     }
 }
 ```
 
-`app/Contacts/ContactService.php`:
+`app/Services/Base/ContactServiceBase.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts;
+namespace App\Services\Base;
 
-use App\Contacts\Domain\Contact;
-use App\Contacts\Dto\CreateContactDto;
-use App\Contacts\Dto\UpdateContactDto;
+use App\Http\DTOs\CreateContactDto;
+use App\Http\DTOs\UpdateContactDto;
+use App\Models\Contact;
+use App\Repositories\ContactRepository;
 use RuntimeException;
 
-final class ContactService
+/**
+ * @generated by Celeris scaffolding. Do not edit directly.
+ * Extend this class in `App\Services\ContactService`.
+ */
+class ContactServiceBase
 {
-    public function __construct(private ContactRepository $repo) {}
+    public function __construct(protected ContactRepository $repository) {}
 
-    /** @return array<int, array<string, mixed>> */
-    public function list(int $limit = 100, int $offset = 0): array
+    /** @return array<int, array<string, int|string>> */
+    public function list(): array
     {
-        return $this->repo->list($limit, $offset);
+        return array_map(
+            static fn(Contact $contact): array => $contact->toArray(),
+            $this->repository->all(),
+        );
     }
 
     public function getOrFail(int $id): Contact
     {
-        $contact = $this->repo->find($id);
+        $contact = $this->repository->find($id);
         if (!$contact instanceof Contact) {
             throw new RuntimeException('Contact not found.');
         }
@@ -1838,89 +1963,86 @@ final class ContactService
 
     public function create(CreateContactDto $dto): Contact
     {
-        $contact = new Contact();
-        $contact->id = $dto->id;
-        $contact->firstName = $dto->firstName;
-        $contact->lastName = $dto->lastName;
-        $contact->phone = $dto->phone;
-        $contact->address = $dto->address;
-        $contact->age = $dto->age;
+        $contact = new Contact(
+            $dto->id,
+            $dto->firstName,
+            $dto->lastName,
+            $dto->phone,
+            $dto->address,
+            $dto->age,
+        );
 
-        $this->repo->insert($contact);
-        return $contact;
+        return $this->repository->save($contact);
     }
 
     public function update(int $id, UpdateContactDto $dto): Contact
     {
-        $contact = $this->getOrFail($id);
-        $contact->firstName = $dto->firstName;
-        $contact->lastName = $dto->lastName;
-        $contact->phone = $dto->phone;
-        $contact->address = $dto->address;
-        $contact->age = $dto->age;
+        $current = $this->getOrFail($id);
 
-        $this->repo->update($contact);
-        return $contact;
+        $updated = new Contact(
+            $current->id,
+            $dto->firstName ?? $current->firstName,
+            $dto->lastName ?? $current->lastName,
+            $dto->phone ?? $current->phone,
+            $dto->address ?? $current->address,
+            $dto->age ?? $current->age,
+        );
+
+        return $this->repository->save($updated);
     }
 
     public function remove(int $id): void
     {
-        $contact = $this->getOrFail($id);
-        $this->repo->delete($contact);
+        if (!$this->repository->delete($id)) {
+            throw new RuntimeException('Contact not found.');
+        }
     }
 }
 ```
 
-### 7.5 Controller (attribute routes + auth policy)
+The user-editable wrappers stay small by default:
+- `app/Repositories/ContactRepository.php`
+- `app/Services/ContactService.php`
 
-`app/Contacts/Http/ContactController.php`:
+Those classes extend their generated base counterparts and are safe places for handwritten logic.
+
+If you want real persistence immediately, you can replace the repository implementation with DBAL or `EntityManager` access, or simplify the module into a service-first persistence style.
+
+### 7.5 Controller (generated base + wrapper)
+
+`app/Http/Controllers/Api/Base/ContactControllerBase.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Contacts\Http;
+namespace App\Http\Controllers\Api\Base;
 
-use App\Contacts\ContactService;
-use App\Contacts\Dto\CreateContactDto;
-use App\Contacts\Dto\UpdateContactDto;
-use Celeris\Framework\Http\Request;
-use Celeris\Framework\Http\RequestContext;
+use App\Http\DTOs\CreateContactDto;
+use App\Http\DTOs\UpdateContactDto;
+use App\Services\ContactService;
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\Routing\Attribute\Route;
-use Celeris\Framework\Routing\Attribute\RouteGroup;
-use Celeris\Framework\Security\Authorization\Authorize;
 
-#[RouteGroup(prefix: '/contacts', middleware: ['api.auth'], version: 'v1', tags: ['Contacts'])]
-final class ContactController
+/**
+ * @generated by Celeris scaffolding. Do not edit directly.
+ * Extend this class in `App\Http\Controllers\Api\ContactController`.
+ */
+class ContactControllerBase
 {
-    public function __construct(private ContactService $service) {}
+    public function __construct(protected ContactService $service) {}
 
     #[Route(methods: ['GET'], path: '/', summary: 'List contacts')]
-    #[Authorize(roles: ['admin'])]
-    public function index(RequestContext $ctx, Request $request): Response
+    public function index(): array
     {
-        $rows = $this->service->list(
-            (int) ($request->getQueryParam('limit', 100)),
-            (int) ($request->getQueryParam('offset', 0)),
-        );
-
-        return new Response(200, ['content-type' => 'application/json; charset=utf-8'], (string) json_encode($rows));
+        return $this->service->list();
     }
 
-    #[Route(methods: ['GET'], path: '/{id}', summary: 'Get one contact')]
+    #[Route(methods: ['GET'], path: '/{id}', summary: 'Get contact')]
     public function show(int $id): array
     {
-        $contact = $this->service->getOrFail($id);
-        return [
-            'id' => $contact->id,
-            'first_name' => $contact->firstName,
-            'last_name' => $contact->lastName,
-            'phone' => $contact->phone,
-            'address' => $contact->address,
-            'age' => $contact->age,
-        ];
+        return $this->service->getOrFail($id)->toArray();
     }
 
     #[Route(methods: ['POST'], path: '/', summary: 'Create contact')]
@@ -1931,23 +2053,14 @@ final class ContactController
         return new Response(
             201,
             ['content-type' => 'application/json; charset=utf-8'],
-            (string) json_encode(['id' => $contact->id])
+            (string) json_encode(['id' => $contact->id]),
         );
     }
 
     #[Route(methods: ['PUT'], path: '/{id}', summary: 'Update contact')]
     public function update(int $id, UpdateContactDto $dto): array
     {
-        $contact = $this->service->update($id, $dto);
-
-        return [
-            'id' => $contact->id,
-            'first_name' => $contact->firstName,
-            'last_name' => $contact->lastName,
-            'phone' => $contact->phone,
-            'address' => $contact->address,
-            'age' => $contact->age,
-        ];
+        return $this->service->update($id, $dto)->toArray();
     }
 
     #[Route(methods: ['DELETE'], path: '/{id}', summary: 'Delete contact')]
@@ -1956,6 +2069,32 @@ final class ContactController
         $this->service->remove($id);
         return new Response(204);
     }
+}
+```
+
+`app/Http/Controllers/Api/ContactController.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Api\Base\ContactControllerBase;
+use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Framework\Security\Authorization\Authorize;
+
+/**
+ * User-editable contacts API controller.
+ *
+ * Keep route-group level metadata and custom endpoints here.
+ * Regeneration updates only `Api\Base\ContactControllerBase`.
+ */
+#[Authorize]
+#[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts'])]
+final class ContactController extends ContactControllerBase
+{
 }
 ```
 
@@ -1976,6 +2115,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\AppServiceProvider;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ContactController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
@@ -1998,6 +2138,7 @@ $kernel = new Kernel(
     ),
 );
 $kernel->registerProvider(new AppServiceProvider());
+$kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
 $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
 
 // Export OpenAPI at boot time (optional)
@@ -2464,6 +2605,9 @@ Notes:
 
 ### 8.6 MVC provider wiring
 
+The generated MVC scaffold uses `App\Models/*`, optional `App\Repositories/*`, and `App\Services/*`.
+The example below keeps `EntityManager`/`DBAL` in the wiring to show one possible production persistence setup, but it is not describing a separate ORM-first folder layout.
+
 `app/AppServiceProvider.php`:
 
 ```php
@@ -2473,8 +2617,8 @@ declare(strict_types=1);
 
 namespace App;
 
-use App\Contacts\ContactRepository;
-use App\Contacts\ContactService;
+use App\Repositories\ContactRepository;
+use App\Services\ContactService;
 use Celeris\Framework\Config\ConfigRepository;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
@@ -2560,6 +2704,13 @@ php scripts/view-smoke.php --all
 ```
 
 ## 9. Database and ORM
+
+This chapter covers the lower-level database stack (`DBAL`, `EntityManager`, migrations) and the alternative ORM-first application style.
+
+Important distinction:
+- The generated API/MVC scaffolds are DB-first and traditional in structure.
+- The ORM-first/Data Mapper style is manual by design: you create entity classes, DTOs, repositories, and services yourself instead of relying on scaffolded `Base/*Base.php` files.
+- Both styles use the same runtime, container, routing, and database infrastructure underneath.
 
 ### 9.1 Supported database engines
 
@@ -2701,6 +2852,54 @@ $query = $dbal->queryBuilder()
 
 $rows = $dbal->connection()->fetchAll($query->sql(), $query->params());
 ```
+
+### 9.3.1 Addendum: ORM-first application style
+
+This section describes the non-scaffolded Data Mapper style.
+It is intentionally separate from the generated API/MVC examples in chapters 7 and 8.
+
+Use the scaffolded/traditional style when:
+- You are starting from an existing database schema.
+- You want generated models, DTOs, services, controllers, and optional repositories quickly.
+- You want regeneration-safe `Base/*Base.php` classes for CRUD-heavy or admin-style applications.
+
+Use the ORM-first/Data Mapper style when:
+- You are designing the application model intentionally instead of mirroring an existing schema one-to-one.
+- You want richer domain entities, aggregate behavior, lazy relations, unit-of-work persistence, or domain events.
+- You are building domain-heavy business applications where module boundaries matter more than scaffold speed.
+
+Why this style exists:
+- It gives you explicit entity mapping through ORM attributes.
+- It lets you keep persistence mechanics in repositories or services while entities stay focused on domain state/behavior.
+- It works well when the code model should lead the database interaction model, rather than the other way around.
+
+Typical structure for an ORM-first application:
+
+```text
+app/
+  Contacts/
+    Domain/
+      Contact.php
+    Dto/
+      CreateContactDto.php
+      UpdateContactDto.php
+    ContactRepository.php
+    ContactService.php
+    Http/
+      ContactController.php
+```
+
+How to use it:
+1. Define entity classes manually with `#[Entity]`, `#[Id]`, `#[Column]`, and optional relation attributes.
+2. Create DTOs manually for request mapping and validation.
+3. Inject `EntityManager` and optionally `DBAL` into repositories or services.
+4. Register those classes in `AppServiceProvider`.
+5. Register controllers/routes normally in the kernel bootstrap.
+
+Tradeoff summary:
+- Scaffolded/traditional style optimizes for speed, regeneration, and DB-first workflows.
+- ORM-first style optimizes for manual architectural control and richer domain modeling.
+- The ORM-first style is not what `create-project` scaffolds for you today; it is a supported application architecture you assemble intentionally.
 
 ### 9.4 Data Mapper CRUD
 
@@ -2862,6 +3061,9 @@ $result = $migrationRunner->migrate([
 
 The core ORM is Data Mapper. Active Record is optional and additive.
 
+Like the ORM-first/Data Mapper addendum in section 9.3.1, the examples in this chapter use a manual module-oriented layout.
+They are not generated by the default API/MVC scaffolds.
+
 ### 10.1 Enable AR provider
 
 ```php
@@ -2931,6 +3133,30 @@ $contact->save();
 $found = ContactAr::where('age', 36)->orderBy('id', 'DESC')->first();
 $contact->delete();
 ```
+
+### 10.3 How AR affects the rest of the module
+
+The Active Record option mainly changes the persistence style of the model class.
+The surrounding application structure can stay the same as in DB-first modules:
+
+- Request/DTO classes still validate and normalize input.
+- Controllers still handle HTTP concerns and delegate business work.
+- Services still hold business rules and orchestration.
+
+The main difference is where persistence logic lives:
+
+- With Data Mapper or DB-first scaffolds, the repository is the default place to hide persistence details.
+- With Active Record, simple CRUD can often live directly in the service by calling the model's static and instance persistence methods.
+- A repository remains optional. Keep one when you want a persistence abstraction, more complex queries, or reuse across services.
+
+In other words, Active Record does not require a different controller/request/service shape.
+It mainly reduces the need for a repository in smaller modules.
+
+Important tooling note:
+
+- The examples in this section are manual patterns.
+- The current API/MVC scaffold remains DB-first oriented and does not generate a dedicated full Active Record module layout.
+- Generated repository/service/controller artifacts therefore follow the same generic scaffold shape described earlier in section 7.
 
 ## 11. Security Subsystem
 
@@ -3087,6 +3313,113 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 ```
 
 `EntityManager::flush()` also forwards domain events if your entity exposes `pullDomainEvents()` or `releaseDomainEvents()`.
+
+### 14.2 Scaffolded MVC/API projects: where to register listeners
+
+In scaffolded `mvc` and `api` projects, the simplest place to wire event listeners is `app/AppServiceProvider.php`.
+
+If you want the listener to run automatically at bootstrap time, make your provider implement `BootableServiceProviderInterface` and register listeners in `boot()`.
+
+```php
+use App\Events\ContactCreatedEvent;
+use Celeris\Framework\Container\BootableServiceProviderInterface;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\Domain\Event\DomainEventDispatcher;
+use Celeris\Framework\Notification\EmailMessage;
+use Celeris\Framework\Notification\NotificationManager;
+
+final class AppServiceProvider implements BootableServiceProviderInterface
+{
+    public function register(ServiceRegistry $services): void
+    {
+        // existing service bindings
+    }
+
+    public function boot(ContainerInterface $container): void
+    {
+        $events = $container->get(DomainEventDispatcher::class);
+
+        $events->listen(ContactCreatedEvent::class, function (ContactCreatedEvent $event) use ($container): void {
+            $notifications = $container->get(NotificationManager::class);
+
+            $notifications->sendEmail(new EmailMessage(
+                to: ['ops@example.com'],
+                subject: 'New contact created',
+                text: sprintf('Contact #%d was created.', $event->contactId),
+            ));
+
+            // You can also trigger any other application action here:
+            // $container->get(CrmSyncService::class)->pushContact($event->contactId);
+            // $container->get(AuditService::class)->record('contact.created', ['id' => $event->contactId]);
+        });
+    }
+}
+```
+
+Then dispatch the event from your service after the application action succeeds:
+
+```php
+$contact = $this->contacts->create($dto);
+$dispatcher->dispatch(new ContactCreatedEvent($contact->id()));
+```
+
+This pattern is a good default when the event represents a business action such as:
+- contact created
+- order approved
+- invoice paid
+
+It keeps your controllers and repositories small while letting you attach notifications, audit logs, integrations, or follow-up processes in one place.
+
+### 14.3 When you need insert/update hooks from the ORM
+
+If your goal is specifically "run something when a row is inserted or updated", use ORM persistence events.
+
+These events are tied to the persistence lifecycle and are available from `EntityManager::persistenceEvents()`.
+
+```php
+use App\Models\Contact;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Database\ORM\EntityManager;
+use Celeris\Framework\Database\ORM\Event\EntityPersistedEvent;
+use Celeris\Framework\Database\ORM\Event\EntityUpdatedEvent;
+
+public function boot(ContainerInterface $container): void
+{
+    $entityManager = $container->get(EntityManager::class);
+
+    $entityManager->persistenceEvents()->listen(EntityPersistedEvent::class, function (EntityPersistedEvent $event) use ($container): void {
+        $entity = $event->entity();
+        if (!$entity instanceof Contact) {
+            return;
+        }
+
+        // A new row was inserted for Contact.
+        // Trigger a notification, external sync, or audit step here.
+    });
+
+    $entityManager->persistenceEvents()->listen(EntityUpdatedEvent::class, function (EntityUpdatedEvent $event) use ($container): void {
+        $entity = $event->entity();
+        if (!$entity instanceof Contact) {
+            return;
+        }
+
+        // A Contact row was updated.
+    });
+}
+```
+
+Use this approach when the database lifecycle itself is what matters, for example:
+- send a notification after a `Contact` record is inserted
+- update a search index after a model changes
+- write an audit trail after an ORM update
+
+### 14.4 Which event style should you choose?
+
+- Use domain events when you want to express a business fact with a clear meaning.
+- Use persistence events when you want to react to ORM lifecycle changes like insert, update, or delete.
+- If the follow-up work is slow or external, prefer handing it off to a queue, outbox, or worker instead of doing everything inline during the request.
+- For notification examples, see also section [23. Notification Subsystem (Step-by-Step)](#23-notification-subsystem-step-by-step).
 
 ## 15. Tooling Platform (CLI + Web)
 
@@ -3410,6 +3743,8 @@ Generator output safety pattern:
 
 Recommended pattern for apps that want the web UI during development:
 
+In API bootstrap (`public/index.php`) or MVC bootstrap (`public/index.php`):
+
 ```php
 use Celeris\Framework\Tooling\ToolingBootstrap;
 
@@ -3440,7 +3775,7 @@ Stub defaults:
 
 Audit records are written as JSON lines with request metadata and generator details.
 
-Example audit record:
+Example audit record in `var/log/tooling-audit.log`:
 
 ```json
 {
@@ -3943,6 +4278,8 @@ MVC stub (`packages/mvc-stub/public/index.php`) uses the same pattern.
 
 ### 23.4 Step 4: Create a service that sends an email
 
+In service class (`app/Services/WelcomeNotificationService.php`):
+
 ```php
 <?php
 
@@ -3975,6 +4312,8 @@ final class WelcomeNotificationService
 ```
 
 ### 23.5 Step 5: Expose an API endpoint that uses the service
+
+In controller class (`app/Http/Controllers/Api/NotificationDemoController.php`):
 
 ```php
 <?php
@@ -4056,6 +4395,8 @@ curl -X POST http://localhost/api/v1/notifications/welcome \
 2. Keep `default_channel=null` in local/test to avoid accidental external sends.
 3. You can force a specific channel at call site:
 
+In service code that already has a `NotificationManager` instance:
+
 ```php
 $result = $notifications->sendEmail($message, 'smtp');
 ```
@@ -4078,6 +4419,8 @@ packages/notification-twilio/
 
 `composer.json` (minimum):
 
+In package manifest (`packages/notification-twilio/composer.json`):
+
 ```json
 {
   "name": "celeris/notification-twilio",
@@ -4095,6 +4438,8 @@ packages/notification-twilio/
 ```
 
 Step 2: Implement channel class
+
+In channel class (`packages/notification-twilio/src/TwilioNotificationChannel.php`):
 
 ```php
 <?php
@@ -4140,6 +4485,8 @@ final class TwilioNotificationChannel implements NotificationChannelInterface
 ```
 
 Step 3: Implement provider class and register channel from config
+
+In provider class (`packages/notification-twilio/src/TwilioNotificationServiceProvider.php`):
 
 ```php
 <?php
@@ -4195,6 +4542,8 @@ Step 4: Add channel config in host app (`config/notifications.php`)
 
 Step 5: Register provider in bootstrap
 
+In host app bootstrap (`public/index.php`):
+
 ```php
 if (class_exists(\Celeris\Notification\Twilio\TwilioNotificationServiceProvider::class)) {
     $kernel->registerProvider(new \Celeris\Notification\Twilio\TwilioNotificationServiceProvider());
@@ -4202,6 +4551,8 @@ if (class_exists(\Celeris\Notification\Twilio\TwilioNotificationServiceProvider:
 ```
 
 Step 6: Send with explicit channel
+
+In application service code that already has a `NotificationManager` instance:
 
 ```php
 use Celeris\Framework\Notification\NotificationEnvelope;
@@ -4243,6 +4594,8 @@ NOTIFICATIONS_DISPATCH_WORKER_ENABLED=true
 
 Step 2: Keep providers registered in bootstrap
 
+In host app bootstrap (`public/index.php`):
+
 ```php
 if (class_exists(\Celeris\Notification\InApp\InAppNotificationServiceProvider::class)) {
     $kernel->registerProvider(new \Celeris\Notification\InApp\InAppNotificationServiceProvider());
@@ -4259,6 +4612,8 @@ if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorker
 ```
 
 Step 3: Persist in-app notification and enqueue outbox event in one transaction
+
+In service class (`app/Services/TransactionNotificationService.php`):
 
 ```php
 <?php
@@ -4314,6 +4669,8 @@ final class TransactionNotificationService
 ```
 
 Step 4: Expose notification read endpoints (API sample)
+
+In controller class (`app/Http/Controllers/Api/MeNotificationsController.php`):
 
 ```php
 <?php

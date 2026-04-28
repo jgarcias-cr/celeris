@@ -25,6 +25,7 @@ class BootstrapManager
    private ?BootstrapReport $lastReport = null;
 
    /**
+    * Add a bootstrap step.
     * @param callable(self): void|callable(): void $step
     */
    public function addStep(
@@ -43,6 +44,7 @@ class BootstrapManager
    }
 
    /**
+    * Add a bootstrap validator.
     * @param callable(self): (bool|string|array<int, string>|null) $validator
     */
    public function addValidator(callable $validator, ?string $name = null): void

@@ -30,6 +30,9 @@ final class ConfigLoader
       private bool $injectEnvironmentIntoConfig = true,
    ) {}
 
+   /**
+    * Return the directory from which configuration files are loaded.
+    */
    public function configDirectory(): string
    {
       return $this->configDirectory;

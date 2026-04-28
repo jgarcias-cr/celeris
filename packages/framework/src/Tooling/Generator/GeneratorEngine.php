@@ -47,6 +47,7 @@ final class GeneratorEngine
    }
 
    /**
+    * Handle list.
     * @return array<int, array{name:string, description:string}>
     */
    public function list(): array
@@ -64,6 +65,7 @@ final class GeneratorEngine
    }
 
    /**
+    * Handle preview.
     * @return array<int, GeneratedFilePreview>
     */
    public function preview(string $generatorName, GenerationRequest $request): array

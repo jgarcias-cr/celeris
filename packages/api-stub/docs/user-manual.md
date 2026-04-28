@@ -3088,6 +3088,113 @@ $dispatcher->dispatch(new ContactCreatedEvent(100));
 
 `EntityManager::flush()` also forwards domain events if your entity exposes `pullDomainEvents()` or `releaseDomainEvents()`.
 
+### 14.2 Scaffolded MVC/API projects: where to register listeners
+
+In scaffolded `mvc` and `api` projects, the simplest place to wire event listeners is `app/AppServiceProvider.php`.
+
+If you want the listener to run automatically at bootstrap time, make your provider implement `BootableServiceProviderInterface` and register listeners in `boot()`.
+
+```php
+use App\Events\ContactCreatedEvent;
+use Celeris\Framework\Container\BootableServiceProviderInterface;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Container\ServiceRegistry;
+use Celeris\Framework\Domain\Event\DomainEventDispatcher;
+use Celeris\Framework\Notification\EmailMessage;
+use Celeris\Framework\Notification\NotificationManager;
+
+final class AppServiceProvider implements BootableServiceProviderInterface
+{
+    public function register(ServiceRegistry $services): void
+    {
+        // existing service bindings
+    }
+
+    public function boot(ContainerInterface $container): void
+    {
+        $events = $container->get(DomainEventDispatcher::class);
+
+        $events->listen(ContactCreatedEvent::class, function (ContactCreatedEvent $event) use ($container): void {
+            $notifications = $container->get(NotificationManager::class);
+
+            $notifications->sendEmail(new EmailMessage(
+                to: ['ops@example.com'],
+                subject: 'New contact created',
+                text: sprintf('Contact #%d was created.', $event->contactId),
+            ));
+
+            // You can also trigger any other application action here:
+            // $container->get(CrmSyncService::class)->pushContact($event->contactId);
+            // $container->get(AuditService::class)->record('contact.created', ['id' => $event->contactId]);
+        });
+    }
+}
+```
+
+Then dispatch the event from your service after the application action succeeds:
+
+```php
+$contact = $this->contacts->create($dto);
+$dispatcher->dispatch(new ContactCreatedEvent($contact->id()));
+```
+
+This pattern is a good default when the event represents a business action such as:
+- contact created
+- order approved
+- invoice paid
+
+It keeps your controllers and repositories small while letting you attach notifications, audit logs, integrations, or follow-up processes in one place.
+
+### 14.3 When you need insert/update hooks from the ORM
+
+If your goal is specifically "run something when a row is inserted or updated", use ORM persistence events.
+
+These events are tied to the persistence lifecycle and are available from `EntityManager::persistenceEvents()`.
+
+```php
+use App\Models\Contact;
+use Celeris\Framework\Container\ContainerInterface;
+use Celeris\Framework\Database\ORM\EntityManager;
+use Celeris\Framework\Database\ORM\Event\EntityPersistedEvent;
+use Celeris\Framework\Database\ORM\Event\EntityUpdatedEvent;
+
+public function boot(ContainerInterface $container): void
+{
+    $entityManager = $container->get(EntityManager::class);
+
+    $entityManager->persistenceEvents()->listen(EntityPersistedEvent::class, function (EntityPersistedEvent $event) use ($container): void {
+        $entity = $event->entity();
+        if (!$entity instanceof Contact) {
+            return;
+        }
+
+        // A new row was inserted for Contact.
+        // Trigger a notification, external sync, or audit step here.
+    });
+
+    $entityManager->persistenceEvents()->listen(EntityUpdatedEvent::class, function (EntityUpdatedEvent $event) use ($container): void {
+        $entity = $event->entity();
+        if (!$entity instanceof Contact) {
+            return;
+        }
+
+        // A Contact row was updated.
+    });
+}
+```
+
+Use this approach when the database lifecycle itself is what matters, for example:
+- send a notification after a `Contact` record is inserted
+- update a search index after a model changes
+- write an audit trail after an ORM update
+
+### 14.4 Which event style should you choose?
+
+- Use domain events when you want to express a business fact with a clear meaning.
+- Use persistence events when you want to react to ORM lifecycle changes like insert, update, or delete.
+- If the follow-up work is slow or external, prefer handing it off to a queue, outbox, or worker instead of doing everything inline during the request.
+- For notification examples, see also section [23. Notification Subsystem (Step-by-Step)](#23-notification-subsystem-step-by-step).
+
 ## 15. Tooling Platform (CLI + Web)
 
 ### 15.1 CLI

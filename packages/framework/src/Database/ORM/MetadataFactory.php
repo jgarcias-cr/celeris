@@ -134,6 +134,9 @@ final class MetadataFactory
       return $metadata;
    }
 
+   /**
+    * Return a trimmed string value or null when the input is empty.
+    */
    private static function nullableString(mixed $value): ?string
    {
       if (!is_string($value)) {

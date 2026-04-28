@@ -147,6 +147,9 @@ final class TemplateRendererFactory
       return trim($value);
    }
 
+   /**
+    * Normalize a configured renderer engine name into its canonical form.
+    */
    private static function normalizeEngine(string $engine): string
    {
       return strtolower(trim($engine));

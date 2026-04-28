@@ -82,6 +82,9 @@ final class CacheIntent
       return $this->type;
    }
 
+   /**
+    * Return the namespace used to isolate this cache intent.
+    */
    public function namespace(): string
    {
       return $this->namespace;

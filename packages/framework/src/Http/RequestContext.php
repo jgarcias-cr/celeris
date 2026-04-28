@@ -51,6 +51,7 @@ final class RequestContext
    }
 
    /**
+    * Create a RequestContext from global server variables.
     * @param array<string, mixed>|null $server
     */
    public static function fromGlobals(?array $server = null): self
@@ -79,13 +80,21 @@ final class RequestContext
       return $this->timestamp;
    }
 
-   /** @return array<string, mixed> */
+   /** 
+    * Get the server params.
+    *
+    * @return array<string, mixed> 
+    */
    public function getServerParams(): array
    {
       return $this->serverParams;
    }
 
-   /** @return array<string, mixed>|null */
+   /** 
+    * Get the auth.
+    *
+    * @return array<string, mixed>|null
+    */
    public function getAuth(): ?array
    {
       return $this->auth;
@@ -101,13 +110,18 @@ final class RequestContext
       return $copy;
    }
 
-   /** @return array<string, mixed> */
+   /** 
+    * Get the route metadata.
+    *
+    * @return array<string, mixed> 
+    */
    public function getRouteMetadata(): array
    {
       return $this->routeMetadata;
    }
 
    /**
+    * Return a copy with the route metadata.
     * @param array<string, mixed> $routeMetadata
     */
    public function withRouteMetadata(array $routeMetadata): self
@@ -183,7 +197,11 @@ final class RequestContext
       return $this->attributes[$key] ?? $default;
    }
 
-   /** @return array<string, mixed> */
+   /** 
+    * Get the attributes.
+    *
+    * @return array<string, mixed> 
+    */
    public function getAttributes(): array
    {
       return $this->attributes;

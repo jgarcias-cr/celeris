@@ -17,6 +17,7 @@ final class Cookies
    private array $values;
 
    /**
+    * Initialize with the given cookie values.
     * @param array<string, string> $values
     */
    public function __construct(array $values = [])
@@ -29,13 +30,16 @@ final class Cookies
       $this->values = $normalized;
    }
 
+
    /**
+    * Create an instance from array.
     * @param array<string, string> $values
     */
    public static function fromArray(array $values): self
    {
       return new self($values);
    }
+
 
    /**
     * Create an instance from cookie header.
@@ -61,8 +65,9 @@ final class Cookies
       return new self($cookies);
    }
 
+
    /**
-    * Determine whether has.
+    * Determine whether has the value.
     *
     * @param string $name
     * @return bool
@@ -71,6 +76,7 @@ final class Cookies
    {
       return array_key_exists($name, $this->values);
    }
+
 
    /**
     * Get the value.
@@ -84,13 +90,16 @@ final class Cookies
       return $this->values[$name] ?? $default;
    }
 
+
    /**
+    * Get all cookie values.
     * @return array<string, string>
     */
    public function all(): array
    {
       return $this->values;
    }
+
 
    /**
     * Return a copy with the value.
@@ -105,6 +114,7 @@ final class Cookies
       $copy->values[$name] = $value;
       return $copy;
    }
+   
 
    /**
     * Return a copy with the out.

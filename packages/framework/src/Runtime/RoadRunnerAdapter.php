@@ -113,6 +113,7 @@ final class RoadRunnerAdapter implements WorkerAdapterInterface
    }
 
    /**
+    * Normalize the frame to a RuntimeRequest instance.
     * @param RuntimeRequest|array<string, mixed> $frame
     */
    private static function normalizeFrame(RuntimeRequest|array $frame): RuntimeRequest

@@ -14,6 +14,9 @@ use Throwable;
  */
 final class LatteTemplateRenderer implements TemplateRendererInterface
 {
+   /**
+    * Create a Latte template renderer for the given views directory.
+    */
    public function __construct(
       private object $latteEngine,
       private string $viewsPath,
@@ -53,6 +56,9 @@ final class LatteTemplateRenderer implements TemplateRendererInterface
       }
    }
 
+   /**
+    * Resolve the absolute file path for a Latte template name.
+    */
    private function resolveTemplatePath(string $template): string
    {
       $basePath = rtrim($this->viewsPath, '/\\');

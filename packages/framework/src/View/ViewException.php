@@ -14,11 +14,17 @@ use RuntimeException;
  */
 final class ViewException extends RuntimeException
 {
+   /**
+    * Create an exception for a missing template file.
+    */
    public static function templateNotFound(string $templatePath): self
    {
       return new self(sprintf('Template not found: %s', $templatePath));
    }
 
+   /**
+    * Create an exception for an unsupported template engine.
+    */
    public static function unsupportedEngine(string $engine): self
    {
       return new self(sprintf(
@@ -27,6 +33,9 @@ final class ViewException extends RuntimeException
       ));
    }
 
+   /**
+    * Create an exception for a renderer dependency that is not installed.
+    */
    public static function missingDependency(string $engine, string $package, string $className): self
    {
       return new self(sprintf(
@@ -37,6 +46,9 @@ final class ViewException extends RuntimeException
       ));
    }
 
+   /**
+    * Create an exception for invalid renderer configuration details.
+    */
    public static function invalidRenderer(string $engine, string $details): self
    {
       return new self(sprintf('Template engine "%s" renderer is invalid: %s', $engine, $details));

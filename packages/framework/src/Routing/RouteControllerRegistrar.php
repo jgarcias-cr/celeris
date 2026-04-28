@@ -129,6 +129,9 @@ final class RouteControllerRegistrar
       return $this->collector->add($methods, $this->composePath($path), $handler, $mergedMiddleware, $metadata);
    }
 
+   /**
+    * Compose the full route path from the configured prefix and route fragment.
+    */
    private function composePath(string $path): string
    {
       $normalizedPath = '/' . trim($path, '/');
@@ -147,6 +150,9 @@ final class RouteControllerRegistrar
       return $this->prefix . $normalizedPath;
    }
 
+   /**
+    * Normalize a route prefix so path composition stays consistent.
+    */
    private static function normalizePrefix(string $prefix): string
    {
       $trimmed = trim($prefix);

@@ -6,8 +6,14 @@ namespace Celeris\Framework\Security\Authorization;
 
 use Celeris\Framework\Http\RequestContext;
 
+/**
+ * Provide helpful authorization utilities for resource-oriented policy classes.
+ */
 abstract class ModelPolicy
 {
+   /**
+    * Decide whether the current request context may access the given resource.
+    */
    protected function allows(RequestContext $ctx, ?object $resource = null, ?string $permission = null): bool
    {
       $auth = $ctx->getAuth();
@@ -56,6 +62,9 @@ abstract class ModelPolicy
       return $this->normalizeIdentifierList($auth[$claimKey] ?? []);
    }
 
+   /**
+    * Resolve the auth-claim key that stores owned identifiers for the resource type.
+    */
    protected function ownershipClaimKey(?object $resource = null): ?string
    {
       $baseName = $this->resourceBaseName($resource);
@@ -79,6 +88,9 @@ abstract class ModelPolicy
       return false;
    }
 
+   /**
+    * Extract a comparable identifier from the given resource object.
+    */
    protected function resourceId(?object $resource): int|string|null
    {
       if (!is_object($resource) || !property_exists($resource, 'id')) {
@@ -93,6 +105,9 @@ abstract class ModelPolicy
       return null;
    }
 
+   /**
+    * Return the short class name for the given resource object.
+    */
    protected function resourceBaseName(?object $resource): ?string
    {
       if (!is_object($resource)) {
@@ -105,6 +120,9 @@ abstract class ModelPolicy
       return $position === false ? $className : substr($className, $position + 1);
    }
 
+   /**
+    * Convert a resource name into snake_case for claim lookups.
+    */
    protected function snakeCase(string $value): string
    {
       $normalized = preg_replace('/(?<!^)[A-Z]/', '_$0', $value);

@@ -34,6 +34,7 @@ final class Serializer
    }
 
    /**
+    * Normalize a value for serialization.
     * @return array<string, mixed>|array<int, mixed>|scalar|null
     */
    public function normalize(mixed $value): mixed
@@ -66,6 +67,7 @@ final class Serializer
    }
 
    /**
+    * Normalize an array for serialization.
     * @param array<mixed> $value
     * @return array<mixed>
     */
@@ -84,6 +86,7 @@ final class Serializer
    }
 
    /**
+    * Normalize an object for serialization.
     * @return array<string, mixed>
     */
    private function normalizeObject(object $value): array
@@ -121,6 +124,8 @@ final class Serializer
    }
 
    /**
+    * Determine if an array is associative.
+    * An array is considered associative if its keys are not a continuous sequence of integers starting from 0.
     * @param array<mixed> $value
     */
    private function isAssociativeArray(array $value): bool

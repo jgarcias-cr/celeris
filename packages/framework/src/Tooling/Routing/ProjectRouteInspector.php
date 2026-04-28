@@ -100,6 +100,9 @@ final class ProjectRouteInspector
       return $routes;
    }
 
+   /**
+    * Strip worker-runner bootstrap code from the generated scratch script.
+    */
    private function stripWorkerRunner(string $source): string
    {
       $result = preg_replace(
@@ -123,6 +126,9 @@ final class ProjectRouteInspector
       return $result;
    }
 
+   /**
+    * Load a kernel instance from the generated scratch bootstrap file.
+    */
    private function loadKernelFromScratchFile(string $scratchPath): mixed
    {
       try {
@@ -159,6 +165,9 @@ final class ProjectRouteInspector
       return array_values(array_unique($normalized));
    }
 
+   /**
+    * Convert a route handler into a readable action label.
+    */
    private function handlerToAction(mixed $handler): string
    {
       if (is_array($handler) && isset($handler[0], $handler[1]) && is_string($handler[0]) && is_string($handler[1])) {

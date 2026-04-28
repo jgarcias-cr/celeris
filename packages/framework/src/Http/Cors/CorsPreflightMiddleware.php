@@ -15,11 +15,17 @@ use Celeris\Framework\Middleware\MiddlewareInterface;
  */
 final class CorsPreflightMiddleware implements MiddlewareInterface
 {
+   /**
+    * Create the CORS preflight middleware with an optional explicit policy.
+    */
    public function __construct(private ?CorsPolicy $policy = null)
    {
       $this->policy ??= new CorsPolicy();
    }
 
+   /**
+    * Short-circuit valid preflight requests before the main handler runs.
+    */
    public function handle(RequestContext $ctx, Request $request, callable $next): Response
    {
       $decision = $this->policy->evaluate($ctx, $request);

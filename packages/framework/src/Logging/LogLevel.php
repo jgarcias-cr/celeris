@@ -38,6 +38,9 @@ final class LogLevel
       ];
    }
 
+   /**
+    * Normalize an arbitrary log level string to a supported constant.
+    */
    public static function normalize(string $level): string
    {
       $value = strtolower(trim($level));

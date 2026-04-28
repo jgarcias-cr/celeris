@@ -70,6 +70,7 @@ final class GeneratedFilePreview
    }
 
    /**
+    * Convert the instance to an array.
     * @return array<string, mixed>
     */
    public function toArray(): array

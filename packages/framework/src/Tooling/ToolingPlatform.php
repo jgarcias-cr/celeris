@@ -68,6 +68,9 @@ final class ToolingPlatform
       return new self($root, $root . '/packages/framework/src');
    }
 
+   /**
+    * Mount the developer tooling UI and return the controller that serves it.
+    */
    public function mountWebUiRoutes(RouteCollector $routes, string $routePrefix = '/__dev/tooling'): DeveloperUiController
    {
       $webUi = $this->webUi(

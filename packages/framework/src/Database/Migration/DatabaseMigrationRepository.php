@@ -116,6 +116,9 @@ final class DatabaseMigrationRepository implements MigrationRepositoryInterface
       );
    }
 
+   /**
+    * Determine whether the thrown exception means the table already exists.
+    */
    private function isAlreadyExistsError(Throwable $exception): bool
    {
       $message = strtolower($exception->getMessage());

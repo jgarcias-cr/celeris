@@ -12,6 +12,9 @@ use Celeris\Framework\Tooling\Web\DeveloperUiController;
  */
 final class ToolingBootstrap
 {
+   /**
+    * Mount the tooling web UI only when the current environment allows it.
+    */
    public static function mountIfEnabled(
       Kernel $kernel,
       string $projectRoot,
@@ -26,6 +29,9 @@ final class ToolingBootstrap
       return $tooling->mountWebUiRoutes($kernel->routes(), $routePrefix);
    }
 
+   /**
+    * Read a nullable boolean flag from the environment.
+    */
    private static function envFlag(string $key): bool
    {
       $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);

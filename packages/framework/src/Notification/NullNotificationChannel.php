@@ -12,6 +12,9 @@ namespace Celeris\Framework\Notification;
  */
 final class NullNotificationChannel implements NotificationChannelInterface
 {
+   /**
+    * Create a notification channel that intentionally discards deliveries.
+    */
    public function __construct(private string $channelName = 'null')
    {
       $clean = trim($this->channelName);

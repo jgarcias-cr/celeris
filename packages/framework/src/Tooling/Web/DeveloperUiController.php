@@ -2276,12 +2276,18 @@ HTML;
       return $this->apiError($ctx, 404, 'not_found', sprintf('Unknown tooling API path "%s".', $apiPath));
    }
 
+   /**
+    * Build the legacy graph response.
+    */
    private function legacyGraphResponse(): Response
    {
       $graph = $this->dependencyGraphBuilder->buildModuleGraph();
       return $this->json(200, $graph->toArray());
    }
 
+   /**
+    * Build the legacy validate response.
+    */
    private function legacyValidateResponse(): Response
    {
       $graph = $this->dependencyGraphBuilder->buildModuleGraph();
@@ -2289,6 +2295,9 @@ HTML;
       return $this->json(200, $report->toArray());
    }
 
+   /**
+    * Build the legacy preview response.
+    */
    private function legacyPreviewResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $request->getQueryParams();
@@ -2322,6 +2331,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the legacy apply response.
+    */
    private function legacyApplyResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $request->getQueryParams();
@@ -2358,6 +2370,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for previewing generated files.
+    */
    private function apiPreviewResponse(RequestContext $ctx, Request $request): Response
    {
       $args = $this->generationArgs($this->requestInput($request));
@@ -2390,6 +2405,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for applying generated files.
+    */
    private function apiApplyResponse(RequestContext $ctx, Request $request): Response
    {
       $args = $this->generationArgs($this->requestInput($request));
@@ -2521,6 +2539,9 @@ HTML;
       return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
    }
 
+   /**
+    * Build the API response for schema connections.
+    */
    private function apiSchemaConnectionsResponse(RequestContext $ctx): Response
    {
       try {
@@ -2561,6 +2582,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for schema tables.
+    */
    private function apiSchemaTablesResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2579,6 +2603,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for routes.
+    */
    private function apiRoutesResponse(RequestContext $ctx): Response
    {
       try {
@@ -2600,6 +2627,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for describing a schema table.
+    */
    private function apiSchemaTableDescribeResponse(RequestContext $ctx, Request $request, string $table): Response
    {
       $input = $this->requestInput($request);
@@ -2623,6 +2653,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for migrations status.
+    */
    private function apiMigrationsStatusResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2641,6 +2674,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for running pending migrations.
+    */
    private function apiMigrationsRunResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2661,6 +2697,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for rolling back migrations.
+    */
    private function apiMigrationsRollbackResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2681,6 +2720,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for rebuilding migrations from scratch.
+    */
    private function apiMigrationsFreshResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2699,6 +2741,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for scaffold preview.
+    */
    private function apiScaffoldPreviewResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2735,6 +2780,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for applying scaffolded files.
+    */
    private function apiScaffoldApplyResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2774,6 +2822,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for seed run.
+    */
    private function apiSeedRunResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2797,6 +2848,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for cache clear.
+    */
    private function apiCacheClearResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2814,6 +2868,9 @@ HTML;
       return $this->apiOk($ctx, $result);
    }
 
+   /**
+    * Build the API response for environment.
+    */
    private function apiEnvironmentResponse(RequestContext $ctx): Response
    {
       try {
@@ -2825,6 +2882,9 @@ HTML;
       return $this->apiOk($ctx, $payload);
    }
 
+   /**
+    * Build the API response for saving environment values.
+    */
    private function apiSaveEnvironmentResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2913,6 +2973,9 @@ HTML;
       ]);
    }
 
+   /**
+    * Build the API response for generating an application key.
+    */
    private function apiGenerateAppKeyResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -2982,6 +3045,9 @@ HTML;
       ];
    }
 
+   /**
+    * Determine whether the current environment exposes a template engine.
+    */
    private function environmentHasViewEngine(): bool
    {
       $viewsPath = rtrim($this->projectRoot, '/\\') . '/app/Views';
@@ -3055,6 +3121,9 @@ HTML;
       return $map;
    }
 
+   /**
+    * Decode an environment value received from the tooling UI.
+    */
    private function decodeEnvironmentValue(string $value): string
    {
       $trimmed = trim($value);
@@ -3154,6 +3223,9 @@ HTML;
       return $keys;
    }
 
+   /**
+    * Prepare an environment value for safe file output.
+    */
    private function envValueForWrite(string $value): string
    {
       if ($value === '') {
@@ -3196,6 +3268,9 @@ HTML;
       return (string) $map[$key];
    }
 
+   /**
+    * Build the API response for compatibility breaking changes.
+    */
    private function apiCompatibilityBreakingChangesResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -3248,6 +3323,9 @@ HTML;
       }
    }
 
+   /**
+    * Build the API response for saving a compatibility baseline.
+    */
    private function apiCompatibilitySaveBaselineResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
@@ -3371,6 +3449,9 @@ HTML;
       return $this->routingTypeValue($input);
    }
 
+   /**
+    * Return the active configuration repository.
+    */
    private function config(): ConfigRepository
    {
       if ($this->config instanceof ConfigRepository) {
@@ -3422,6 +3503,9 @@ HTML;
       return $configs;
    }
 
+   /**
+    * Resolve the default database connection name.
+    */
    private function defaultConnectionName(): string
    {
       $default = $this->config()->get('database.default', 'default');
@@ -3432,6 +3516,9 @@ HTML;
       return trim($default);
    }
 
+   /**
+    * Resolve the directory that stores migration files.
+    */
    private function migrationsDirectory(): string
    {
       return rtrim($this->projectRoot, '/\\') . '/database/migrations';
@@ -3486,6 +3573,9 @@ HTML;
       return $rows;
    }
 
+   /**
+    * Derive the migration class name from a file path.
+    */
    private function migrationClassFromFile(string $path): string
    {
       $source = (string) file_get_contents($path);
@@ -4441,6 +4531,9 @@ return [
 PHP;
    }
 
+   /**
+    * Build a predictable seed file name from a table name.
+    */
    private function seedFileNameForTable(string $tableName): string
    {
       $normalized = strtolower(trim($tableName));
@@ -4456,6 +4549,9 @@ PHP;
       return trim($safe, '._-');
    }
 
+   /**
+    * Build the generated repository test source for an entity.
+    */
    private function repositoryTestContents(string $entity): string
    {
       return <<<PHP
@@ -4479,6 +4575,9 @@ final class {$entity}RepositoryTest extends TestCase
 PHP;
    }
 
+   /**
+    * Build the generated service test source for an entity.
+    */
    private function serviceTestContents(string $entity): string
    {
       return <<<PHP
@@ -4503,6 +4602,9 @@ final class {$entity}ServiceTest extends TestCase
 PHP;
    }
 
+   /**
+    * Build the generated controller integration test source for an entity.
+    */
    private function controllerIntegrationTestContents(string $entity): string
    {
       return <<<PHP
@@ -4554,6 +4656,9 @@ PHP;
       return $out;
    }
 
+   /**
+    * Build a representative PHP literal for the given column type.
+    */
    private function sampleLiteralForType(string $column, string $type, int $index): string
    {
       if (str_contains($type, 'int') || str_contains($type, 'numeric') || str_contains($type, 'decimal')) {
@@ -4575,6 +4680,9 @@ PHP;
       return "'" . $this->escapeSingleQuoted($column . '_' . $index) . "'";
    }
 
+   /**
+    * Resolve the path used to store a compatibility baseline for a table.
+    */
    private function compatibilityBaselinePath(string $connection, string $table): string
    {
       $safeConnection = preg_replace('/[^A-Za-z0-9_]+/', '_', strtolower($connection)) ?? 'connection';
@@ -4582,6 +4690,9 @@ PHP;
       return rtrim($this->projectRoot, '/\\') . '/var/tooling/baselines/' . $safeConnection . '__' . $safeTable . '.json';
    }
 
+   /**
+    * Convert an absolute path into a project-relative path when possible.
+    */
    private function relativeToProject(string $absolutePath): string
    {
       $root = rtrim($this->projectRoot, '/\\') . '/';
@@ -4755,6 +4866,9 @@ PHP;
       return $count;
    }
 
+   /**
+    * Qualify a table name for the current database driver.
+    */
    private function qualifiedTableName(string $table, DatabaseDriver $driver): string
    {
       $parts = $this->splitSchemaAndTable($table);
@@ -4765,6 +4879,9 @@ PHP;
       return $this->quoteIdentifier($parts['schema'], $driver) . '.' . $this->quoteIdentifier($parts['table'], $driver);
    }
 
+   /**
+    * Quote a database identifier for the current driver.
+    */
    private function quoteIdentifier(string $identifier, DatabaseDriver $driver): string
    {
       $clean = trim($identifier);
@@ -4860,6 +4977,9 @@ PHP;
       };
    }
 
+   /**
+    * Resolve an environment-controlled path with a safe default.
+    */
    private function envPath(string $envKey, string $default): string
    {
       $raw = $this->envString($envKey);
@@ -4874,6 +4994,9 @@ PHP;
       return rtrim($this->projectRoot, '/\\') . '/' . ltrim($raw, '/\\');
    }
 
+   /**
+    * Determine whether the path resolves inside the current project.
+    */
    private function isPathWithinProject(string $path): bool
    {
       $root = realpath($this->projectRoot);
@@ -5081,6 +5204,9 @@ PHP;
       return $changes;
    }
 
+   /**
+    * Derive a class-friendly entity name from a table name.
+    */
    private function entityNameFromTable(string $tableName): string
    {
       $parsed = $this->splitSchemaAndTable($tableName, 'public');
@@ -5193,6 +5319,9 @@ PHP;
       return array_values(array_unique($required));
    }
 
+   /**
+    * Convert a default value into a PHP literal when possible.
+    */
    private function defaultLiteral(mixed $value): ?string
    {
       if ($value === null) {
@@ -5262,6 +5391,9 @@ PHP;
       return implode("\n", $lines);
    }
 
+   /**
+    * Convert a string into camelCase.
+    */
    private function camel(string $value): string
    {
       $parts = preg_split('/[^A-Za-z0-9]+/', strtolower($value)) ?: [];
@@ -5274,6 +5406,9 @@ PHP;
       return ($first !== null ? $first : 'field') . implode('', $rest);
    }
 
+   /**
+    * Escape a value for use inside a single-quoted PHP string literal.
+    */
    private function escapeSingleQuoted(string $value): string
    {
       return str_replace("'", "\\'", $value);
@@ -5364,6 +5499,9 @@ PHP;
       ];
    }
 
+   /**
+    * Build a 405 response for requests that use an unsupported method.
+    */
    private function methodNotAllowed(RequestContext $ctx, array $allowed): Response
    {
       $response = $this->apiError(
@@ -5469,6 +5607,9 @@ PHP;
       return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
    }
 
+   /**
+    * Determine whether tooling is enabled for the current environment.
+    */
    private function isToolingEnabled(): bool
    {
       $explicit = $this->envFlag(self::WEB_ENABLED_KEY);
@@ -5489,6 +5630,9 @@ PHP;
       return $this->environment() === 'development';
    }
 
+   /**
+    * Return the current application environment name.
+    */
    private function environment(): string
    {
       $raw = $_ENV[self::ENV_KEY] ?? $_SERVER[self::ENV_KEY] ?? getenv(self::ENV_KEY);
@@ -5614,6 +5758,9 @@ PHP;
       @file_put_contents($path, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
    }
 
+   /**
+    * Read a server parameter from the current request context.
+    */
    private function serverParam(RequestContext $ctx, string $key): string
    {
       $params = $ctx->getServerParams();
@@ -5621,6 +5768,9 @@ PHP;
       return is_string($value) ? $value : '';
    }
 
+   /**
+    * Return the lazily initialized application key manager.
+    */
    private function appKeyManager(): AppKeyManager
    {
       if ($this->appKeyManager === null) {
@@ -5630,6 +5780,9 @@ PHP;
       return $this->appKeyManager;
    }
 
+   /**
+    * Return the lazily initialized project route inspector.
+    */
    private function routeInspector(): ProjectRouteInspector
    {
       if ($this->routeInspector === null) {
@@ -5639,12 +5792,18 @@ PHP;
       return $this->routeInspector;
    }
 
+   /**
+    * Determine whether tooling audit logging is enabled.
+    */
    private function isAuditEnabled(): bool
    {
       $flag = $this->envFlag(self::AUDIT_ENABLED_KEY);
       return $flag ?? true;
    }
 
+   /**
+    * Resolve the audit log path for tooling operations.
+    */
    private function auditPath(): string
    {
       $raw = $this->envString(self::AUDIT_PATH_KEY);
@@ -5673,12 +5832,18 @@ PHP;
       return array_values(array_filter($parts, static fn(string $item): bool => $item !== ''));
    }
 
+   /**
+    * Read a required string value from the environment.
+    */
    private function envString(string $key): string
    {
       $raw = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
       return is_string($raw) ? trim($raw) : '';
    }
 
+   /**
+    * Read a nullable boolean flag from the environment.
+    */
    private function envFlag(string $key): ?bool
    {
       $raw = $this->envString($key);

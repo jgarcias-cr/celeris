@@ -14,6 +14,7 @@ namespace Celeris\Framework\Http;
 final class ContentNegotiator
 {
    /**
+    * Negotiate content types.
     * @param array<int, string> $supportedTypes
     */
    public static function negotiate(array $supportedTypes, ?string $acceptHeader, ?string $default = null): ?string
@@ -39,6 +40,7 @@ final class ContentNegotiator
       return $default;
    }
 
+
    /**
     * Handle accepts.
     *
@@ -51,7 +53,9 @@ final class ContentNegotiator
       return self::negotiate([$contentType], $acceptHeader) !== null;
    }
 
+
    /**
+    * Parse the `Accept` header into an ordered list of media types with quality factors and specificity.
     * @return array<int, array{type: string, q: float, specificity: int}>
     */
    private static function parseAcceptHeader(string $header): array
@@ -88,6 +92,7 @@ final class ContentNegotiator
       return $items;
    }
 
+
    /**
     * Handle specificity.
     *
@@ -105,6 +110,7 @@ final class ContentNegotiator
       return 2;
    }
 
+   
    /**
     * Handle matches.
     *

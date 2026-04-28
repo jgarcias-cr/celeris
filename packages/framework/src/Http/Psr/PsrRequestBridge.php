@@ -55,7 +55,9 @@ final class PsrRequestBridge
       );
    }
 
+
    /**
+    * Normalize uploaded files from psr request.
     * @param array<string, mixed> $uploaded
     * @return array<string, UploadedFile|array>
     */

@@ -9,12 +9,18 @@ namespace Celeris\Framework\Security\Auth;
  */
 final class HmacCookieValueCodec implements CookieValueCodecInterface
 {
+   /**
+    * Create a cookie codec that signs values with an HMAC secret.
+    */
    public function __construct(
       private string $key,
       private string $version = 'v1',
    ) {
    }
 
+   /**
+    * Encode and sign a cookie value for safe round-tripping.
+    */
    public function encode(string $value): string
    {
       $payload = self::base64UrlEncode($value);
@@ -23,6 +29,9 @@ final class HmacCookieValueCodec implements CookieValueCodecInterface
       return $this->version . '.' . $payload . '.' . $signature;
    }
 
+   /**
+    * Verify and decode a previously signed cookie value.
+    */
    public function decode(string $value): ?string
    {
       $parts = explode('.', $value, 3);
@@ -48,11 +57,17 @@ final class HmacCookieValueCodec implements CookieValueCodecInterface
       return $decoded;
    }
 
+   /**
+    * Encode a string using URL-safe base64 without padding.
+    */
    private static function base64UrlEncode(string $value): string
    {
       return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
    }
 
+   /**
+    * Decode a URL-safe base64 string when it is well formed.
+    */
    private static function base64UrlDecode(string $value): ?string
    {
       $normalized = strtr($value, '-_', '+/');

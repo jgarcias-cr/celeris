@@ -12,6 +12,9 @@ namespace Celeris\Framework\Database\Sql;
  */
 final class OracleSqlDialect implements SqlDialectInterface
 {
+   /**
+    * Apply limit and offset clauses using this dialect's SQL syntax.
+    */
    public function applyLimitOffset(string $sql, ?int $limit, ?int $offset, bool $hasOrderBy): string
    {
       if ($limit === null && $offset === null) {

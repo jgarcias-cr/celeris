@@ -82,6 +82,9 @@ final class CookieSessionStrategy implements AuthStrategyInterface
       return AuthResult::authenticated($identity, $this->name(), $tokenId);
    }
 
+   /**
+    * Resolve the session identifier from the incoming request.
+    */
    private function resolveSessionId(Request $request): ?string
    {
       $raw = $request->getCookies()->get($this->cookieName);

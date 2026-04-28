@@ -14,11 +14,17 @@ use Celeris\Framework\Database\DatabaseDriver;
  */
 final class SqlDialectFactory
 {
+   /**
+    * Return the generic SQL dialect implementation.
+    */
    public static function generic(): SqlDialectInterface
    {
       return new GenericSqlDialect();
    }
 
+   /**
+    * Resolve the SQL dialect for the given database driver.
+    */
    public static function forDriver(DatabaseDriver $driver): SqlDialectInterface
    {
       return match ($driver) {

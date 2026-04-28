@@ -55,6 +55,7 @@ final class ValidatorEngine
    }
 
    /**
+    * Handle validate schema.
     * @param array<string, mixed> $payload
     * @param array<string, array<string, mixed>> $schema
     */
@@ -211,6 +212,7 @@ final class ValidatorEngine
    }
 
    /**
+    * Handle validate schema length.
     * @param array<string, mixed> $rules
     */
    private function validateSchemaLength(ValidationResult $result, string $field, mixed $value, array $rules): void
@@ -236,6 +238,11 @@ final class ValidatorEngine
    }
 
    /**
+    * Handle validate schema range.
+    *
+    * @param ValidationResult $result
+    * @param string $field
+    * @param mixed $value
     * @param array<string, mixed> $rules
     */
    private function validateSchemaRange(ValidationResult $result, string $field, mixed $value, array $rules): void

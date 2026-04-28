@@ -33,6 +33,7 @@ final class ControllerGenerator implements GeneratorInterface
    }
 
    /**
+    * Handle generation.
     * @return array<int, GeneratedFileDraft>
     */
    public function generate(GenerationRequest $request): array

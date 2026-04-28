@@ -14,6 +14,9 @@ use Celeris\Framework\Config\ConfigRepository;
  */
 final class LoggingBootstrap
 {
+   /**
+    * Build the default logger instance from application configuration.
+    */
    public static function fromConfig(ConfigRepository $config, string $projectRoot): LoggerInterface
    {
       $minimumLevel = (string) $config->get(

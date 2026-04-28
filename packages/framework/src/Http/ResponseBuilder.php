@@ -58,6 +58,7 @@ final class ResponseBuilder
    }
 
    /**
+    * Handle header.
     * @param string|string[] $value
     */
    public function header(string $name, string|array $value): self
@@ -67,6 +68,8 @@ final class ResponseBuilder
    }
 
    /**
+    * Handle header addition.
+    *
     * @param string|string[] $value
     */
    public function addHeader(string $name, string|array $value): self

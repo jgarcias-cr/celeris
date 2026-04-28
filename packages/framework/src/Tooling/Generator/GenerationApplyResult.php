@@ -23,6 +23,7 @@ final class GenerationApplyResult
    }
 
    /**
+    * Get the list of written files.
     * @return array<int, string>
     */
    public function written(): array
@@ -31,6 +32,7 @@ final class GenerationApplyResult
    }
 
    /**
+    * Get the list of skipped files.
     * @return array<int, string>
     */
    public function skipped(): array

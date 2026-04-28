@@ -58,6 +58,7 @@ final class ArchitectureViolation
    }
 
    /**
+    * Convert the violation to an array representation.
     * @return array{rule:string,message:string,severity:string}
     */
    public function toArray(): array

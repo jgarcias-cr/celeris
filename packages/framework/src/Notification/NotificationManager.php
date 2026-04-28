@@ -158,6 +158,9 @@ final class NotificationManager
       return $this->defaultChannel;
    }
 
+   /**
+    * Normalize a channel name so lookups stay predictable.
+    */
    private static function normalizeChannelName(string $name): string
    {
       return strtolower(trim($name));

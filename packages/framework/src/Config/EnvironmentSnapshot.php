@@ -33,6 +33,9 @@ final class EnvironmentSnapshot
       }
    }
 
+   /**
+    * Create an empty environment snapshot.
+    */
    public static function empty(): self
    {
       return new self([], [], 'env-empty');

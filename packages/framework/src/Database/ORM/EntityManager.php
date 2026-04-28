@@ -574,11 +574,17 @@ final class EntityManager
       };
    }
 
+   /**
+    * Determine whether the identifier value should be treated as empty.
+    */
    private function isEmptyIdentifier(mixed $value): bool
    {
       return $value === null || $value === '';
    }
 
+   /**
+    * Resolve the identifier strategy that should be used for the entity.
+    */
    private function effectiveIdStrategy(EntityMetadata $metadata, ColumnMetadata $idMeta): IdGenerationStrategy
    {
       if (!$idMeta->generated()) {
@@ -615,6 +621,9 @@ final class EntityManager
       return IdGenerationStrategy::Identity;
    }
 
+   /**
+    * Resolve the default identifier strategy configured on the connection.
+    */
    private function connectionDefaultIdStrategy(): IdGenerationStrategy
    {
       if (!$this->connection instanceof PdoConnection) {
@@ -634,6 +643,9 @@ final class EntityManager
       return IdGenerationStrategy::fromString($clean);
    }
 
+   /**
+    * Resolve the sequence name used to generate entity identifiers.
+    */
    private function resolveSequenceName(EntityMetadata $metadata, ColumnMetadata $idMeta): string
    {
       $sequence = $idMeta->idSequence() ?? $this->configuredSequenceName($metadata, $idMeta);
@@ -647,6 +659,9 @@ final class EntityManager
       return $this->normalizeSequenceName($sequence);
    }
 
+   /**
+    * Return the explicitly configured sequence name when one exists.
+    */
    private function configuredSequenceName(EntityMetadata $metadata, ColumnMetadata $idMeta): ?string
    {
       if (!$this->connection instanceof PdoConnection) {
@@ -678,6 +693,9 @@ final class EntityManager
       ]);
    }
 
+   /**
+    * Fetch the next value from the given database sequence.
+    */
    private function nextSequenceValue(string $sequence): mixed
    {
       foreach ($this->sequenceSqlCandidates($sequence) as [$sql, $params]) {
@@ -730,6 +748,9 @@ final class EntityManager
       };
    }
 
+   /**
+    * Return the database driver associated with the current connection.
+    */
    private function connectionDriver(): ?DatabaseDriver
    {
       if ($this->connection instanceof PdoConnection) {
@@ -739,6 +760,9 @@ final class EntityManager
       return null;
    }
 
+   /**
+    * Normalize a sequence name before sending it to the database.
+    */
    private function normalizeSequenceName(string $sequence): string
    {
       $clean = trim($sequence);

@@ -34,6 +34,7 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Create from array.
     * @param array<string, string|array<int, string>> $headers
     */
    public static function fromArray(array $headers): self
@@ -70,6 +71,7 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Handle all.
     * @return array<int, string>
     */
    public function all(string $name): array
@@ -78,6 +80,8 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Get all headers as a multi-value array.
+    *
     * @return array<string, array<int, string>>
     */
    public function toMultiValueArray(): array
@@ -86,6 +90,8 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Get all headers as a single-value array.
+    *
     * @return array<string, string|array<int, string>>
     */
    public function toArray(): array
@@ -99,6 +105,7 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Return a copy with the given header value.
     * @param string|array<int, string> $value
     */
    public function with(string $name, string|array $value): self
@@ -109,6 +116,12 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Return a copy with the given header value added.
+    * If the header already exists, the new value(s) will be appended to the existing ones.
+    * If the header does not exist, it will be created with the given value(s).
+    * The header name is case-insensitive, so "Content-Type" and "content-type" are treated as the same header.
+    * If the value is a string, it will be trimmed and added as a single value.
+    * If the value is an array, each item will be trimmed and added as a separate value.
     * @param string|array<int, string> $value
     */
    public function withAdded(string $name, string|array $value): self
@@ -139,6 +152,18 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Return a copy with the given header values merged.
+    * If a header already exists, the new value(s) will be appended to the existing ones.
+    * If a header does not exist, it will be created with the given value(s).
+    * The header name is case-insensitive, so "Content-Type" and "content-type" are treated as the same header.
+    * If a value is a string, it will be trimmed and added as a single value.
+    * If a value is an array, each item will be trimmed and added as a separate value.
+    * The input array should have header names as keys and header values as values. Header values can be either
+    * strings or arrays of strings. For example: 
+    * [
+    *    "Content-Type" => "application/json",
+    *    "Accept" => ["application/json", "text/plain"]
+    * ]
     * @param array<string, string|array<int, string>> $headers
     */
    public function merge(array $headers): self
@@ -152,6 +177,9 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Get an iterator for the headers.
+    * The iterator yields header names as keys and arrays of header values as values.
+    *
     * @return Traversable<string, array<int, string>>
     */
    public function getIterator(): Traversable
@@ -171,6 +199,7 @@ final class Headers implements IteratorAggregate
    }
 
    /**
+    * Handle normalize values.
     * @param string|array<int, string> $value
     * @return array<int, string>
     */

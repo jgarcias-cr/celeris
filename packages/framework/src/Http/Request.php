@@ -143,7 +143,11 @@ final class Request
       return $copy;
    }
 
-   /** @return array<string, string|array<int, string>> */
+   /** 
+    * Get the headers.
+    *
+    * @return array<string, string|array<int, string>> 
+    */
    public function getHeaders(): array
    {
       return $this->headers->toArray();
@@ -171,7 +175,11 @@ final class Request
       return $this->headers->first($name, $default);
    }
 
-   /** @return array<string, mixed> */
+   /** 
+    * Get the query params.
+    *
+    * @return array<string, mixed> 
+    */
    public function getQueryParams(): array
    {
       return $this->queryParams;
@@ -203,6 +211,8 @@ final class Request
    }
 
    /**
+    * Return a copy with the headers.
+    *
     * @param Headers|array<string, string|array<int, string>> $headers
     */
    public function withHeaders(Headers|array $headers): self
@@ -236,6 +246,7 @@ final class Request
    }
 
    /**
+    * Return a copy with the cookies.
     * @param array<string, string>|Cookies $cookies
     */
    public function withCookies(Cookies|array $cookies): self
@@ -296,6 +307,7 @@ final class Request
    }
 
    /**
+    * Return a copy with the uploaded files.
     * @param array<string, UploadedFile|array> $uploadedFiles
     */
    public function withUploadedFiles(array $uploadedFiles): self
@@ -305,13 +317,18 @@ final class Request
       return $copy;
    }
 
-   /** @return array<string, mixed> */
+   /** 
+    * Get the server params.
+    *
+    * @return array<string, mixed> 
+    */
    public function getServerParams(): array
    {
       return $this->serverParams;
    }
 
    /**
+    * Return a copy with the server params.
     * @param array<string, mixed> $serverParams
     */
    public function withServerParams(array $serverParams): self
@@ -345,6 +362,7 @@ final class Request
    }
 
    /**
+    * Handle extract headers.
     * @param array<string, mixed> $server
     * @return array<string, string|array<int, string>>
     */
@@ -373,6 +391,7 @@ final class Request
    }
 
    /**
+    * Handle normalize uploaded files.
     * @param array<string, mixed> $files
     * @return array<string, UploadedFile|array>
     */
@@ -470,6 +489,7 @@ final class Request
    }
 
    /**
+    * Handle resolve parsed body.
     * @param array<string, string|array<int, string>> $headers
     */
    private static function resolveParsedBody(mixed $parsedBody, string $rawBody, array $headers): mixed

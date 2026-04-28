@@ -16,20 +16,32 @@ final class Route
 {
    private static ?RouteCollector $collector = null;
 
+   /**
+    * Prevent direct instantiation of the static route facade.
+    */
    private function __construct()
    {
    }
 
+   /**
+    * Bind the static route facade to a route collector instance.
+    */
    public static function bind(RouteCollector $collector): void
    {
       self::$collector = $collector;
    }
 
+   /**
+    * Clear the currently bound route collector.
+    */
    public static function clear(): void
    {
       self::$collector = null;
    }
 
+   /**
+    * Return the currently bound route collector.
+    */
    public static function collector(): RouteCollector
    {
       if (self::$collector === null) {

@@ -16,6 +16,9 @@ use Celeris\Framework\Database\DatabaseDriver;
  */
 final class SqlDialectResolver
 {
+   /**
+    * Resolve the SQL dialect for the given connection.
+    */
    public static function forConnection(ConnectionInterface $connection): SqlDialectInterface
    {
       if ($connection instanceof PdoConnection) {

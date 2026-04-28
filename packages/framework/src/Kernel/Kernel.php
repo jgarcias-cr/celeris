@@ -420,11 +420,17 @@ final class Kernel implements KernelInterface
       return $this->notificationManager;
    }
 
+   /**
+    * Return the logger currently attached to the kernel.
+    */
    public function getLogger(): LoggerInterface
    {
       return $this->logger;
    }
 
+   /**
+    * Replace the kernel logger and optionally mark it as config-managed.
+    */
    public function setLogger(LoggerInterface $logger, bool $managedByConfig = false): void
    {
       $this->logger = $logger;
@@ -658,6 +664,7 @@ final class Kernel implements KernelInterface
     }
 
     /**
+     * Generate an OpenAPI document based on the registered routes and schemas.
      * @return array<string, mixed>
      */
     public function generateOpenApi(?string $title = null, ?string $version = null): array
@@ -668,6 +675,7 @@ final class Kernel implements KernelInterface
     }
 
     /**
+     * Validate an OpenAPI document against the registered routes and schemas.
      * @param array<string, mixed> $document
      * @return array<int, string>
      */
@@ -844,6 +852,7 @@ final class Kernel implements KernelInterface
    }
 
    /**
+    * Handle reindex middleware descriptors.
     * @param array<int, array<string, mixed>> $descriptors
     * @return array<int, array<string, mixed>>
     */
@@ -953,6 +962,7 @@ final class Kernel implements KernelInterface
    }
 
    /**
+    * Handle invoke callable.
     * @param array<string, string> $pathParams
     */
    private function invokeCallable(callable $callable, RequestContext $ctx, Request $request, array $pathParams): mixed
@@ -970,6 +980,22 @@ final class Kernel implements KernelInterface
    }
 
    /**
+    * Handle resolve handler argument.
+    *
+    * The resolution order is as follows:
+    * 1. If the parameter type is a class or interface, attempt to resolve it from the container.
+    * 2. If the parameter name is "params", inject all path parameters as an associative array.
+    * 3. If a path parameter matches the parameter name, inject the path parameter value (cast to the declared type if possible).
+    * 4. If the parameter has a default value, use it.
+    * 5. If the parameter allows null, use null.
+    * 6. Otherwise, throw an exception for unresolved parameter.
+    * The container resolution supports both constructor injection and DTO mapping:
+    * - If the parameter type is a class that can be resolved from the container, the container instance will be injected.
+    * - If the parameter type is a class that cannot be resolved from the container but is supported by the DTO mapper, the DTO mapper will attempt to map request data (query parameters for GET requests, or parsed body for other methods) to an instance of the class, which will then be injected.
+    * This allows for flexible route handlers that can declare dependencies on services or DTOs without needing to manually extract and validate request data.
+    * @param ReflectionParameter $parameter
+    * @param RequestContext $ctx
+    * @param Request $request
     * @param array<string, string> $pathParams
     */
    private function resolveHandlerArgument(
@@ -1304,7 +1330,7 @@ final class Kernel implements KernelInterface
    }
 
    /**
-    * Handle dbal.
+    * Handle dbal (database abstraction layer).
     *
     * @return DBAL
     */
@@ -1524,6 +1550,9 @@ final class Kernel implements KernelInterface
       return dirname(__DIR__, 3);
    }
 
+   /**
+    * Resolve the project root from the active configuration loader when possible.
+    */
    private static function resolveProjectRoot(?ConfigLoader $configLoader): string
    {
       if ($configLoader instanceof ConfigLoader) {

@@ -147,6 +147,7 @@ Key runtime flow:
 
 This is the full request lifecycle as implemented by `WorkerRunner + Kernel`.
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```text
 +---------------------------+
 | Runtime Adapter           |
@@ -466,6 +467,7 @@ Canonical lifecycle phases:
 
 Graph 1: Canonical worker state flow
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```text
 +-------------------+
 | Process Started   |
@@ -508,6 +510,7 @@ Graph 1: Canonical worker state flow
 
 Graph 2: Canonical per-request sequence in worker mode
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```text
 Runtime Adapter      WorkerRunner          Kernel              App Code
      |                   |                   |                    |
@@ -547,6 +550,7 @@ Common mistakes to avoid in worker mode:
 
 `public/index.php`:
 
+Sample location/type: file `public/index.php`.
 ```php
 <?php
 
@@ -567,6 +571,7 @@ $runner->run();
 
 `RoadRunnerAdapter` and `SwooleAdapter` use callback-based transport integration. You provide receiver/responder callbacks and run through `WorkerRunner`.
 
+Sample location/type: runtime bootstrap snippet for a worker front controller or equivalent bootstrap file.
 ```php
 $adapter = new RoadRunnerAdapter(
     receiver: fn (): ?array => $nextFrameFromRuntime(),
@@ -581,6 +586,7 @@ $runner->run();
 
 `NativeHttpWorkerAdapter` is a first-party socket-based worker adapter. It runs a lightweight HTTP/1.1 loop directly through `WorkerRunner`.
 
+Sample location/type: runtime bootstrap snippet for a worker front controller or equivalent bootstrap file.
 ```php
 use Celeris\Framework\Runtime\NativeHttpWorkerAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
@@ -601,6 +607,7 @@ You can keep one bootstrap entrypoint and switch runtime mode with environment v
 
 `public/index.php`:
 
+Sample location/type: file `public/index.php`.
 ```php
 <?php
 
@@ -668,6 +675,7 @@ through `ConfigLoader + EnvironmentLoader`, then builds immutable runtime config
 
 `config/app.php`:
 
+Sample location/type: file `config/app.php`.
 ```php
 <?php
 
@@ -679,6 +687,7 @@ return [
 
 `config/database.php`:
 
+Sample location/type: file `config/database.php`.
 ```php
 <?php
 
@@ -704,6 +713,7 @@ return [
 
 `config/security.php`:
 
+Sample location/type: file `config/security.php`.
 ```php
 <?php
 
@@ -788,6 +798,7 @@ return [
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\ConfigValidator;
@@ -826,6 +837,7 @@ The framework container supports lifetimes:
 
 Provider lifecycle (high-level):
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```mermaid
 flowchart TD
     A[public/index.php] --> B[new Kernel(...)]
@@ -888,6 +900,7 @@ Quick decision guide:
 
 ### 4.2 Registration examples by lifetime
 
+Sample location/type: service provider class or provider registration code.
 ```php
 <?php
 
@@ -928,6 +941,7 @@ final class LifetimeExamplesProvider implements ServiceProviderInterface
 
 Example of an invalid lifetime dependency (do not do this):
 
+Sample location/type: service provider registration example.
 ```php
 $services->singleton(
     App\Bad\SingletonNeedingRequestState::class,
@@ -948,6 +962,7 @@ If you are using the generated API or MVC scaffolds, your provider will usually 
 
 `app/AppServiceProvider.php`:
 
+Sample location/type: file `app/AppServiceProvider.php`.
 ```php
 <?php
 
@@ -990,6 +1005,7 @@ If you are following the scaffolded/traditional structure, use this only as an a
 
 Register provider in bootstrap:
 
+Sample location/type: bootstrap code, typically in `public/index.php`.
 ```php
 $kernel->registerProvider(new \App\AppServiceProvider());
 ```
@@ -999,6 +1015,7 @@ $kernel->registerProvider(new \App\AppServiceProvider());
 `Kernel::handle()` creates a request-scoped container and stores it in `RequestContext`.
 Services registered with request lifetime are isolated per request and cleared at the end of that request.
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```mermaid
 sequenceDiagram
     participant W as Worker Process
@@ -1027,6 +1044,7 @@ sequenceDiagram
 
 `LoggerInterface` is available from the container by default and can be constructor-injected into controllers/services.
 
+Sample location/type: service class example.
 ```php
 <?php
 
@@ -1049,6 +1067,7 @@ final class ContactService
 
 Quick value logging:
 
+Sample location/type: method-body snippet for a service or controller class that already has a logger instance.
 ```php
 $this->logger->debug('Value check', ['value' => $myValue]);
 ```
@@ -1075,6 +1094,7 @@ Notes:
 
 `Response` is immutable. `ResponseBuilder` is mutable and ergonomic.
 
+Sample location/type: controller/handler method snippet that returns an HTTP response.
 ```php
 use Celeris\Framework\Http\ResponseBuilder;
 use Celeris\Framework\Http\HttpStatus;
@@ -1087,6 +1107,7 @@ $response = (new ResponseBuilder())
 
 ### 5.3 Cookies
 
+Sample location/type: controller/handler method snippet that adds cookies to an HTTP response.
 ```php
 use Celeris\Framework\Http\SetCookie;
 
@@ -1100,6 +1121,7 @@ $response = $response->withCookie(
 
 ### 5.4 Streaming responses
 
+Sample location/type: controller/handler method snippet that returns a streaming HTTP response.
 ```php
 use Celeris\Framework\Http\ResponseBuilder;
 
@@ -1114,6 +1136,7 @@ $response = (new ResponseBuilder())
 
 ### 5.5 Content negotiation
 
+Sample location/type: controller/handler method snippet that performs content negotiation.
 ```php
 use Celeris\Framework\Http\ContentNegotiator;
 
@@ -1136,6 +1159,7 @@ This means package/application internals can use Celeris contracts for determini
 
 Example boundary adapter used by a third-party package:
 
+Sample location/type: adapter class example from a third-party package integration boundary.
 ```php
 <?php
 
@@ -1192,6 +1216,7 @@ You can use either approach or mix both in the same app.
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 $kernel->registerController(ContactController::class);
 // or
@@ -1202,6 +1227,7 @@ $kernel->registerController(ContactController::class, new RouteGroup(prefix: '/a
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Routing\Route;
 use Celeris\Framework\Routing\RouteGroup;
@@ -1233,6 +1259,7 @@ Route::group(new RouteGroup(prefix: '/api', middleware: ['api.auth']), function 
 
 In bootstrap (`public/index.php`) without the static `Route` facade:
 
+Sample location/type: bootstrap/front controller file `public/index.php`.
 ```php
 $kernel->routes()->get('/health', function (RequestContext $ctx, Request $request): Response {
     return new Response(200, ['content-type' => 'application/json'], '{"ok":true}');
@@ -1262,6 +1289,7 @@ They are architecture examples, not a description of the generated scaffold fold
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Routing\RouteGroup;
 use Celeris\Framework\Routing\RouteMetadata;
@@ -1288,6 +1316,7 @@ $kernel->groupRoutes(
 
 In controller class (`app/Contacts/Http/ContactController.php`):
 
+Sample location/type: controller class at `app/Contacts/Http/ContactController.php`.
 ```php
 <?php
 
@@ -1322,6 +1351,7 @@ Register it:
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 $kernel->registerController(\App\Contacts\Http\ContactController::class, new \Celeris\Framework\Routing\RouteGroup(prefix: '/api'));
 ```
@@ -1342,6 +1372,7 @@ Register middleware:
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 $kernel->registerMiddleware('api.auth', new \App\Http\Middleware\RequireAuthMiddleware());
 $kernel->addGlobalMiddleware('api.auth'); // optional global execution
@@ -1351,6 +1382,7 @@ $kernel->addGlobalMiddleware('api.auth'); // optional global execution
 
 In middleware class (`app/Http/Middleware/RequireAuthMiddleware.php`):
 
+Sample location/type: middleware class at `app/Http/Middleware/RequireAuthMiddleware.php`.
 ```php
 <?php
 
@@ -1378,6 +1410,7 @@ final class RequireAuthMiddleware implements MiddlewareInterface
 
 ### 6.5 Middleware introspection
 
+Sample location/type: middleware class or middleware registration snippet.
 ```php
 $all = $kernel->inspectMiddleware();
 $routeOnly = $kernel->inspectMiddleware('GET', '/api/contacts/10', 'v1');
@@ -1385,6 +1418,7 @@ $routeOnly = $kernel->inspectMiddleware('GET', '/api/contacts/10', 'v1');
 
 ### 6.6 OpenAPI generation and validation
 
+Sample location/type: middleware class or middleware registration snippet.
 ```php
 $openApi = $kernel->generateOpenApi('Contacts API', '1.0.0');
 $errors = $kernel->validateOpenApi($openApi);
@@ -1418,6 +1452,7 @@ When you need custom fallback behavior, add a global pipeline middleware that re
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
@@ -1445,6 +1480,7 @@ $kernel->getPipeline()->add(new class implements MiddlewareInterface {
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Http\Response;
 
@@ -1467,6 +1503,7 @@ $kernel->routes()->get(
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 use Celeris\Framework\Http\Response;
 use Celeris\Framework\View\TemplateRendererInterface;
@@ -1481,6 +1518,7 @@ $kernel->routes()->get('/about', static function (TemplateRendererInterface $vie
 
 In route registrar (`app/Http/Routes/ContactResourceRoutes.php`):
 
+Sample location/type: route registrar at `app/Http/Routes/ContactResourceRoutes.php`.
 ```php
 use Celeris\Framework\Routing\RouteCollector;
 use Celeris\Framework\Routing\RouteMetadata;
@@ -1505,6 +1543,7 @@ A common approach is one route registrar per module, wired in bootstrap:
 
 In bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap at `public/index.php`.
 ```php
 <?php
 
@@ -1533,6 +1572,7 @@ Example registrar:
 
 In route registrar (`app/Contacts/Routes/ContactRoutes.php`):
 
+Sample location/type: route registrar at `app/Contacts/Routes/ContactRoutes.php`.
 ```php
 <?php
 
@@ -1578,6 +1618,7 @@ Important:
 
 Install an API project:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 composer create-project celeris/api users-service
 ```
@@ -1595,6 +1636,7 @@ For SQLite/MySQL/MariaDB/SQL Server/Firebird/IBM DB2/Oracle keys, see `docs/data
 
 ### 7.1 Suggested structure
 
+Sample location/type: example project directory structure shown inline in this manual.
 ```text
 api-app/
   .env
@@ -1692,6 +1734,7 @@ The generated base class holds the schema-shaped properties and serializer helpe
 
 `app/Models/Base/ContactBase.php`:
 
+Sample location/type: file `app/Models/Base/ContactBase.php`.
 ```php
 <?php
 
@@ -1745,6 +1788,7 @@ class ContactBase
 
 `app/Models/Contact.php`:
 
+Sample location/type: file `app/Models/Contact.php`.
 ```php
 <?php
 
@@ -1771,6 +1815,7 @@ The generated DTOs live in `app/Http/DTOs/` and reflect the scaffolded create/up
 
 `app/Http/DTOs/CreateContactDto.php`:
 
+Sample location/type: file `app/Http/DTOs/CreateContactDto.php`.
 ```php
 <?php
 
@@ -1814,6 +1859,7 @@ final class CreateContactDto
 
 `app/Http/DTOs/UpdateContactDto.php`:
 
+Sample location/type: file `app/Http/DTOs/UpdateContactDto.php`.
 ```php
 <?php
 
@@ -1867,6 +1913,7 @@ The generated repository base is intentionally simple. It demonstrates the CRUD 
 
 `app/Repositories/Base/ContactRepositoryBase.php`:
 
+Sample location/type: file `app/Repositories/Base/ContactRepositoryBase.php`.
 ```php
 <?php
 
@@ -1921,6 +1968,7 @@ class ContactRepositoryBase
 
 `app/Services/Base/ContactServiceBase.php`:
 
+Sample location/type: file `app/Services/Base/ContactServiceBase.php`.
 ```php
 <?php
 
@@ -2012,6 +2060,7 @@ If you want real persistence immediately, you can replace the repository impleme
 
 `app/Http/Controllers/Api/Base/ContactControllerBase.php`:
 
+Sample location/type: file `app/Http/Controllers/Api/Base/ContactControllerBase.php`.
 ```php
 <?php
 
@@ -2074,6 +2123,7 @@ class ContactControllerBase
 
 `app/Http/Controllers/Api/ContactController.php`:
 
+Sample location/type: file `app/Http/Controllers/Api/ContactController.php`.
 ```php
 <?php
 
@@ -2107,6 +2157,7 @@ HTTP verb convention note:
 
 `public/index.php`:
 
+Sample location/type: file `public/index.php`.
 ```php
 <?php
 
@@ -2158,6 +2209,7 @@ There is no mandatory template engine in core. MVC rendering is driven by `Templ
 
 Install an MVC project:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 composer create-project celeris/mvc blog
 ```
@@ -2176,6 +2228,7 @@ For SQLite/MySQL/MariaDB/SQL Server/Firebird/IBM DB2/Oracle keys, see `docs/data
 
 ### 8.1 Suggested structure
 
+Sample location/type: example project directory structure shown inline in this manual.
 ```text
 mvc-app/
   .env
@@ -2326,6 +2379,7 @@ Supported engines:
 
 Minimal config shape in `config/app.php`:
 
+Sample location/type: config file `config/app.php`.
 ```php
 'view' => [
     'engine' => $env('VIEW_ENGINE', 'php'),
@@ -2351,6 +2405,7 @@ Minimal config shape in `config/app.php`:
 
 `app/Http/Controllers/ContactPageController.php`:
 
+Sample location/type: file `app/Http/Controllers/ContactPageController.php`.
 ```php
 <?php
 
@@ -2378,6 +2433,7 @@ Your user controller extends that base class and remains safe from regeneration.
 
 `app/Views/contacts/index.php` (content fragment):
 
+Sample location/type: view file `app/Views/contacts/index.php`.
 ```php
 <h1 data-page-title><?= htmlspecialchars((string) ($title ?? 'Contacts'), ENT_QUOTES, 'UTF-8') ?></h1>
 <p class="lead">Choose a contact to open details.</p>
@@ -2394,6 +2450,7 @@ Your user controller extends that base class and remains safe from regeneration.
 
 `app/Views/layout.php` (shared layout + partial includes):
 
+Sample location/type: PHP view/template file example.
 ```php
 <!doctype html>
 <html lang="en">
@@ -2416,6 +2473,7 @@ Your user controller extends that base class and remains safe from regeneration.
 
 `app/Views/partials/header.php` (reusable partial):
 
+Sample location/type: PHP view/template file example.
 ```php
 <header class="site-header">
   <div class="page site-shell">
@@ -2455,30 +2513,35 @@ The MVC scaffold ships with a source/output split for frontend assets:
 
 Install asset tooling once:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm install
 ```
 
 Compile assets for production (minified):
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run build
 ```
 
 Build with source maps (development):
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run dev
 ```
 
 Watch files during local frontend work:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run watch
 ```
 
 Composer script aliases are also available:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 composer assets:build
 composer assets:dev
@@ -2496,6 +2559,7 @@ Bundle/compile files at will:
 
 Example (additional admin bundle):
 
+Sample location/type: frontend JavaScript module snippet shown inline in this manual.
 ```js
 const entries = [
   { entry: path.join(sourceRoot, 'js', 'app.js'), outfile: path.join(outputRoot, 'js', 'app.min.js') },
@@ -2507,12 +2571,14 @@ const entries = [
 
 3. Rebuild:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run build
 ```
 
 4. Load each generated bundle from the relevant view:
 
+Sample location/type: view/template fragment shown inline in this manual.
 ```html
 <link rel="stylesheet" href="/assets/css/admin.min.css">
 <script src="/assets/js/admin.min.js" defer></script>
@@ -2534,6 +2600,7 @@ Option A: CDN (quick start)
 Option B: NPM package (recommended)
 1. Install the package:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm install <framework-package>
 ```
@@ -2544,15 +2611,18 @@ npm install <framework-package>
 
 Example (`bootstrap`):
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm install bootstrap
 ```
 
+Sample location/type: stylesheet snippet, typically in your frontend entry CSS file.
 ```css
 /* resources/css/app.css */
 @import "bootstrap/dist/css/bootstrap.min.css";
 ```
 
+Sample location/type: frontend JavaScript module snippet shown inline in this manual.
 ```js
 // resources/js/app.js
 import "bootstrap";
@@ -2560,6 +2630,7 @@ import "bootstrap";
 
 3. Build:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run build
 ```
@@ -2574,6 +2645,7 @@ Sass example:
 
 1. Install Sass:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm install --save-dev sass
 ```
@@ -2582,6 +2654,7 @@ npm install --save-dev sass
 
 3. Add scripts in `package.json`:
 
+Sample location/type: JSON manifest/config file shown inline in this manual.
 ```json
 {
   "scripts": {
@@ -2594,6 +2667,7 @@ npm install --save-dev sass
 
 4. Build as usual:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 npm run build
 ```
@@ -2610,6 +2684,7 @@ The example below keeps `EntityManager`/`DBAL` in the wiring to show one possibl
 
 `app/AppServiceProvider.php`:
 
+Sample location/type: file `app/AppServiceProvider.php`.
 ```php
 <?php
 
@@ -2693,12 +2768,14 @@ For simple modules, inject `EntityManager`/`DBAL` directly into `ContactService`
 
 Quick check against configured engine:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php scripts/view-smoke.php
 ```
 
 Check all engines and report missing optional dependencies:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php scripts/view-smoke.php --all
 ```
@@ -2743,6 +2820,7 @@ Connection aliases in config:
 
 Example connection entries:
 
+Sample location/type: config snippet for `config/database.php`.
 ```php
 'connections' => [
     'firebird' => [
@@ -2832,6 +2910,7 @@ If connection fails with the new drivers, check in this order:
 
 For a non-default mapper connection:
 
+Sample location/type: service or repository snippet that opens a non-default DBAL/ORM connection.
 ```php
 $dbal = $kernel->getDbal();
 $analyticsConnection = $dbal->connection('analytics');
@@ -2840,6 +2919,7 @@ $analyticsEm = new \Celeris\Framework\Database\ORM\EntityManager($analyticsConne
 
 ### 9.3 DBAL query builder
 
+Sample location/type: repository or service method snippet that builds and runs a DBAL query.
 ```php
 $dbal = $kernel->getDbal();
 $query = $dbal->queryBuilder()
@@ -2875,6 +2955,7 @@ Why this style exists:
 
 Typical structure for an ORM-first application:
 
+Sample location/type: example project directory structure shown inline in this manual.
 ```text
 app/
   Contacts/
@@ -2903,6 +2984,7 @@ Tradeoff summary:
 
 ### 9.4 Data Mapper CRUD
 
+Sample location/type: service or repository method snippet that performs Data Mapper CRUD through `EntityManager`.
 ```php
 $em = $kernel->getEntityManager();
 
@@ -2942,6 +3024,7 @@ Accepted strategy aliases:
 
 Example entity-level configuration:
 
+Sample location/type: entity/model class example.
 ```php
 #[Entity(table: 'contacts')]
 final class Contact
@@ -2954,6 +3037,7 @@ final class Contact
 
 Connection-level defaults can be set in `database.php` options and are used when `strategy: 'auto'`:
 
+Sample location/type: config snippet for `config/database.php`.
 ```php
 'oci' => [
     'driver' => 'oci',
@@ -2990,6 +3074,7 @@ Sequence name format constraints:
 
 ### 9.5 Lazy relations
 
+Sample location/type: entity/model class example.
 ```php
 use Celeris\Framework\Database\ORM\Attribute\LazyRelation;
 use Celeris\Framework\Database\ORM\LazyReference;
@@ -3020,6 +3105,7 @@ Each `EntityManager::flush()` executes in a transaction.
 
 #### B) Explicit multi-step transaction
 
+Sample location/type: entity/model class example.
 ```php
 $connection = $kernel->getDbal()->connection('main');
 
@@ -3036,6 +3122,7 @@ $connection->transactional(function ($conn) use ($em, $contact): void {
 
 ### 9.7 Query tracing and hidden-query checks
 
+Sample location/type: entity/model class example.
 ```php
 use Celeris\Framework\Database\Connection\QueryTraceInspector;
 
@@ -3050,6 +3137,7 @@ $queries = $inspector->queriesSince($snapshot);
 
 ### 9.8 Migrations
 
+Sample location/type: migration class example.
 ```php
 $migrationRunner = $kernel->getMigrationRunner();
 $result = $migrationRunner->migrate([
@@ -3066,6 +3154,7 @@ They are not generated by the default API/MVC scaffolds.
 
 ### 10.1 Enable AR provider
 
+Sample location/type: service provider class or provider registration code.
 ```php
 use Celeris\Framework\Database\ActiveRecord\ActiveRecordServiceProvider;
 
@@ -3074,6 +3163,7 @@ $kernel->registerProvider(new ActiveRecordServiceProvider());
 
 ### 10.2 AR model example
 
+Sample location/type: service provider class or provider registration code.
 ```php
 <?php
 
@@ -3117,6 +3207,7 @@ final class ContactAr extends ActiveRecordModel
 
 Usage:
 
+Sample location/type: service or controller method snippet using an Active Record model.
 ```php
 $contact = ContactAr::create([
     'id' => 1,
@@ -3180,6 +3271,7 @@ Security pipeline in `SecurityKernelGuard` enforces, in order:
 
 ### 11.2 Authorization with attributes
 
+Sample location/type: controller or policy-related authorization example.
 ```php
 use Celeris\Framework\Security\Authorization\Authorize;
 
@@ -3207,6 +3299,7 @@ final class AdminController
 
 ### 11.3 Token revocation
 
+Sample location/type: auth/service/controller code for token management.
 ```php
 $authEngine = $kernel->getSecurityGuard()->authEngine();
 $authEngine->revokeToken('token-id-123');
@@ -3214,6 +3307,7 @@ $authEngine->revokeToken('token-id-123');
 
 ### 11.4 Password hashing
 
+Sample location/type: auth/security usage snippet for a service or controller method.
 ```php
 $hasher = $kernel->getSecurityGuard()->passwordHasher();
 $hash = $hasher->hash('S3cure-P@ssw0rd');
@@ -3226,6 +3320,7 @@ $ok = $hasher->verify('S3cure-P@ssw0rd', $hash);
 
 Use `ValidatorEngine` directly:
 
+Sample location/type: validation usage example in a controller or service class.
 ```php
 $validator = $kernel->getValidator();
 $result = $validator->validate($dto);
@@ -3236,6 +3331,7 @@ if (!$result->isValid()) {
 
 or strict mode:
 
+Sample location/type: DTO class example.
 ```php
 $kernel->getValidator()->assertValid($dto);
 ```
@@ -3246,6 +3342,7 @@ If a handler parameter is typed with a class annotated `#[Dto]`, the kernel maps
 
 ### 12.3 Deterministic serialization
 
+Sample location/type: DTO class example.
 ```php
 $serializer = $kernel->getSerializer();
 $json = $serializer->toJson($domainObject);
@@ -3257,6 +3354,7 @@ Serializer normalizes arrays/objects deterministically and supports enum/date co
 
 ### 13.1 Cache engine from intents
 
+Sample location/type: DTO class example.
 ```php
 use Celeris\Framework\Cache\Intent\CacheIntent;
 
@@ -3271,12 +3369,14 @@ $value = $cache->remember($intent, fn () => $service->getOrFail(100));
 
 ### 13.2 Deterministic invalidation
 
+Sample location/type: service-layer code example.
 ```php
 $cache->invalidate(CacheIntent::invalidate('contacts', '*', ['contact:100']));
 ```
 
 ### 13.3 HTTP cache policy from request context
 
+Sample location/type: service-layer code example.
 ```php
 use Celeris\Framework\Cache\Http\HttpCacheContext;
 
@@ -3289,6 +3389,7 @@ $ctx = HttpCacheContext::withIntent($ctx, $intent);
 
 ### 14.1 Define and dispatch events
 
+Sample location/type: service-layer code example.
 ```php
 use Celeris\Framework\Domain\Event\AbstractDomainEvent;
 
@@ -3320,6 +3421,7 @@ In scaffolded `mvc` and `api` projects, the simplest place to wire event listene
 
 If you want the listener to run automatically at bootstrap time, make your provider implement `BootableServiceProviderInterface` and register listeners in `boot()`.
 
+Sample location/type: bootstrap code, typically in `public/index.php`.
 ```php
 use App\Events\ContactCreatedEvent;
 use Celeris\Framework\Container\BootableServiceProviderInterface;
@@ -3359,6 +3461,7 @@ final class AppServiceProvider implements BootableServiceProviderInterface
 
 Then dispatch the event from your service after the application action succeeds:
 
+Sample location/type: service-layer code example.
 ```php
 $contact = $this->contacts->create($dto);
 $dispatcher->dispatch(new ContactCreatedEvent($contact->id()));
@@ -3377,6 +3480,7 @@ If your goal is specifically "run something when a row is inserted or updated", 
 
 These events are tied to the persistence lifecycle and are available from `EntityManager::persistenceEvents()`.
 
+Sample location/type: service provider `boot()` method snippet for registering ORM persistence event listeners.
 ```php
 use App\Models\Contact;
 use Celeris\Framework\Container\ContainerInterface;
@@ -3427,6 +3531,7 @@ Use this approach when the database lifecycle itself is what matters, for exampl
 
 In installed apps and scaffolded projects, use the local wrapper:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris <command> [options]
 ```
@@ -3462,6 +3567,7 @@ The CLI supports:
 
 #### `app-key`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris app-key --show
 php celeris app-key --force --env=.env --json
@@ -3469,6 +3575,7 @@ php celeris app-key --force --env=.env --json
 
 #### `routes:list`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris routes:list
 php celeris routes:list --json
@@ -3476,6 +3583,7 @@ php celeris routes:list --json
 
 #### `health`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris health
 php celeris health --json
@@ -3483,6 +3591,7 @@ php celeris health --json
 
 #### `summary`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris summary
 php celeris summary --json
@@ -3490,6 +3599,7 @@ php celeris summary --json
 
 #### `list-generators`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris list-generators
 php celeris list-generators --json
@@ -3497,6 +3607,7 @@ php celeris list-generators --json
 
 #### `graph`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris graph
 php celeris graph --format=dot
@@ -3505,6 +3616,7 @@ php celeris graph --format=json
 
 #### `validate`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris validate
 php celeris validate --json
@@ -3512,6 +3624,7 @@ php celeris validate --json
 
 #### `generate`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris generate controller Contact --module=Contacts
 php celeris generate controller Contact --module=Contacts --write
@@ -3520,6 +3633,7 @@ php celeris generate controller Contact --module=Contacts --routing-type=php --w
 
 Use `generate module` only when you intentionally want a new module boundary (for example `Billing`, `Inventory`) with its own provider/controller skeleton:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris generate module Billing --write
 ```
@@ -3529,6 +3643,7 @@ Most feature work should use DB scaffolding or targeted generators for models/re
 
 #### `environment:get`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris environment:get
 php celeris environment:get --json
@@ -3538,6 +3653,7 @@ php celeris environment:get --json
 
 Prepare a JSON payload file (for example `env-update.json`) with the same shape returned by `environment:get --json`, then apply it:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris environment:save --file=env-update.json
 php celeris environment:save --file=env-update.json --json
@@ -3545,6 +3661,7 @@ php celeris environment:save --file=env-update.json --json
 
 #### `schema:connections`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris schema:connections
 php celeris schema:connections --json
@@ -3552,6 +3669,7 @@ php celeris schema:connections --json
 
 #### `schema:tables`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris schema:tables --connection=pgsql
 php celeris schema:tables --connection=pgsql --json
@@ -3559,6 +3677,7 @@ php celeris schema:tables --connection=pgsql --json
 
 #### `schema:describe`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris schema:describe contacts --connection=pgsql
 php celeris schema:describe contacts --connection=pgsql --json
@@ -3568,6 +3687,7 @@ Migration commands use files from `app/Database/Migrations`.
 
 #### `migrate`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris migrate all --connection=pgsql
 php celeris migrate CreateContactsTableMigration.php --connection=pgsql
@@ -3577,6 +3697,7 @@ Warning: this changes schema state. Run against dev/staging first.
 
 #### `migrate:rollback`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris migrate:rollback all --connection=pgsql
 php celeris migrate:rollback CreateContactsTableMigration.php --connection=pgsql
@@ -3586,6 +3707,7 @@ Warning: this can remove schema/data introduced by the selected migration(s).
 
 #### `migrate:fresh`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris migrate:fresh --connection=pgsql
 ```
@@ -3594,6 +3716,7 @@ Warning: this performs rollback + re-run and is destructive by nature.
 
 #### `migrate:status`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris migrate:status --connection=pgsql
 php celeris migrate:status --connection=pgsql --json
@@ -3601,6 +3724,7 @@ php celeris migrate:status --connection=pgsql --json
 
 #### `scaffold:preview`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris scaffold:preview contacts --connection=pgsql
 php celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=attribute --json
@@ -3608,6 +3732,7 @@ php celeris scaffold:preview contacts --connection=pgsql --artifacts=model,repos
 
 #### `scaffold:apply`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris scaffold:apply contacts --connection=pgsql
 php celeris scaffold:apply contacts --connection=pgsql --artifacts=model,repository,service,controller,dto.request,dto.response --routing-type=php --json
@@ -3624,6 +3749,7 @@ Each file returns:
 
 #### `seed`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris seed all --connection=pgsql
 php celeris seed contacts --connection=pgsql
@@ -3637,6 +3763,7 @@ Warning: seed scripts may insert duplicate or conflicting data depending on scri
 
 #### `cache:clear`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris cache:clear
 php celeris cache:clear --scope=route
@@ -3649,6 +3776,7 @@ Supported scopes: `all`, `route`, `http`, `view`.
 
 #### `route:clear`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris route:clear
 php celeris route:clear --json
@@ -3658,6 +3786,7 @@ php celeris route:clear --json
 
 #### `http:cache:clear`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris http:cache:clear
 php celeris http:cache:clear --json
@@ -3667,6 +3796,7 @@ php celeris http:cache:clear --json
 
 #### `compat:check`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris compat:check contacts --connection=pgsql
 php celeris compat:check contacts --connection=pgsql --json
@@ -3674,6 +3804,7 @@ php celeris compat:check contacts --connection=pgsql --json
 
 #### `compat:baseline:save`
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 php celeris compat:baseline:save contacts --connection=pgsql
 php celeris compat:baseline:save contacts --connection=pgsql --json
@@ -3685,6 +3816,7 @@ Run commands from the scaffolded project root (the folder containing `app/`, `co
 
 Typical flow to add/extend CRUD for a table:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 # 1) Inspect available connections and tables
 php celeris schema:connections
@@ -3705,6 +3837,7 @@ php celeris compat:check contacts --connection=pgsql
 
 Run from `packages/api-stub` or `packages/mvc-stub`:
 
+Sample location/type: terminal command run from `packages/api-stub` or `packages/mvc-stub`.
 ```bash
 # 1) Apply all migration files from app/Database/Migrations
 php celeris migrate all --connection=pgsql
@@ -3745,6 +3878,7 @@ Recommended pattern for apps that want the web UI during development:
 
 In API bootstrap (`public/index.php`) or MVC bootstrap (`public/index.php`):
 
+Sample location/type: bootstrap/front controller file `public/index.php`.
 ```php
 use Celeris\Framework\Tooling\ToolingBootstrap;
 
@@ -3777,6 +3911,7 @@ Audit records are written as JSON lines with request metadata and generator deta
 
 Example audit record in `var/log/tooling-audit.log`:
 
+Sample location/type: log file `var/log/tooling-audit.log`.
 ```json
 {
   "timestamp": "2026-02-12T10:15:30Z",
@@ -3862,6 +3997,7 @@ Design reference:
 
 ### 16.1 Example
 
+Sample location/type: middleware class or middleware registration snippet.
 ```php
 use Celeris\Framework\Distributed\MicroserviceRuntimeModel;
 use Celeris\Framework\Distributed\Auth\ServiceAuthenticator;
@@ -3884,12 +4020,14 @@ $runtime = new MicroserviceRuntimeModel(
 
 For outbound service calls:
 
+Sample location/type: service-layer code example.
 ```php
 $outbound = $runtime->prepareOutboundRequest($ctx, $request);
 ```
 
 For messaging:
 
+Sample location/type: service-layer code example.
 ```php
 $runtime->publishMessage($ctx, 'contacts.events', 'contact.created', ['id' => 100]);
 ```
@@ -4052,6 +4190,7 @@ This section is for external developers who want to build a package that integra
 
 ### 22.2 Recommended package layout
 
+Sample location/type: example project directory structure shown inline in this manual.
 ```text
 vendor-package/
   src/
@@ -4084,6 +4223,7 @@ vendor-package/
 
 ### 22.4 Minimal provider example
 
+Sample location/type: bootstrap code, typically in `public/index.php`.
 ```php
 <?php
 
@@ -4113,6 +4253,7 @@ final class VendorPackageServiceProvider implements ServiceProviderInterface
 
 ### 22.5 PHP route registrar example
 
+Sample location/type: repository class example.
 ```php
 <?php
 
@@ -4136,6 +4277,7 @@ final class VendorPackageRoutes
 
 ### 22.6 Application-side wiring example
 
+Sample location/type: application bootstrap/front controller wiring example.
 ```php
 use Vendor\Package\VendorPackageServiceProvider;
 use Vendor\Package\Routes\VendorPackageRoutes;
@@ -4149,6 +4291,7 @@ VendorPackageRoutes::register($kernel->routes());
 
 Package provider lifecycle in host app:
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```mermaid
 flowchart LR
     A[Host app bootstrap] --> B[$kernel->registerProvider(new VendorPackageServiceProvider())]
@@ -4232,6 +4375,7 @@ By default:
 
 Recommended `.env` for SMTP delivery:
 
+Sample location/type: environment file `.env`.
 ```env
 NOTIFICATIONS_DEFAULT_CHANNEL=smtp
 NOTIFICATIONS_NULL_ENABLED=true
@@ -4252,6 +4396,7 @@ NOTIFICATIONS_FROM_NAME=Celeris
 
 Install in your app:
 
+Sample location/type: terminal command run from the project root unless noted otherwise.
 ```bash
 composer require celeris/notification-smtp
 ```
@@ -4266,6 +4411,7 @@ Register the SMTP provider in your front controller.
 
 API stub (`packages/api-stub/public/index.php`):
 
+Sample location/type: API stub bootstrap file `packages/api-stub/public/index.php`.
 ```php
 $kernel->registerProvider(new AppServiceProvider());
 
@@ -4280,6 +4426,7 @@ MVC stub (`packages/mvc-stub/public/index.php`) uses the same pattern.
 
 In service class (`app/Services/WelcomeNotificationService.php`):
 
+Sample location/type: service class at `app/Services/WelcomeNotificationService.php`.
 ```php
 <?php
 
@@ -4315,6 +4462,7 @@ final class WelcomeNotificationService
 
 In controller class (`app/Http/Controllers/Api/NotificationDemoController.php`):
 
+Sample location/type: controller class at `app/Http/Controllers/Api/NotificationDemoController.php`.
 ```php
 <?php
 
@@ -4377,12 +4525,14 @@ final class NotificationDemoController
 
 In API bootstrap (`packages/api-stub/public/index.php`):
 
+Sample location/type: API bootstrap at `packages/api-stub/public/index.php`.
 ```php
 $kernel->registerController(NotificationDemoController::class, new RouteGroup(prefix: '/api'));
 ```
 
 Call endpoint:
 
+Sample location/type: terminal command used to call the example notification endpoint.
 ```bash
 curl -X POST http://localhost/api/v1/notifications/welcome \
   -H 'content-type: application/json' \
@@ -4397,6 +4547,7 @@ curl -X POST http://localhost/api/v1/notifications/welcome \
 
 In service code that already has a `NotificationManager` instance:
 
+Sample location/type: service-layer code example.
 ```php
 $result = $notifications->sendEmail($message, 'smtp');
 ```
@@ -4409,6 +4560,7 @@ Use this pattern for every new provider package.
 
 Step 1: Create package skeleton
 
+Sample location/type: conceptual diagram or illustrative text block shown inline in this manual.
 ```text
 packages/notification-twilio/
   composer.json
@@ -4421,6 +4573,7 @@ packages/notification-twilio/
 
 In package manifest (`packages/notification-twilio/composer.json`):
 
+Sample location/type: package manifest at `packages/notification-twilio/composer.json`.
 ```json
 {
   "name": "celeris/notification-twilio",
@@ -4441,6 +4594,7 @@ Step 2: Implement channel class
 
 In channel class (`packages/notification-twilio/src/TwilioNotificationChannel.php`):
 
+Sample location/type: channel class at `packages/notification-twilio/src/TwilioNotificationChannel.php`.
 ```php
 <?php
 
@@ -4488,6 +4642,7 @@ Step 3: Implement provider class and register channel from config
 
 In provider class (`packages/notification-twilio/src/TwilioNotificationServiceProvider.php`):
 
+Sample location/type: provider class at `packages/notification-twilio/src/TwilioNotificationServiceProvider.php`.
 ```php
 <?php
 
@@ -4528,6 +4683,7 @@ final class TwilioNotificationServiceProvider implements BootableServiceProvider
 
 Step 4: Add channel config in host app (`config/notifications.php`)
 
+Sample location/type: host app config file `config/notifications.php`.
 ```php
 'channels' => [
     'null' => ['enabled' => true],
@@ -4544,6 +4700,7 @@ Step 5: Register provider in bootstrap
 
 In host app bootstrap (`public/index.php`):
 
+Sample location/type: host app bootstrap at `public/index.php`.
 ```php
 if (class_exists(\Celeris\Notification\Twilio\TwilioNotificationServiceProvider::class)) {
     $kernel->registerProvider(new \Celeris\Notification\Twilio\TwilioNotificationServiceProvider());
@@ -4554,6 +4711,7 @@ Step 6: Send with explicit channel
 
 In application service code that already has a `NotificationManager` instance:
 
+Sample location/type: bootstrap/front controller file `public/index.php`.
 ```php
 use Celeris\Framework\Notification\NotificationEnvelope;
 
@@ -4581,6 +4739,7 @@ Use this flow when you need durable in-app notifications plus async websocket pu
 
 Step 1: Enable channels and worker in `.env`
 
+Sample location/type: example `.env` file entries.
 ```env
 NOTIFICATIONS_DEFAULT_CHANNEL=in_app
 NOTIFICATIONS_IN_APP_ENABLED=true
@@ -4596,6 +4755,7 @@ Step 2: Keep providers registered in bootstrap
 
 In host app bootstrap (`public/index.php`):
 
+Sample location/type: host app bootstrap at `public/index.php`.
 ```php
 if (class_exists(\Celeris\Notification\InApp\InAppNotificationServiceProvider::class)) {
     $kernel->registerProvider(new \Celeris\Notification\InApp\InAppNotificationServiceProvider());
@@ -4615,6 +4775,7 @@ Step 3: Persist in-app notification and enqueue outbox event in one transaction
 
 In service class (`app/Services/TransactionNotificationService.php`):
 
+Sample location/type: service class at `app/Services/TransactionNotificationService.php`.
 ```php
 <?php
 
@@ -4672,6 +4833,7 @@ Step 4: Expose notification read endpoints (API sample)
 
 In controller class (`app/Http/Controllers/Api/MeNotificationsController.php`):
 
+Sample location/type: controller class at `app/Http/Controllers/Api/MeNotificationsController.php`.
 ```php
 <?php
 
@@ -4762,6 +4924,7 @@ Provided scripts:
 
 Run worker examples:
 
+Sample location/type: terminal command for running the notification worker example.
 ```bash
 php packages/api-stub/bin/notifications-dispatch-worker.php --once
 php packages/api-stub/bin/notifications-dispatch-worker.php --max-loops=100
@@ -4769,6 +4932,7 @@ php packages/api-stub/bin/notifications-dispatch-worker.php --max-loops=100
 
 Replay dead-letter examples:
 
+Sample location/type: terminal command for running the notification worker example.
 ```bash
 php packages/api-stub/bin/notifications-replay-dead-letter.php --dry-run --limit=50
 php packages/api-stub/bin/notifications-replay-dead-letter.php --id=<dead_letter_id>

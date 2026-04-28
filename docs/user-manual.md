@@ -3225,6 +3225,164 @@ $found = ContactAr::where('age', 36)->orderBy('id', 'DESC')->first();
 $contact->delete();
 ```
 
+### 10.2a Model patterns comparison: API stub vs MVC stub vs ORM entity
+
+#### Why API stub models are more complex than MVC stub models
+
+The API stub's `ContactBase` model includes an explicit `toArray()` method for JSON serialization, while the MVC stub uses PHP 8 constructor property promotion:
+
+**API stub** (with serialization):
+```php
+class ContactBase
+{
+    public int $id;
+    public string $firstName;
+    
+    public function __construct(int $id, string $firstName) {
+        $this->id = $id;
+        $this->firstName = $firstName;
+    }
+    
+    public function toArray(): array {
+        return ['id' => $this->id, 'first_name' => $this->firstName];
+    }
+}
+```
+
+**MVC stub** (simplified):
+```php
+class ContactBase
+{
+    public function __construct(
+        public int $id,
+        public string $firstName,
+    ) {}
+}
+```
+
+**Why the difference:**
+
+1. **API responses need JSON serialization** — The `toArray()` method transforms domain properties (`firstName`) to API-friendly snake_case (`first_name`), which is the REST/JSON convention. This mapping is essential for API contracts.
+
+2. **MVC uses server-side rendering** — Templates access model properties directly without JSON conversion, so the simpler constructor promotion syntax is sufficient.
+
+3. **Architectural intent** — APIs are data-first (must serialize to JSON), while MVC views are rendering-first (template data binding). The model complexity reflects this focus.
+
+#### When to use the ORM entity pattern (instead of scaffolded models or Active Record)
+
+Use the **ORM entity pattern** when you want explicit persistence control through `EntityManager` instead of relying on scaffolded service/repository layers.
+
+**Main scenarios:**
+
+1. **Custom data access logic** — When your models need fine-grained control over persistence beyond scaffolded CRUD.
+
+2. **Complex queries with relations** — When you need to define relationships between entities using `#[LazyRelation]`.
+
+3. **Active Record overkill** — When Active Record feels too opinionated (methods on the model itself), but you still want ORM metadata.
+
+4. **Micro-services or lightweight APIs** — When you don't want the full scaffolded layer (Repository + Service), just ORM entity → EntityManager → direct use.
+
+**Example: ORM Entity + EntityManager**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Celeris\Framework\Database\ORM\Attribute\Entity;
+use Celeris\Framework\Database\ORM\Attribute\Id;
+use Celeris\Framework\Database\ORM\Attribute\Column;
+
+// Pure domain model — no persistence methods on the class
+#[Entity(table: 'contacts')]
+final class Contact
+{
+   #[Id(generated: true)]
+   #[Column('id')]
+   private int $id;
+
+   #[Column('email')]
+   private string $email;
+
+   #[Column('status')]
+   private string $status = 'active';
+
+   public function __construct(string $email)
+   {
+      $this->email = $email;
+   }
+
+   public function getEmail(): string
+   {
+      return $this->email;
+   }
+
+   public function deactivate(): void
+   {
+      $this->status = 'inactive';
+   }
+}
+```
+
+**Usage in a service:**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\Contact;
+use Celeris\Framework\Database\ORM\EntityManager;
+
+final class ContactService
+{
+   public function __construct(private EntityManager $em) {}
+
+   public function create(string $email): Contact
+   {
+      $contact = new Contact($email);
+      
+      // EntityManager handles persistence, not the model
+      $this->em->persist($contact);
+      $this->em->flush();
+      
+      return $contact;
+   }
+
+   public function deactivateByEmail(string $email): void
+   {
+      // Query via EntityManager
+      $contact = $this->em->query(Contact::class)
+         ->where('email', $email)
+         ->first();
+
+      if ($contact) {
+         $contact->deactivate();
+         $this->em->flush(); // EntityManager detects dirty state
+      }
+   }
+
+   public function findActive(): array
+   {
+      return $this->em->query(Contact::class)
+         ->where('status', 'active')
+         ->get();
+   }
+}
+```
+
+**Why this over Active Record:**
+
+- ✅ Model stays focused on domain logic (`deactivate()` only)
+- ✅ No `save()`, `delete()`, `find()` pollution on the model
+- ✅ Service layer owns all persistence concerns
+- ✅ Testable — mock `EntityManager` instead of static model methods
+- ✅ Cleaner separation of concerns
+
+This pattern is lighter than the full scaffolded approach (no Repository/Service base classes) but more explicit than Active Record.
+
 ### 10.3 How AR affects the rest of the module
 
 The Active Record option mainly changes the persistence style of the model class.

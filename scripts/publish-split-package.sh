@@ -14,7 +14,7 @@ require_cmd() {
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/publish-split-package.sh <prefix> <target-repository> [source-ref]
+  scripts/publish-split-package.sh <prefix> <target-repository> [source-ref] [target-tag]
 
 Environment:
   SPLIT_PUSH_TOKEN  Required. Token with push access to the target repository.
@@ -29,8 +29,8 @@ Examples:
     scripts/publish-split-package.sh packages/api-stub celeris/api 0123abcd
 USAGE
 }
-
-if [[ $# -lt 2 || $# -gt 3 ]]; then
+echo "ARGS: $# -> $@"
+if [[ $# -lt 2 ]]; then
   usage
   exit 1
 fi

@@ -65,6 +65,7 @@ jobs:
     env:
       SPLIT_PUSH_TOKEN: ${{ secrets.MONOREPO_SPLIT_TOKEN }}
       TARGET_REPOSITORY: ${{ vars[matrix.repository_variable] }}
+      CELERIS_VERSION: ${{ vars.CELERIS_VERSION }}
 
     steps:
       - name: Validate configuration
@@ -140,4 +141,5 @@ jobs:
           bash scripts/publish-split-package.sh \
             "${{ matrix.prefix }}" \
             "${TARGET_REPOSITORY}" \
-            "${{ steps.plan.outputs.source_ref }}"
+            "${{ steps.plan.outputs.source_ref }}" \
+            "${CELERIS_VERSION}"

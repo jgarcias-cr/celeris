@@ -3326,23 +3326,56 @@ final class Contact
 }
 ```
 
-**Usage in a service:**
+**DTO with validation** (request input validation):
+
+```php
+<?php
+
+namespace App\Http\DTOs;
+
+use Celeris\Framework\Serialization\Attribute\Dto;
+use Celeris\Framework\Validation\Attribute\Email;
+use Celeris\Framework\Validation\Attribute\Required;
+
+#[Dto]
+final class CreateContactDto
+{
+   public function __construct(
+      #[Required, Email]
+      public string $email,
+   ) {}
+}
+```
+
+**Usage in a service with validation:**
 
 ```php
 <?php
 
 namespace App\Services;
 
+use App\Http\DTOs\CreateContactDto;
 use App\Models\Contact;
 use Celeris\Framework\Database\ORM\EntityManager;
+use Celeris\Framework\Validation\ValidatorInterface;
 
 final class ContactService
 {
-   public function __construct(private EntityManager $em) {}
+   public function __construct(
+      private EntityManager $em,
+      private ValidatorInterface $validator,
+   ) {}
 
-   public function create(string $email): Contact
+   public function create(CreateContactDto $dto): Contact
    {
-      $contact = new Contact($email);
+      // Validation is already done by DTO mapper during request binding
+      // But you can also validate explicitly if needed:
+      $errors = $this->validator->validate($dto);
+      if ($errors) {
+         throw new \Celeris\Framework\Validation\ValidationException($errors);
+      }
+
+      $contact = new Contact($dto->email);
       
       // EntityManager handles persistence, not the model
       $this->em->persist($contact);
@@ -3373,6 +3406,78 @@ final class ContactService
 }
 ```
 
+**Automatic validation from controller (during request binding):**
+
+When a controller handler declares a DTO parameter, the framework automatically validates all input against DTO validation attributes **before** the handler is called:
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\DTOs\CreateContactDto;
+use App\Services\ContactService;
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
+
+final class ContactController
+{
+   public function __construct(private ContactService $service) {}
+
+   #[Route(methods: ['POST'], path: '/', summary: 'Create contact')]
+   public function create(RequestContext $ctx, CreateContactDto $dto): Response
+   {
+      // At this point, $dto is GUARANTEED to be valid
+      // Validation happened automatically during request binding
+      // If validation had failed, framework would return 400 error before this method runs
+      
+      $contact = $this->service->create($dto);
+
+      return new Response(
+         201,
+         ['content-type' => 'application/json'],
+         json_encode(['id' => $contact->getEmail()])
+      );
+   }
+}
+```
+
+**Request flow example:**
+
+Invalid request:
+```
+POST /contacts
+{
+  "email": "invalid-email",
+  "firstName": ""
+}
+```
+
+Result: **400 Bad Request** (handler is never called)
+```json
+{
+  "errors": [
+    {"path": "email", "rule": "email", "message": "Must be a valid email address."},
+    {"path": "firstName", "rule": "length", "message": "Must be at least 1 character."}
+  ]
+}
+```
+
+Valid request:
+```
+POST /contacts
+{
+  "email": "ada@example.com",
+  "firstName": "Ada"
+}
+```
+
+Result: **201 Created** (validation passes, handler executes)
+
+**Key insight:** Validation attributes in DTOs provide automatic request-level validation without any manual checking in your controller or service code.
+
 **Why this over Active Record:**
 
 - ✅ Model stays focused on domain logic (`deactivate()` only)
@@ -3380,6 +3485,7 @@ final class ContactService
 - ✅ Service layer owns all persistence concerns
 - ✅ Testable — mock `EntityManager` instead of static model methods
 - ✅ Cleaner separation of concerns
+- ✅ DTO validation is automatic and happens before handler execution
 
 This pattern is lighter than the full scaffolded approach (no Repository/Service base classes) but more explicit than Active Record.
 

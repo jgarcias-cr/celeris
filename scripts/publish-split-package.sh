@@ -41,7 +41,7 @@ prefix="$1"
 target_repository="$2"
 source_ref="${3:-HEAD}"
 target_branch="${TARGET_BRANCH:-}"
-target_tag="${TARGET_TAG:-}"
+target_tag="${4:-${TARGET_TAG:-}}"
 split_push_token="${SPLIT_PUSH_TOKEN:-}"
 force_push="${FORCE_PUSH:-}"
 

@@ -1,5 +1,6 @@
 {
    "name": "celeris/framework",
+   "version": "1.0.0",
    "description": "Celeris framework core (minimal)",
    "type": "library",
    "license": "MIT",
@@ -30,7 +31,6 @@
          "Celeris\\Framework\\": "src/"
       }
    },
-   "minimum-stability": "dev",
    "prefer-stable": true,
    "extra": {
       "branch-alias": {

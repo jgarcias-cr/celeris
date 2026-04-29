@@ -1,5 +1,6 @@
 {
   "name": "celeris/monorepo",
+  "version": "1.0.0",
   "description": "Local development workspace for the Celeris monorepo",
   "type": "project",
   "license": "MIT",

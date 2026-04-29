@@ -1,5 +1,6 @@
 {
    "name": "celeris/mvc",
+   "version": "1.0.0",
    "description": "Celeris MVC base application scaffold for building server-rendered web applications.",
    "type": "project",
    "license": "MIT",

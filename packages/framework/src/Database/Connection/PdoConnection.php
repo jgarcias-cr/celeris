@@ -127,7 +127,7 @@ final class PdoConnection implements ConnectionInterface
                $converted = [];
                foreach ($row as $key => $value) {
                   if (is_string($key)) {
-                     $converted[$key] = $value;
+                     $converted[strtolower($key)] = $value;
                   }
                }
                $normalized[] = $converted;

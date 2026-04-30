@@ -389,7 +389,7 @@ button:disabled {
   display: none;
 }
 .schema-modal-panel {
-  width: min(980px, 100%);
+  width: min(700px, 100%);
   max-height: 86vh;
   overflow: auto;
   border-radius: 12px;
@@ -447,6 +447,14 @@ button:disabled {
   position: sticky;
   top: 0;
   background: #fffef9;
+}
+.schema-table th:nth-child(3),
+.schema-table td:nth-child(3),
+.schema-table th:nth-child(5),
+.schema-table td:nth-child(5) {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
 }
 .pill {
   display: inline-flex;
@@ -623,7 +631,6 @@ pre {
 <main>
   <section class="card">
     <h1>Celeris Tooling Platform</h1>
-    <p class="muted">DB-first scaffolding dashboard. Request id: {$requestId}</p>
     <div style="margin-top:0.5rem;">
       <span class="badge ok">DB-FIRST</span>
     </div>

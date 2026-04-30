@@ -137,6 +137,7 @@ jobs:
         env:
           TARGET_BRANCH: ${{ steps.plan.outputs.target_branch }}
           TARGET_TAG: ${{ steps.plan.outputs.target_tag }}
+          FORCE_PUSH: "true"  # ← Allow force-push for tags
         run: |
           bash scripts/publish-split-package.sh \
             "${{ matrix.prefix }}" \

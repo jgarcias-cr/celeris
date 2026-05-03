@@ -6,7 +6,7 @@
 <div class="contacts-toolbar">
    <a class="btn btn-primary" href="/contacts/create">Add Contact</a>
 </div>
-<section class="contacts-table-card">
+<section class="contacts-table-card" x-data="contactsTable(<?= (int) count($contacts ?? []) ?>)">
    <div class="contacts-table-wrap">
       <table class="contacts-table" data-contacts-table>
          <thead>
@@ -18,15 +18,15 @@
             </tr>
          </thead>
          <tbody>
-            <?php foreach (($contacts ?? []) as $contact): ?>
-               <tr data-contact-row>
+            <?php foreach (($contacts ?? []) as $index => $contact): ?>
+               <tr data-contact-row data-stagger-item style="--stagger-index: <?= (int) $index ?>;" x-show="isVisible(<?= (int) $index ?>)">
                   <td><?= htmlspecialchars($contact->firstName . ' ' . $contact->lastName, ENT_QUOTES, 'UTF-8') ?></td>
                   <td><?= htmlspecialchars((string) ($contact->phone ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
                   <td><?= htmlspecialchars((string) ($contact->address ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
                   <td>
                      <div class="table-actions">
-                        <a class="table-link" data-contact-link href="/contacts/<?= (int) $contact->id ?>/edit">Edit</a>
-                        <form method="post" action="/contacts/<?= (int) $contact->id ?>/delete" data-confirm="Delete this contact?">
+                        <a class="table-link" href="/contacts/<?= (int) $contact->id ?>/edit">Edit</a>
+                        <form method="post" action="/contacts/<?= (int) $contact->id ?>/delete" x-on:submit.prevent="confirmDelete($event, 'Delete this contact?')">
                            <button type="submit" class="table-link danger-link">Delete</button>
                         </form>
                      </div>
@@ -45,10 +45,10 @@
       </table>
    </div>
 
-   <div class="contacts-pagination" data-pagination>
+   <div class="contacts-pagination" data-pagination x-cloak x-show="totalRows > 0">
       <div class="pagination-size">
          <label for="page-size">Rows per page</label>
-         <select id="page-size" data-page-size>
+         <select id="page-size" data-page-size x-model.number="pageSize" x-on:change="resetPage()">
             <option value="10" selected>10</option>
             <option value="25">25</option>
             <option value="50">50</option>
@@ -56,9 +56,9 @@
       </div>
 
       <div class="pagination-nav">
-         <button type="button" data-pagination-prev>Previous</button>
-         <span data-pagination-info>Page 1 of 1</span>
-         <button type="button" data-pagination-next>Next</button>
+         <button type="button" data-pagination-prev x-on:click="previousPage()" x-bind:disabled="currentPage <= 1">Previous</button>
+         <span data-pagination-info x-text="pageLabel">Page 1 of 1</span>
+         <button type="button" data-pagination-next x-on:click="nextPage()" x-bind:disabled="currentPage >= totalPages">Next</button>
       </div>
    </div>
 </section>

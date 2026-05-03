@@ -2348,7 +2348,7 @@ What each folder/file is for:
 - `scripts/view-smoke.php`
 - Quick renderer smoke check for configured engine (or all engines with `--all`).
 - `vite.config.js`
-- Vite build configuration (bundles + minifies JS/CSS and copies `resources/images` to `public/assets/images`).
+- Vite build configuration (bundles Alpine.js + CSS and copies `resources/images` to `public/assets/images`).
 - `package.json`
 - Frontend toolchain metadata (`npm run dev`, `npm run build`, `npm run watch`).
 - `resources/css`, `resources/js`, `resources/images`
@@ -2614,7 +2614,60 @@ Recommended pattern:
 - Emit a small number of intentional output bundles.
 - Load only bundles needed by each page.
 
-### 8.5.1 Install a CSS framework (Bootstrap, Tailwind, etc.)
+### 8.5.1 Alpine.js interaction pattern
+
+The MVC stub uses Alpine.js as its default client-side interaction layer.
+
+The intended model is:
+- render complete HTML on the server first
+- keep interactivity local to the fragment that needs it
+- use Alpine directives in templates instead of imperative DOM queries spread across the page
+- reserve heavier frontend architecture for cases where the application actually needs it
+
+Current entrypoint:
+- `resources/js/app.js`
+- Starts Alpine and registers reusable components with `Alpine.data(...)`.
+
+Current sample component:
+- `contactsTable(totalRows)`
+- Handles contacts pagination state (`currentPage`, `pageSize`, `totalPages`)
+- Exposes derived labels such as `pageLabel`
+- Provides small UI actions such as `previousPage()`, `nextPage()`, `resetPage()`, and `confirmDelete(...)`
+
+Typical usage in the stub views:
+
+Sample location/type: view/template fragment shown inline in this manual.
+```html
+<section class="contacts-table-card" x-data="contactsTable(42)">
+  <tr x-show="isVisible(0)">
+    ...
+  </tr>
+
+  <select x-model.number="pageSize" x-on:change="resetPage()">
+    <option value="10">10</option>
+    <option value="25">25</option>
+  </select>
+
+  <button type="button" x-on:click="previousPage()" x-bind:disabled="currentPage <= 1">
+    Previous
+  </button>
+
+  <span x-text="pageLabel">Page 1 of 1</span>
+
+  <form method="post" x-on:submit.prevent="confirmDelete($event, 'Delete this contact?')">
+    <button type="submit">Delete</button>
+  </form>
+</section>
+```
+
+Guidance for extending Alpine usage:
+1. Register shared behavior in `resources/js/app.js` with `Alpine.data(...)`.
+2. Keep component state scoped to the smallest sensible container with `x-data`.
+3. Prefer `x-text`, `x-show`, `x-model`, and `x-on:*` over manual `querySelector(...)` wiring.
+4. Keep business rules on the server; use Alpine for presentation state and small interaction flows.
+5. Add `x-cloak` when hidden content should stay invisible until Alpine has initialized.
+
+### 8.5.2 Install a CSS framework (Bootstrap, Tailwind, etc.)
 
 You can use any frontend CSS framework in Celeris MVC. The framework is frontend-agnostic.
 
@@ -2650,7 +2703,11 @@ Sample location/type: stylesheet snippet, typically in your frontend entry CSS f
 Sample location/type: frontend JavaScript module snippet shown inline in this manual.
 ```js
 // resources/js/app.js
+import Alpine from "alpinejs";
 import "bootstrap";
+
+window.Alpine = Alpine;
+Alpine.start();
 ```
 
 3. Build:
@@ -2662,7 +2719,7 @@ npm run build
 
 4. Use framework classes in your view fragments/layout/partials as needed.
 
-### 8.5.2 Install a CSS preprocessor (Sass/Less/Stylus)
+### 8.5.3 Install a CSS preprocessor (Sass/Less/Stylus)
 
 The default stub builds plain CSS with Vite. For preprocessors, either let Vite compile them directly or add a pre-build step that writes a normal CSS file inside `resources/css/`, then run the normal asset build.
 

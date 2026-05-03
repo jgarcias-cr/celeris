@@ -429,8 +429,11 @@ body {
    color: var(--muted);
 }
 
-.js [data-stagger-item],
-.js [data-contact-link] {
+[x-cloak] {
+   display: none !important;
+}
+
+[data-stagger-item] {
    opacity: 0;
    transform: translateY(10px);
    animation: rise 300ms ease forwards;

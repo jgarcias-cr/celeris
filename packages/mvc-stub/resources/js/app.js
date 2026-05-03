@@ -1,88 +1,48 @@
-(() => {
-   'use strict';
+import Alpine from 'alpinejs';
 
-   document.documentElement.classList.add('js');
+document.addEventListener('alpine:init', () => {
+   Alpine.data('contactsTable', (totalRows = 0) => ({
+      currentPage: 1,
+      pageSize: 10,
+      totalRows,
 
-   const staggered = Array.from(document.querySelectorAll('[data-stagger-item], [data-contact-link]'));
-   staggered.forEach((item, index) => {
-      item.style.setProperty('--stagger-index', String(index));
-   });
+      get totalPages() {
+         return Math.max(1, Math.ceil(this.totalRows / this.pageSize));
+      },
 
-   document.addEventListener('submit', (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLFormElement)) {
-         return;
-      }
+      get pageLabel() {
+         return `Page ${this.currentPage} of ${this.totalPages}`;
+      },
 
-      const message = target.getAttribute('data-confirm');
-      if (!message) {
-         return;
-      }
+      isVisible(index) {
+         const start = (this.currentPage - 1) * this.pageSize;
+         const end = start + this.pageSize;
+         return index >= start && index < end;
+      },
 
-      if (!window.confirm(message)) {
-         event.preventDefault();
-      }
-   });
+      previousPage() {
+         if (this.currentPage > 1) {
+            this.currentPage -= 1;
+         }
+      },
 
-   const table = document.querySelector('[data-contacts-table]');
-   if (!table) {
-      return;
-   }
+      nextPage() {
+         if (this.currentPage < this.totalPages) {
+            this.currentPage += 1;
+         }
+      },
 
-   const rows = Array.from(table.querySelectorAll('[data-contact-row]'));
-   const pageSizeSelect = document.querySelector('[data-page-size]');
-   const pagination = document.querySelector('[data-pagination]');
-   const prevButton = document.querySelector('[data-pagination-prev]');
-   const nextButton = document.querySelector('[data-pagination-next]');
-   const pageInfo = document.querySelector('[data-pagination-info]');
+      resetPage() {
+         this.currentPage = 1;
+      },
 
-   if (!pageSizeSelect || !pagination || !prevButton || !nextButton || !pageInfo || rows.length === 0) {
-      return;
-   }
+      confirmDelete(event, message) {
+         if (window.confirm(message)) {
+            event.target.submit();
+         }
+      },
+   }));
+});
 
-   let pageSize = Number.parseInt(pageSizeSelect.value, 10) || 10;
-   let currentPage = 1;
-
-   const render = () => {
-      const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-      currentPage = Math.min(currentPage, totalPages);
-
-      const start = (currentPage - 1) * pageSize;
-      const end = start + pageSize;
-
-      rows.forEach((row, index) => {
-         row.style.display = index >= start && index < end ? 'table-row' : 'none';
-      });
-
-      prevButton.disabled = currentPage <= 1;
-      nextButton.disabled = currentPage >= totalPages;
-      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-   };
-
-   pageSizeSelect.addEventListener('change', () => {
-      pageSize = Number.parseInt(pageSizeSelect.value, 10) || 10;
-      currentPage = 1;
-      render();
-   });
-
-   prevButton.addEventListener('click', () => {
-      if (currentPage <= 1) {
-         return;
-      }
-
-      currentPage -= 1;
-      render();
-   });
-
-   nextButton.addEventListener('click', () => {
-      const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-      if (currentPage >= totalPages) {
-         return;
-      }
-
-      currentPage += 1;
-      render();
-   });
-
-   render();
-})();
+window.Alpine = Alpine;
+Alpine.start();

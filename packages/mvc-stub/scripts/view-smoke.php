@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+/**
+ * Prefer the local project autoloader, then the monorepo autoloader, before
+ * falling back to the framework bootstrap used during package development.
+ */
 $projectAutoload = __DIR__ . '/../vendor/autoload.php';
 $workspaceAutoload = __DIR__ . '/../../../vendor/autoload.php';
 $runtimeCanLoadComposer = PHP_VERSION_ID >= 80400;
@@ -17,6 +21,11 @@ use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\View\TemplateRendererFactory;
 
 $basePath = dirname(__DIR__);
+
+/**
+ * When `--all` is present, the smoke test renders the sample views with every
+ * supported engine instead of only the engine configured in `config/app.php`.
+ */
 $runAll = in_array('--all', $argv, true);
 
 $configLoader = new ConfigLoader(
@@ -37,6 +46,7 @@ $viewConfig = is_array($appConfig['view'] ?? null) ? $appConfig['view'] : [];
 $configuredEngine = strtolower(trim((string) ($viewConfig['engine'] ?? 'php')));
 $engines = $runAll ? ['php', 'plates', 'twig', 'latte'] : [$configuredEngine];
 
+/** @var array<int, object> $contacts */
 $contacts = sampleContacts();
 $contact = $contacts[0];
 
@@ -77,6 +87,8 @@ if ($runAll) {
 exit($failures === 0 ? 0 : 1);
 
 /**
+ * Build a small in-memory dataset used to render the sample contact pages.
+ *
  * @return array<int, object>
  */
 function sampleContacts(): array
@@ -102,7 +114,9 @@ function sampleContacts(): array
 }
 
 /**
- * @param array<string, mixed> $config
+ * Ensure optional template-engine cache directories exist before rendering.
+ *
+ * @param array<string, mixed> $config View configuration passed to the renderer factory.
  */
 function ensureEngineDirectories(array $config, string $basePath): void
 {
@@ -128,6 +142,9 @@ function ensureEngineDirectories(array $config, string $basePath): void
    }
 }
 
+/**
+ * Create a directory tree when it is missing.
+ */
 function ensureDirectory(string $path): void
 {
    if (is_dir($path)) {
@@ -137,6 +154,9 @@ function ensureDirectory(string $path): void
    @mkdir($path, 0775, true);
 }
 
+/**
+ * Resolve a relative path against the stub base path while preserving absolute paths.
+ */
 function resolvePath(string $path, string $basePath): string
 {
    if ($path === '') {
@@ -150,6 +170,9 @@ function resolvePath(string $path, string $basePath): string
    return rtrim($basePath, '/\\') . '/' . ltrim($path, '/\\');
 }
 
+/**
+ * Require an autoload file and suppress hard failure when the autoloader is unusable.
+ */
 function safeLoadAutoload(string $path): bool
 {
    if (!is_file($path)) {

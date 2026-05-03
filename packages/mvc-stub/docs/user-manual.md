@@ -2248,7 +2248,6 @@ mvc-app/
     security.php
   scripts/
     view-smoke.php
-    build-assets.mjs
   resources/
     css/
       app.css
@@ -2348,8 +2347,8 @@ What each folder/file is for:
 - Alternative content templates for Twig/Latte when `VIEW_ENGINE` is switched.
 - `scripts/view-smoke.php`
 - Quick renderer smoke check for configured engine (or all engines with `--all`).
-- `scripts/build-assets.mjs`
-- Asset compiler entrypoint (bundles + minifies JS/CSS and copies `resources/images` to `public/assets/images`).
+- `vite.config.js`
+- Vite build configuration (bundles + minifies JS/CSS and copies `resources/images` to `public/assets/images`).
 - `package.json`
 - Frontend toolchain metadata (`npm run dev`, `npm run build`, `npm run watch`).
 - `resources/css`, `resources/js`, `resources/images`
@@ -2555,18 +2554,44 @@ Bundle/compile files at will:
 - `resources/css/*.css`
 - `resources/images/*`
 
-2. Add entries in `scripts/build-assets.mjs` (`entries` array), mapping each source to its output file in `public/assets/*`.
+2. Add entries in `vite.config.js` under `build.rollupOptions.input`, and extend the output naming rules so each source maps to the intended file in `public/assets/*`.
 
 Example (additional admin bundle):
 
-Sample location/type: frontend JavaScript module snippet shown inline in this manual.
+Sample location/type: Vite configuration snippet shown inline in this manual.
 ```js
-const entries = [
-  { entry: path.join(sourceRoot, 'js', 'app.js'), outfile: path.join(outputRoot, 'js', 'app.min.js') },
-  { entry: path.join(sourceRoot, 'css', 'app.css'), outfile: path.join(outputRoot, 'css', 'app.min.css') },
-  { entry: path.join(sourceRoot, 'js', 'admin.js'), outfile: path.join(outputRoot, 'js', 'admin.min.js') },
-  { entry: path.join(sourceRoot, 'css', 'admin.css'), outfile: path.join(outputRoot, 'css', 'admin.min.css') },
-];
+rollupOptions: {
+  input: {
+    app: path.join(resourcesDir, 'js', 'app.js'),
+    styles: path.join(resourcesDir, 'css', 'app.css'),
+    admin: path.join(resourcesDir, 'js', 'admin.js'),
+    adminStyles: path.join(resourcesDir, 'css', 'admin.css'),
+  },
+  output: {
+    entryFileNames: (chunk) => {
+      if (chunk.name === 'app') {
+        return 'js/app.min.js';
+      }
+
+      if (chunk.name === 'admin') {
+        return 'js/admin.min.js';
+      }
+
+      return 'js/[name].min.js';
+    },
+    assetFileNames: (asset) => {
+      if (asset.name === 'styles.css') {
+        return 'css/app.min.css';
+      }
+
+      if (asset.name === 'adminStyles.css') {
+        return 'css/admin.min.css';
+      }
+
+      return 'assets/[name]-[hash][extname]';
+    },
+  },
+},
 ```
 
 3. Rebuild:
@@ -2639,7 +2664,7 @@ npm run build
 
 ### 8.5.2 Install a CSS preprocessor (Sass/Less/Stylus)
 
-The default stub builds plain CSS with esbuild. For preprocessors, add a pre-build step that compiles to a normal CSS file inside `resources/css/`, then run the normal asset build.
+The default stub builds plain CSS with Vite. For preprocessors, either let Vite compile them directly or add a pre-build step that writes a normal CSS file inside `resources/css/`, then run the normal asset build.
 
 Sass example:
 
@@ -2658,9 +2683,8 @@ Sample location/type: JSON manifest/config file shown inline in this manual.
 ```json
 {
   "scripts": {
-    "css:compile": "sass resources/scss/app.scss resources/css/app.css --no-source-map",
-    "build": "npm run css:compile && node ./scripts/build-assets.mjs --prod",
-    "dev": "npm run css:compile && node ./scripts/build-assets.mjs --dev"
+    "build": "vite build",
+    "dev": "vite build --mode development"
   }
 }
 ```

@@ -24,7 +24,7 @@ It is a good fit for:
 - Form request objects and model policies for explicit validation and authorization
 - Multiple view engine options with configuration for `php`, `twig`, `plates`, and `latte`
 - Shared layouts and partials for starter UI composition
-- Asset build scripts for JavaScript, CSS, and static images
+- Vite-based asset pipeline for JavaScript, CSS, and static images
 - Database-backed or file-backed contacts storage depending on configuration
 - Environment-based security toggles for JWT, opaque tokens, cookie sessions, API tokens, mTLS, and CSRF
 - Built-in request throttling configuration
@@ -89,7 +89,7 @@ php scripts/view-smoke.php --all
 
 ## Frontend Assets
 
-The package includes an asset pipeline for CSS, JavaScript, and static images.
+The package includes a Vite-based asset pipeline for CSS, JavaScript, and static images.
 
 Useful commands:
 
@@ -114,7 +114,8 @@ Compiled assets are written under `public/assets`.
 - `config` centralizes app, view, database, and security behavior
 - `database/migrations` and `database/seeds` contain starter persistence files
 - `resources` contains source frontend assets
-- `scripts` contains helper scripts such as the renderer smoke test and asset builder
+- `scripts` contains helper scripts such as the renderer smoke test
+- `vite.config.js` defines the frontend build output for `public/assets`
 
 ## Storage and Data
 

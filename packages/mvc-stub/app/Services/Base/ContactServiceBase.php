@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Base;
 
+use App\Events\ContactCreatedEvent;
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
+use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 use Celeris\Framework\Events\ModelEventManager;
 use RuntimeException;
 
@@ -18,6 +20,7 @@ class ContactServiceBase
    public function __construct(
       protected ContactRepository $repository,
       protected ModelEventManager $events,
+      protected DomainEventDispatcher $domainEvents,
    ) {}
 
    /** @return array<int, Contact> */
@@ -50,6 +53,7 @@ class ContactServiceBase
    {
       $contact = $this->repository->create($this->normalizePayload($payload));
       $this->events->onCreate($contact);
+      $this->domainEvents->dispatch(new ContactCreatedEvent($contact->id));
       return $contact;
    }
 

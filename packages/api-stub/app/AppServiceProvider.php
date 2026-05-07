@@ -11,6 +11,7 @@ use App\Services\AuthService;
 use App\Services\ContactService;
 use App\Events\ContactCreatedEvent;
 use App\Listeners\ContactCreatedListener;
+use App\Listeners\Models\ContactLifecycleListener;
 
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
@@ -20,6 +21,7 @@ use Celeris\Framework\Events\ModelEventManager;
 use Celeris\Framework\Security\Password\PasswordHasher;
 use Celeris\Framework\Container\BootableServiceProviderInterface;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
+use Celeris\Framework\Logging\LoggerInterface;
 
 /**
  * Registers core application services for the API stub.
@@ -48,7 +50,10 @@ final class AppServiceProvider implements ServiceProviderInterface, BootableServ
 
       $services->singleton(
          ModelEventManager::class,
-         static fn(ContainerInterface $c): ModelEventManager => self::buildModelEvents(),
+         static fn(ContainerInterface $c): ModelEventManager => self::buildModelEvents(
+            $c->get(LoggerInterface::class),
+         ),
+         [LoggerInterface::class],
       );
 
       $services->singleton(
@@ -56,8 +61,9 @@ final class AppServiceProvider implements ServiceProviderInterface, BootableServ
          static fn(ContainerInterface $c): ContactService => new ContactService(
             $c->get(ContactRepository::class),
             $c->get(ModelEventManager::class),
+            $c->get(DomainEventDispatcher::class),
          ),
-         [ContactRepository::class, ModelEventManager::class],
+         [ContactRepository::class, ModelEventManager::class, DomainEventDispatcher::class],
       );
 
       $services->singleton(
@@ -78,7 +84,10 @@ final class AppServiceProvider implements ServiceProviderInterface, BootableServ
 
       $services->singleton(
          ContactCreatedListener::class,
-         static fn(ContainerInterface $c): ContactCreatedListener => new ContactCreatedListener(),
+         static fn(ContainerInterface $c): ContactCreatedListener => new ContactCreatedListener(
+            $c->get(LoggerInterface::class),
+         ),
+         [LoggerInterface::class],
       );
    }
 
@@ -91,7 +100,7 @@ final class AppServiceProvider implements ServiceProviderInterface, BootableServ
    public function boot(ContainerInterface $container): void
    {
       $events = $container->get(DomainEventDispatcher::class);
-      $events->listen(ContactCreatedEvent::class, ContactCreatedListener::class);
+      $events->listen(ContactCreatedEvent::class, $container->get(ContactCreatedListener::class));
    }
 
 
@@ -100,8 +109,10 @@ final class AppServiceProvider implements ServiceProviderInterface, BootableServ
     *
     * @return ModelEventManager
     */
-   private static function buildModelEvents(): ModelEventManager
+   private static function buildModelEvents(LoggerInterface $logger): ModelEventManager
    {
+      ContactLifecycleListener::useLogger($logger);
+
       $events = new ModelEventManager();
       $events->autodiscover(dirname(__DIR__) . '/app/Listeners/Models', 'App\\Listeners\\Models');
       return $events;

@@ -7,9 +7,11 @@ namespace App\Listeners;
 use App\Events\ContactCreatedEvent;
 use Celeris\Framework\Domain\Event\DomainEventInterface;
 use Celeris\Framework\Domain\Event\DomainEventListenerInterface;
+use Celeris\Framework\Logging\LoggerInterface;
 
 final class ContactCreatedListener implements DomainEventListenerInterface
 {
+   public function __construct(private LoggerInterface $logger) {}
 
    /**
     * Handles the contact created event.
@@ -23,7 +25,10 @@ final class ContactCreatedListener implements DomainEventListenerInterface
          return;
       }
 
-      // Your action here:
-      // send email, audit log, sync CRM, enqueue job, etc.
+      $this->logger->info('ContactCreatedEvent handled after contact add.', [
+         'listener' => 'contact-domain-event',
+         'contact_id' => $event->contactId,
+         'event_id' => $event->eventId(),
+      ]);
    }
 }

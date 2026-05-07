@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Base;
 
+use App\Events\ContactCreatedEvent;
 use App\Http\DTOs\CreateContactDto;
 use App\Http\DTOs\UpdateContactDto;
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
+use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 use Celeris\Framework\Events\ModelEventManager;
 use RuntimeException;
 
@@ -20,6 +22,7 @@ class ContactServiceBase
    public function __construct(
       protected ContactRepository $repository,
       protected ModelEventManager $events,
+      protected DomainEventDispatcher $domainEvents,
    ) {}
 
    /** @return array<int, array<string, int|string>> */
@@ -61,6 +64,7 @@ class ContactServiceBase
 
       $created = $this->repository->save($contact);
       $this->events->onCreate($created);
+      $this->domainEvents->dispatch(new ContactCreatedEvent($created->id));
       return $created;
    }
 

@@ -4,16 +4,22 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Events\ContactCreatedEvent;
 use App\Http\Controllers\ContactPageController;
 use App\Http\Controllers\HomePageController;
+use App\Listeners\ContactCreatedListener;
+use App\Listeners\Models\ContactLifecycleListener;
 use App\Repositories\ContactRepository;
 use App\Services\ContactService;
 use Celeris\Framework\Config\ConfigRepository;
+use Celeris\Framework\Container\BootableServiceProviderInterface;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceProviderInterface;
 use Celeris\Framework\Container\ServiceRegistry;
 use Celeris\Framework\Database\DBAL;
+use Celeris\Framework\Domain\Event\DomainEventDispatcher;
 use Celeris\Framework\Events\ModelEventManager;
+use Celeris\Framework\Logging\LoggerInterface;
 use Celeris\Framework\View\TemplateRendererFactory;
 use Celeris\Framework\View\TemplateRendererInterface;
 
@@ -26,7 +32,7 @@ use Celeris\Framework\View\TemplateRendererInterface;
  * - register additional domain/application services;
  * - expose optional third-party integrations required by your modules.
  */
-final class AppServiceProvider implements ServiceProviderInterface
+final class AppServiceProvider implements ServiceProviderInterface, BootableServiceProviderInterface
 {
    public function register(ServiceRegistry $services): void
    {
@@ -51,7 +57,10 @@ final class AppServiceProvider implements ServiceProviderInterface
 
       $services->singleton(
          ModelEventManager::class,
-         static fn (ContainerInterface $c): ModelEventManager => self::buildModelEvents(),
+         static fn (ContainerInterface $c): ModelEventManager => self::buildModelEvents(
+            $c->get(LoggerInterface::class),
+         ),
+         [LoggerInterface::class],
       );
 
       $services->singleton(
@@ -59,8 +68,9 @@ final class AppServiceProvider implements ServiceProviderInterface
          static fn (ContainerInterface $c): ContactService => new ContactService(
             $c->get(ContactRepository::class),
             $c->get(ModelEventManager::class),
+            $c->get(DomainEventDispatcher::class),
          ),
-         [ContactRepository::class, ModelEventManager::class],
+         [ContactRepository::class, ModelEventManager::class, DomainEventDispatcher::class],
       );
 
       $services->singleton(
@@ -79,6 +89,20 @@ final class AppServiceProvider implements ServiceProviderInterface
          ),
          [ContactService::class, TemplateRendererInterface::class],
       );
+
+      $services->singleton(
+         ContactCreatedListener::class,
+         static fn(ContainerInterface $c): ContactCreatedListener => new ContactCreatedListener(
+            $c->get(LoggerInterface::class),
+         ),
+         [LoggerInterface::class],
+      );
+   }
+
+   public function boot(ContainerInterface $container): void
+   {
+      $events = $container->get(DomainEventDispatcher::class);
+      $events->listen(ContactCreatedEvent::class, $container->get(ContactCreatedListener::class));
    }
 
    private static function buildRenderer(ContainerInterface $container): TemplateRendererInterface
@@ -106,8 +130,10 @@ final class AppServiceProvider implements ServiceProviderInterface
       );
    }
 
-   private static function buildModelEvents(): ModelEventManager
+   private static function buildModelEvents(LoggerInterface $logger): ModelEventManager
    {
+      ContactLifecycleListener::useLogger($logger);
+
       $events = new ModelEventManager();
       $events->autodiscover(dirname(__DIR__) . '/app/Listeners/Models', 'App\\Listeners\\Models');
       return $events;

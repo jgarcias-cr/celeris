@@ -26,6 +26,7 @@ It is a good fit for:
 - Shared layouts and partials for starter UI composition
 - Vite-based asset pipeline for Alpine.js, CSS, and static images
 - Database-backed or file-backed contacts storage depending on configuration
+- Autodiscovered model lifecycle listeners for `onCreate`, `onUpdate`, `onDelete`, and `onShow`
 - Environment-based security toggles for JWT, opaque tokens, cookie sessions, API tokens, mTLS, and CSRF
 - Built-in request throttling configuration
 - Optional notification integrations for SMTP, in-app notifications, transactional outbox, realtime delivery, and dispatch workers
@@ -48,6 +49,8 @@ The scaffold currently includes:
 - shared layout and partial templates
 - example middleware hook points for protected routes
 - configurable rendering through the selected view engine
+
+Model lifecycle listeners live under `app/Listeners/Models` and are registered automatically by `AppServiceProvider`.
 
 The sample contacts domain is intentionally small. It exists to demonstrate the structure and request flow, not to define how your real application should look.
 

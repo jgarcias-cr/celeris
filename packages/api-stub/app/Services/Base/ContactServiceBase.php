@@ -8,6 +8,7 @@ use App\Http\DTOs\CreateContactDto;
 use App\Http\DTOs\UpdateContactDto;
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
+use Celeris\Framework\Events\ModelEventManager;
 use RuntimeException;
 
 /**
@@ -16,7 +17,10 @@ use RuntimeException;
  */
 class ContactServiceBase
 {
-   public function __construct(protected ContactRepository $repository) {}
+   public function __construct(
+      protected ContactRepository $repository,
+      protected ModelEventManager $events,
+   ) {}
 
    /** @return array<int, array<string, int|string>> */
    public function list(): array
@@ -37,6 +41,13 @@ class ContactServiceBase
       return $contact;
    }
 
+   public function show(int $id): Contact
+   {
+      $contact = $this->getOrFail($id);
+      $this->events->onShow($contact, ['id' => $id]);
+      return $contact;
+   }
+
    public function create(CreateContactDto $dto): Contact
    {
       $contact = new Contact(
@@ -48,7 +59,9 @@ class ContactServiceBase
          $dto->age,
       );
 
-      return $this->repository->save($contact);
+      $created = $this->repository->save($contact);
+      $this->events->onCreate($created);
+      return $created;
    }
 
    public function update(int $id, UpdateContactDto $dto): Contact
@@ -64,13 +77,18 @@ class ContactServiceBase
          $dto->age ?? $current->age,
       );
 
-      return $this->repository->save($updated);
+      $saved = $this->repository->save($updated);
+      $this->events->onUpdate($saved, ['previous' => $current]);
+      return $saved;
    }
 
    public function remove(int $id): void
    {
+      $contact = $this->getOrFail($id);
       if (!$this->repository->delete($id)) {
          throw new RuntimeException('Contact not found.');
       }
+
+      $this->events->onDelete($contact, ['id' => $id]);
    }
 }

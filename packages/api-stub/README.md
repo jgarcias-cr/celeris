@@ -24,6 +24,7 @@ It is a good fit for:
 - Attribute-based routing through Celeris controllers
 - DTO-driven request input mapping for create and update flows
 - Service and repository layers already separated for easier maintenance
+- Autodiscovered model lifecycle listeners for `onCreate`, `onUpdate`, `onDelete`, and `onShow`
 - Database configuration, migrations, and seed data out of the box
 - Environment-based security toggles for JWT, opaque tokens, cookie sessions, API tokens, and mTLS
 - Built-in rate-limit configuration
@@ -50,6 +51,8 @@ The scaffold currently exposes these starter endpoints:
 - `POST /api/contacts` creates a contact
 - `PUT /api/contacts/{id}` updates a contact
 - `DELETE /api/contacts/{id}` deletes a contact
+
+Model lifecycle listeners live under `app/Listeners/Models` and are registered automatically by `AppServiceProvider`.
 
 Treat these as a starting point. They are intentionally simple so you can replace, extend, or remove them as your real domain takes shape.
 

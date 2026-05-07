@@ -4190,6 +4190,7 @@ declare(strict_types=1);
 
 namespace {$this->namespaceRoot}\\Services\\Base;
 
+use Celeris\\Framework\\Events\\ModelEventManager;
 use {$this->namespaceRoot}\\Repositories\\{$entity}Repository;
 use {$this->namespaceRoot}\\Models\\Base\\{$entity}Base;
 
@@ -4200,7 +4201,28 @@ class {$entity}ServiceBase
 {
    public function __construct(
       protected {$entity}Repository \$repository,
+      protected ModelEventManager \$events,
    ) {}
+
+   protected function fireOnCreate(object \$model, array \$context = []): void
+   {
+      \$this->events->onCreate(\$model, \$context);
+   }
+
+   protected function fireOnUpdate(object \$model, array \$context = []): void
+   {
+      \$this->events->onUpdate(\$model, \$context);
+   }
+
+   protected function fireOnDelete(object \$model, array \$context = []): void
+   {
+      \$this->events->onDelete(\$model, \$context);
+   }
+
+   protected function fireOnShow(object \$model, array \$context = []): void
+   {
+      \$this->events->onShow(\$model, \$context);
+   }
 
    /**
     * @param array<string, mixed> \$payload
@@ -4241,6 +4263,10 @@ use {$this->namespaceRoot}\\Services\\Base\\{$entity}ServiceBase;
  * User-editable service wrapper.
  *
  * Inherited from base:
+ * - fireOnCreate(object \$model, array<string, mixed> \$context = []): void (protected)
+ * - fireOnUpdate(object \$model, array<string, mixed> \$context = []): void (protected)
+ * - fireOnDelete(object \$model, array<string, mixed> \$context = []): void (protected)
+ * - fireOnShow(object \$model, array<string, mixed> \$context = []): void (protected)
  * - validateForCreate(array<string, mixed> \$payload): array<string, mixed> (protected)
  */
 final class {$entity}Service extends {$entity}ServiceBase

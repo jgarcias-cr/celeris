@@ -3766,40 +3766,55 @@ In scaffolded `mvc` and `api` projects, the simplest place to wire event listene
 
 If you want the listener to run automatically at bootstrap time, make your provider implement `BootableServiceProviderInterface` and register listeners in `boot()`.
 
-Sample location/type: bootstrap code, typically in `public/index.php`.
+Sample location/type: file `app/Listeners/ContactCreatedListener.php`.
 ```php
 use App\Events\ContactCreatedEvent;
+use Celeris\Framework\Domain\Event\DomainEventInterface;
+use Celeris\Framework\Domain\Event\DomainEventListenerInterface;
+
+final class ContactCreatedListener implements DomainEventListenerInterface
+{
+    public function handle(DomainEventInterface $event): void
+    {
+        if (!$event instanceof ContactCreatedEvent) {
+            return;
+        }
+
+        // Trigger follow-up application work here:
+        // send a notification, sync a CRM, enqueue a job, or write an audit entry.
+    }
+}
+```
+
+Sample location/type: file `app/AppServiceProvider.php`.
+```php
+use App\Events\ContactCreatedEvent;
+use App\Listeners\ContactCreatedListener;
 use Celeris\Framework\Container\BootableServiceProviderInterface;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceRegistry;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
-use Celeris\Framework\Notification\EmailMessage;
-use Celeris\Framework\Notification\NotificationManager;
 
 final class AppServiceProvider implements BootableServiceProviderInterface
 {
     public function register(ServiceRegistry $services): void
     {
-        // existing service bindings
+        // existing service bindings...
+
+        $services->singleton(
+            ContactCreatedListener::class,
+            static fn (ContainerInterface $container): ContactCreatedListener => new ContactCreatedListener(),
+        );
     }
 
     public function boot(ContainerInterface $container): void
     {
         $events = $container->get(DomainEventDispatcher::class);
 
-        $events->listen(ContactCreatedEvent::class, function (ContactCreatedEvent $event) use ($container): void {
-            $notifications = $container->get(NotificationManager::class);
-
-            $notifications->sendEmail(new EmailMessage(
-                to: ['ops@example.com'],
-                subject: 'New contact created',
-                text: sprintf('Contact #%d was created.', $event->contactId),
-            ));
-
-            // You can also trigger any other application action here:
-            // $container->get(CrmSyncService::class)->pushContact($event->contactId);
-            // $container->get(AuditService::class)->record('contact.created', ['id' => $event->contactId]);
-        });
+        $events->listen(
+            ContactCreatedEvent::class,
+            $container->get(ContactCreatedListener::class),
+        );
     }
 }
 ```
@@ -3819,7 +3834,57 @@ This pattern is a good default when the event represents a business action such 
 
 It keeps your controllers and repositories small while letting you attach notifications, audit logs, integrations, or follow-up processes in one place.
 
-### 14.3 When you need insert/update hooks from the ORM
+### 14.3 Scaffolded model lifecycle autodiscovery
+
+Generated MVC/API service scaffolds also support application-level model lifecycle events for common CRUD flows.
+
+The generated base services fire these events after the application action succeeds:
+- `ModelEvent::CREATE` / `onCreate` after create
+- `ModelEvent::UPDATE` / `onUpdate` after update
+- `ModelEvent::DELETE` / `onDelete` after delete
+- `ModelEvent::SHOW` / `onShow` when an explicit show/details action is used
+
+Listeners live in `app/Listeners/Models` and are autodiscovered by `AppServiceProvider` through `ModelEventManager::autodiscover()`.
+
+Sample location/type: file `app/Listeners/Models/ContactLifecycleListener.php`.
+```php
+namespace App\Listeners\Models;
+
+use App\Models\Contact;
+use Celeris\Framework\Events\ModelEvent;
+use Celeris\Framework\Events\ModelEventSubscriberInterface;
+
+final class ContactLifecycleListener implements ModelEventSubscriberInterface
+{
+    public static function subscribedEvents(): array
+    {
+        return [ModelEvent::CREATE];
+    }
+
+    public static function subscribedModels(): array
+    {
+        return [Contact::class];
+    }
+
+    public function handle(ModelEvent $event): void
+    {
+        /** @var Contact $contact */
+        $contact = $event->model();
+
+        // Run follow-up work for a newly created contact here:
+        // send a notification, write an audit entry, clear cache,
+        // dispatch a queue job, or enqueue an outbox message.
+    }
+}
+```
+
+`subscribedEvents()` selects which event names this listener handles.
+`subscribedModels()` selects which model classes it handles.
+The `handle()` method is where you place the action that should run when the event happens.
+
+Use this flow for scaffolded CRUD behavior when you want a quick, convention-based hook without hand-registering each listener.
+
+### 14.4 When you need insert/update hooks from the ORM
 
 If your goal is specifically "run something when a row is inserted or updated", use ORM persistence events.
 
@@ -3863,9 +3928,10 @@ Use this approach when the database lifecycle itself is what matters, for exampl
 - update a search index after a model changes
 - write an audit trail after an ORM update
 
-### 14.4 Which event style should you choose?
+### 14.5 Which event style should you choose?
 
 - Use domain events when you want to express a business fact with a clear meaning.
+- Use scaffolded model lifecycle events when you want `onCreate`, `onUpdate`, `onDelete`, or `onShow` hooks for generated MVC/API service flows.
 - Use persistence events when you want to react to ORM lifecycle changes like insert, update, or delete.
 - If the follow-up work is slow or external, prefer handing it off to a queue, outbox, or worker instead of doing everything inline during the request.
 - For notification examples, see also section [23. Notification Subsystem (Step-by-Step)](#23-notification-subsystem-step-by-step).

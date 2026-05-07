@@ -6,6 +6,7 @@ namespace App\Services\Base;
 
 use App\Models\Contact;
 use App\Repositories\ContactRepository;
+use Celeris\Framework\Events\ModelEventManager;
 use RuntimeException;
 
 /**
@@ -14,7 +15,10 @@ use RuntimeException;
  */
 class ContactServiceBase
 {
-   public function __construct(protected ContactRepository $repository) {}
+   public function __construct(
+      protected ContactRepository $repository,
+      protected ModelEventManager $events,
+   ) {}
 
    /** @return array<int, Contact> */
    public function list(): array
@@ -32,12 +36,21 @@ class ContactServiceBase
       return $contact;
    }
 
+   public function show(int $id): Contact
+   {
+      $contact = $this->getOrFail($id);
+      $this->events->onShow($contact, ['id' => $id]);
+      return $contact;
+   }
+
    /**
     * @param array<string, mixed> $payload
     */
    public function create(array $payload): Contact
    {
-      return $this->repository->create($this->normalizePayload($payload));
+      $contact = $this->repository->create($this->normalizePayload($payload));
+      $this->events->onCreate($contact);
+      return $contact;
    }
 
    /**
@@ -50,12 +63,19 @@ class ContactServiceBase
          throw new RuntimeException('Contact not found.');
       }
 
+      $this->events->onUpdate($contact, ['id' => $id]);
       return $contact;
    }
 
    public function delete(int $id): bool
    {
-      return $this->repository->delete($id);
+      $contact = $this->getOrFail($id);
+      $deleted = $this->repository->delete($id);
+      if ($deleted) {
+         $this->events->onDelete($contact, ['id' => $id]);
+      }
+
+      return $deleted;
    }
 
    /**

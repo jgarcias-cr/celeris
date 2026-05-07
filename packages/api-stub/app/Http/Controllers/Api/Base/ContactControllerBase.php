@@ -28,7 +28,7 @@ class ContactControllerBase
    #[Route(methods: ['GET'], path: '/{id}', summary: 'Get contact')]
    public function show(int $id): array
    {
-      return $this->service->getOrFail($id)->toArray();
+      return $this->service->show($id)->toArray();
    }
 
 

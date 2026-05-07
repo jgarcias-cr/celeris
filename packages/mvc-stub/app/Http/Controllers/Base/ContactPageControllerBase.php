@@ -153,7 +153,7 @@ class ContactPageControllerBase
    #[Route(methods: ['GET'], path: '/{id}', summary: 'Contact details page')]
    public function show(RequestContext $ctx, int $id): Response
    {
-      $contact = $this->service->getOrFail($id);
+      $contact = $this->service->show($id);
       $this->showRequest->authorizeOrFail($ctx, $contact);
 
       $html = $this->renderPage('Contact', 'contacts/show', [

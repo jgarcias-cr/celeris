@@ -654,6 +654,63 @@ function runCliHelpSnapshot(): void
    }
 }
 
+/**
+ * @return void
+ */
+function runDbScaffoldGeneratesRichModelCode(): void
+{
+   $root = '/tmp/celeris-phase10-rich-scaffold-' . bin2hex(random_bytes(6));
+   @mkdir($root, 0777, true);
+
+   $controller = new DeveloperUiController(
+      new GeneratorEngine(),
+      new DependencyGraphBuilder(__DIR__ . '/../src'),
+      new ArchitectureDecisionValidator(),
+      $root,
+      '/__dev/tooling',
+      'App',
+   );
+
+   $schema = [
+      'table' => 'apps',
+      'schema' => 'public',
+      'columns' => [
+         ['name' => 'app_id', 'type' => 'int', 'nullable' => false, 'primary' => true, 'default' => null],
+         ['name' => 'app_name', 'type' => 'varchar', 'nullable' => false, 'primary' => false, 'default' => null],
+         ['name' => 'is_active', 'type' => 'bool', 'nullable' => false, 'primary' => false, 'default' => 'true'],
+         ['name' => 'created_at', 'type' => 'datetime', 'nullable' => false, 'primary' => false, 'default' => null],
+      ],
+      'primary_key' => ['app_id'],
+      'relationships' => [],
+   ];
+
+   $method = new ReflectionMethod($controller, 'buildScaffoldPreview');
+   $method->setAccessible(true);
+   $files = $method->invoke($controller, 'apps', $schema, ['model', 'repository', 'service']);
+   assertTrue(is_array($files), 'DB scaffold preview should return generated file rows.');
+
+   $byPath = [];
+   foreach ($files as $file) {
+      if (is_array($file) && isset($file['path'], $file['contents'])) {
+         $byPath[(string) $file['path']] = (string) $file['contents'];
+      }
+   }
+
+   $model = $byPath['app/Models/Base/AppBase.php'] ?? '';
+   assertTrue(str_contains($model, 'public int $appId;'), 'Generated model base should include typed camelCase properties.');
+   assertTrue(str_contains($model, 'public function __construct('), 'Generated model base should include a constructor.');
+   assertTrue(str_contains($model, "'app_name' => \$this->appName,"), 'Generated model base should include toArray mapping.');
+   assertTrue(!str_contains($model, 'public const COLUMNS'), 'Generated model base should not regress to metadata-only constants.');
+
+   $repository = $byPath['app/Repositories/Base/AppRepositoryBase.php'] ?? '';
+   assertTrue(str_contains($repository, 'use App\\Models\\App;'), 'Generated repository should use the generated model.');
+   assertTrue(str_contains($repository, 'public function find(int $id): ?App'), 'Generated repository should expose typed find behavior.');
+
+   $service = $byPath['app/Services/Base/AppServiceBase.php'] ?? '';
+   assertTrue(str_contains($service, 'public function create(array $payload): App'), 'Generated service should create model instances from payloads.');
+   assertTrue(str_contains($service, '$current = $this->getOrFail($id);'), 'Generated service should preserve current values during update.');
+}
+
 $checks = [
    'UxTesting' => 'runUxTesting',
    'DiffGenerationCorrectness' => 'runDiffGenerationCorrectness',
@@ -665,6 +722,7 @@ $checks = [
    'CliSeedCommand' => 'runCliSeedCommand',
    'CliMigrateCommands' => 'runCliMigrateCommands',
    'CliHelpSnapshot' => 'runCliHelpSnapshot',
+   'DbScaffoldGeneratesRichModelCode' => 'runDbScaffoldGeneratesRichModelCode',
 ];
 
 $failed = false;

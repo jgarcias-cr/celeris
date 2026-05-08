@@ -1185,7 +1185,7 @@ const ARTIFACT_DEPENDENCIES = {
   model: { requires: [], disables: ['repository', 'service', 'test.unit.repository', 'test.unit.service', 'controller'] },
   repository: { requires: ['model'], disables: ['service', 'test.unit.service', 'test.unit.repository'] },
   service: { requires: ['model', 'repository'], disables: ['test.unit.service'] },
-  controller: { requires: [], disables: ['test.integration.controller'] },
+  controller: { requires: ['service', 'dto.request'], disables: ['test.integration.controller'] },
   'test.unit.repository': { requires: ['repository'], disables: [] },
   'test.unit.service': { requires: ['service', 'repository'], disables: [] },
   'test.integration.controller': { requires: ['controller'], disables: [] },
@@ -4177,6 +4177,7 @@ HTML;
 
       $tableLiteral = $this->escapeSingleQuoted($tableName);
       $entityLower = strtolower($entity);
+      $apiRouteGroupPrefix = $isApiProject ? '/' . $entityLower : '/api/' . $entityLower;
 
       if (in_array('model', $artifacts, true)) {
          $modelProperties = $this->modelPropertyLines($columns);
@@ -4327,8 +4328,8 @@ PHP
          $keyColumn = $this->repositoryKeyColumn($columns, $primary);
          $keyProperty = $this->camel($keyColumn['name']);
          $keyType = $this->repositoryKeyType($keyColumn);
-         $createArgs = $this->modelConstructorPayloadArguments($columns, '$payload', 'null');
-         $updateArgs = $this->modelConstructorPayloadArguments($columns, '$payload', '$current');
+         $createArgs = $this->modelConstructorDtoArguments($columns, '$dto', null);
+         $updateArgs = $this->modelConstructorDtoArguments($columns, '$dto', '$current');
          $serviceBaseContents = <<<PHP
 <?php
 
@@ -4336,6 +4337,8 @@ declare(strict_types=1);
 
 namespace {$this->namespaceRoot}\\Services\\Base;
 
+use {$this->namespaceRoot}\\Http\\DTOs\\Create{$entity}Dto;
+use {$this->namespaceRoot}\\Http\\DTOs\\Update{$entity}Dto;
 use {$this->namespaceRoot}\\Models\\{$entity};
 use {$this->namespaceRoot}\\Repositories\\{$entity}Repository;
 use RuntimeException;
@@ -4376,10 +4379,7 @@ class {$entity}ServiceBase
       return \$this->getOrFail(\$id);
    }
 
-   /**
-    * @param array<string, mixed> \$payload
-    */
-   public function create(array \$payload): {$entity}
+   public function create(Create{$entity}Dto \$dto): {$entity}
    {
       \$model = new {$entity}(
 {$createArgs}
@@ -4388,10 +4388,7 @@ class {$entity}ServiceBase
       return \$this->repository->save(\$model);
    }
 
-   /**
-    * @param array<string, mixed> \$payload
-    */
-   public function update({$keyType} \$id, array \$payload): {$entity}
+   public function update({$keyType} \$id, Update{$entity}Dto \$dto): {$entity}
    {
       \$current = \$this->getOrFail(\$id);
 
@@ -4433,6 +4430,10 @@ PHP
       }
 
       if (in_array('controller', $artifacts, true)) {
+         $keyColumn = $this->repositoryKeyColumn($columns, $primary);
+         $keyType = $this->repositoryKeyType($keyColumn);
+         $keyProperty = $this->camel((string) ($keyColumn['name'] ?? 'id'));
+         $keyPropertyLiteral = $this->escapeSingleQuoted($keyProperty);
          $controllerBaseContents = $resolvedRoutingType === 'attribute'
             ? <<<PHP
 <?php
@@ -4441,8 +4442,9 @@ declare(strict_types=1);
 
 namespace {$this->namespaceRoot}\\Http\\Controllers\\Base;
 
-use Celeris\\Framework\\Http\\Request;
-use Celeris\\Framework\\Http\\RequestContext;
+use {$this->namespaceRoot}\\Http\\DTOs\\Create{$entity}Dto;
+use {$this->namespaceRoot}\\Http\\DTOs\\Update{$entity}Dto;
+use {$this->namespaceRoot}\\Services\\{$entity}Service;
 use Celeris\\Framework\\Http\\Response;
 use Celeris\\Framework\\Routing\\Attribute\\Route;
 
@@ -4452,10 +4454,43 @@ use Celeris\\Framework\\Routing\\Attribute\\Route;
  */
 class {$entity}ControllerBase
 {
-   #[Route(methods: ['GET'], path: '/', summary: '{$entity} collection')]
-   public function index(RequestContext \$ctx, Request \$request): Response
+   public function __construct(protected {$entity}Service \$service) {}
+
+   #[Route(methods: ['GET'], path: '/', summary: 'List {$entityLower}')]
+   public function index(): array
    {
-      return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '{"resource":"{$entityLower}","status":"ok"}');
+      return \$this->service->list();
+   }
+
+   #[Route(methods: ['GET'], path: '/{id}', summary: 'Get {$entityLower}')]
+   public function show({$keyType} \$id): array
+   {
+      return \$this->service->show(\$id)->toArray();
+   }
+
+   #[Route(methods: ['POST'], path: '/', summary: 'Create {$entityLower}')]
+   public function create(Create{$entity}Dto \$dto): Response
+   {
+      \$model = \$this->service->create(\$dto);
+
+      return new Response(
+         201,
+         ['content-type' => 'application/json; charset=utf-8'],
+         (string) json_encode(['{$keyPropertyLiteral}' => \$model->{$keyProperty}]),
+      );
+   }
+
+   #[Route(methods: ['PUT'], path: '/{id}', summary: 'Update {$entityLower}')]
+   public function update({$keyType} \$id, Update{$entity}Dto \$dto): array
+   {
+      return \$this->service->update(\$id, \$dto)->toArray();
+   }
+
+   #[Route(methods: ['DELETE'], path: '/{id}', summary: 'Delete {$entityLower}')]
+   public function delete({$keyType} \$id): Response
+   {
+      \$this->service->remove(\$id);
+      return new Response(204);
    }
 }
 PHP
@@ -4466,8 +4501,9 @@ declare(strict_types=1);
 
 namespace {$this->namespaceRoot}\\Http\\Controllers\\Base;
 
-use Celeris\\Framework\\Http\\Request;
-use Celeris\\Framework\\Http\\RequestContext;
+use {$this->namespaceRoot}\\Http\\DTOs\\Create{$entity}Dto;
+use {$this->namespaceRoot}\\Http\\DTOs\\Update{$entity}Dto;
+use {$this->namespaceRoot}\\Services\\{$entity}Service;
 use Celeris\\Framework\\Http\\Response;
 
 /**
@@ -4476,9 +4512,38 @@ use Celeris\\Framework\\Http\\Response;
  */
 class {$entity}ControllerBase
 {
-   public function index(RequestContext \$ctx, Request \$request): Response
+   public function __construct(protected {$entity}Service \$service) {}
+
+   public function index(): array
    {
-      return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '{"resource":"{$entityLower}","status":"ok"}');
+      return \$this->service->list();
+   }
+
+   public function show({$keyType} \$id): array
+   {
+      return \$this->service->show(\$id)->toArray();
+   }
+
+   public function create(Create{$entity}Dto \$dto): Response
+   {
+      \$model = \$this->service->create(\$dto);
+
+      return new Response(
+         201,
+         ['content-type' => 'application/json; charset=utf-8'],
+         (string) json_encode(['{$keyPropertyLiteral}' => \$model->{$keyProperty}]),
+      );
+   }
+
+   public function update({$keyType} \$id, Update{$entity}Dto \$dto): array
+   {
+      return \$this->service->update(\$id, \$dto)->toArray();
+   }
+
+   public function delete({$keyType} \$id): Response
+   {
+      \$this->service->remove(\$id);
+      return new Response(204);
    }
 }
 PHP;
@@ -4498,9 +4563,13 @@ use Celeris\\Framework\\Routing\\Attribute\\RouteGroup;
 /**
  * User-editable API controller wrapper.
  *
- * @method \\Celeris\\Framework\\Http\\Response index(\\Celeris\\Framework\\Http\\RequestContext \$ctx, \\Celeris\\Framework\\Http\\Request \$request)
+ * @method array index()
+ * @method array show({$keyType} \$id)
+ * @method \\Celeris\\Framework\\Http\\Response create(\\{$this->namespaceRoot}\\Http\\DTOs\\Create{$entity}Dto \$dto)
+ * @method array update({$keyType} \$id, \\{$this->namespaceRoot}\\Http\\DTOs\\Update{$entity}Dto \$dto)
+ * @method \\Celeris\\Framework\\Http\\Response delete({$keyType} \$id)
  */
-#[RouteGroup(prefix: '/{$entityLower}', version: 'v1', tags: ['{$entity}'])]
+#[RouteGroup(prefix: '{$apiRouteGroupPrefix}', version: 'v1', tags: ['{$entity}'])]
 final class {$entity}Controller extends {$entity}ControllerBase
 {
 }
@@ -4528,7 +4597,11 @@ class {$entity}RoutesBase
    {
       \$routes
          ->controller({$entity}Controller::class)
-         ->get('/api/v1/{$entityLower}', 'index');
+         ->get('/api/v1/{$entityLower}', 'index')
+         ->get('/api/v1/{$entityLower}/{id}', 'show')
+         ->post('/api/v1/{$entityLower}', 'create')
+         ->put('/api/v1/{$entityLower}/{id}', 'update')
+         ->delete('/api/v1/{$entityLower}/{id}', 'delete');
    }
 }
 PHP;
@@ -5897,6 +5970,32 @@ PHP;
          $type = strtolower((string) ($column['type'] ?? ''));
          $literal = $this->defaultLiteral($column['default'] ?? null);
          $lines[] = '         ' . ($literal ?? $this->sampleLiteralForType($name, $type, $index)) . ',';
+      }
+
+      return $lines === [] ? '         // No columns discovered.' : implode("\n", $lines);
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function modelConstructorDtoArguments(array $columns, string $dtoVariable, ?string $fallbackVariable): string
+   {
+      $lines = [];
+      foreach ($columns as $column) {
+         $name = (string) ($column['name'] ?? '');
+         if ($name === '') {
+            continue;
+         }
+
+         $property = $this->camel($name);
+         $value = $dtoVariable . '->' . $property;
+         if ($fallbackVariable !== null) {
+            $value = (bool) ($column['primary'] ?? false)
+               ? $fallbackVariable . '->' . $property
+               : $value . ' ?? ' . $fallbackVariable . '->' . $property;
+         }
+
+         $lines[] = '         ' . $value . ',';
       }
 
       return $lines === [] ? '         // No columns discovered.' : implode("\n", $lines);

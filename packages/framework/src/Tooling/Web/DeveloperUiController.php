@@ -3938,10 +3938,10 @@ HTML;
       $table = $parsed['table'];
 
       $rows = $connection->fetchAll(
-         "SELECT column_name, data_type, is_nullable, column_default, column_key
-          FROM information_schema.columns
-          WHERE table_schema = DATABASE()
-            AND table_name = :table
+         "SELECT column_name, data_type, column_type, is_nullable, column_default, column_key, character_maximum_length, numeric_precision, numeric_scale
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = :table
           ORDER BY ordinal_position",
          ['table' => $table]
       );
@@ -3960,10 +3960,13 @@ HTML;
 
          $columns[] = [
             'name' => $name,
-            'type' => (string) ($row['data_type'] ?? ''),
+            'type' => (string) ($row['column_type'] ?? $row['data_type'] ?? ''),
             'nullable' => strtoupper((string) ($row['is_nullable'] ?? 'NO')) === 'YES',
             'default' => $row['column_default'] ?? null,
             'primary' => $isPrimary,
+            'length' => $row['character_maximum_length'] ?? null,
+            'precision' => $row['numeric_precision'] ?? null,
+            'scale' => $row['numeric_scale'] ?? null,
          ];
       }
 
@@ -4000,7 +4003,7 @@ HTML;
       $table = $parsed['table'];
 
       $rows = $connection->fetchAll(
-         "SELECT column_name, data_type, is_nullable, column_default
+         "SELECT column_name, data_type, is_nullable, column_default, character_maximum_length, numeric_precision, numeric_scale
           FROM information_schema.columns
           WHERE table_schema = :schema
             AND table_name = :table
@@ -4035,6 +4038,9 @@ HTML;
             'nullable' => strtoupper((string) ($row['is_nullable'] ?? 'NO')) === 'YES',
             'default' => $row['column_default'] ?? null,
             'primary' => isset($primaryLookup[$name]),
+            'length' => $row['character_maximum_length'] ?? null,
+            'precision' => $row['numeric_precision'] ?? null,
+            'scale' => $row['numeric_scale'] ?? null,
          ];
       }
 
@@ -4487,37 +4493,30 @@ PHP
       }
 
       if (in_array('dto.request', $artifacts, true)) {
-         $requestProperties = $this->dtoPropertyLines($columns);
+         $createDto = $this->requestDtoContents($entity, $columns, 'create');
+         $updateDto = $this->requestDtoContents($entity, $columns, 'update');
          $rows[] = $this->previewFileRow(
-            'app/DTO/' . $entity . 'CreateRequest.php',
-            <<<PHP
-<?php
-
-declare(strict_types=1);
-
-namespace {$this->namespaceRoot}\\DTO;
-
-final class {$entity}CreateRequest
-{
-{$requestProperties}
-}
-PHP
-               . "\n"
+            'app/Http/DTOs/Create' . $entity . 'Dto.php',
+            $createDto . "\n"
+         );
+         $rows[] = $this->previewFileRow(
+            'app/Http/DTOs/Update' . $entity . 'Dto.php',
+            $updateDto . "\n"
          );
       }
 
       if (in_array('dto.response', $artifacts, true)) {
-         $responseProperties = $this->dtoPropertyLines($columns);
+         $responseProperties = $this->dtoPropertyLines($columns, false);
          $rows[] = $this->previewFileRow(
-            'app/DTO/' . $entity . 'Response.php',
+            'app/Http/DTOs/' . $entity . 'ResponseDto.php',
             <<<PHP
 <?php
 
 declare(strict_types=1);
 
-namespace {$this->namespaceRoot}\\DTO;
+namespace {$this->namespaceRoot}\\Http\\DTOs;
 
-final class {$entity}Response
+final class {$entity}ResponseDto
 {
 {$responseProperties}
 }
@@ -5489,7 +5488,227 @@ PHP;
    /**
     * @param array<int, array<string, mixed>> $columns
     */
-   private function dtoPropertyLines(array $columns): string
+   private function requestDtoContents(string $entity, array $columns, string $mode): string
+   {
+      $isUpdate = $mode === 'update';
+      $class = ($isUpdate ? 'Update' : 'Create') . $entity . 'Dto';
+      $properties = $this->dtoConstructorPropertyLines($columns, $isUpdate);
+      $imports = $this->dtoImportLines($columns, true, $isUpdate);
+      $description = $isUpdate
+         ? 'Input DTO for partial/full ' . strtolower($entity) . ' updates.'
+         : 'Input DTO for ' . strtolower($entity) . ' creation requests.';
+
+      return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$this->namespaceRoot}\\Http\\DTOs;
+
+{$imports}
+
+/**
+ * {$description}
+ */
+#[Dto]
+final class {$class}
+{
+   public function __construct(
+{$properties}
+   ) {}
+}
+PHP;
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function dtoImportLines(array $columns, bool $request, bool $isUpdate = false): string
+   {
+      $imports = [
+         'Celeris\\Framework\\Serialization\\Attribute\\Dto',
+      ];
+
+      if ($this->dtoNeedsMapFrom($columns)) {
+         $imports[] = 'Celeris\\Framework\\Serialization\\Attribute\\MapFrom';
+      }
+
+      if ($request) {
+         foreach ($this->dtoValidationImports($columns, $isUpdate) as $import) {
+            $imports[] = $import;
+         }
+      }
+
+      sort($imports);
+      return implode("\n", array_map(static fn(string $class): string => 'use ' . $class . ';', array_values(array_unique($imports))));
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function dtoValidationImports(array $columns, bool $isUpdate): array
+   {
+      $imports = [];
+      foreach ($columns as $column) {
+         foreach ($this->dtoValidationAttributes($column, $isUpdate) as $attribute) {
+            $name = strtok($attribute, '(') ?: $attribute;
+            $imports[] = 'Celeris\\Framework\\Validation\\Attribute\\' . $name;
+         }
+      }
+
+      return array_values(array_unique($imports));
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function dtoNeedsMapFrom(array $columns): bool
+   {
+      foreach ($columns as $column) {
+         $name = (string) ($column['name'] ?? '');
+         if ($name !== '' && $this->camel($name) !== $name) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function dtoConstructorPropertyLines(array $columns, bool $isUpdate): string
+   {
+      $lines = [];
+      foreach ($columns as $column) {
+         $name = (string) ($column['name'] ?? '');
+         if ($name === '') {
+            continue;
+         }
+
+         $property = $this->camel($name);
+         $type = $this->columnPhpTypeWithNullable($column, $isUpdate || (bool) ($column['nullable'] ?? false));
+         $attributes = $this->dtoPropertyAttributeLines($column, $isUpdate);
+         foreach ($attributes as $attribute) {
+            $lines[] = '      ' . $attribute;
+         }
+
+         $default = $isUpdate ? ' = null' : '';
+         $lines[] = sprintf('      public %s $%s%s,', $type, $property, $default);
+         $lines[] = '';
+      }
+
+      if ($lines === []) {
+         return '      // No columns discovered.';
+      }
+
+      while (end($lines) === '') {
+         array_pop($lines);
+      }
+
+      return implode("\n", $lines);
+   }
+
+   /**
+    * @param array<string, mixed> $column
+    * @return array<int, string>
+    */
+   private function dtoPropertyAttributeLines(array $column, bool $isUpdate): array
+   {
+      $lines = [];
+      $validation = $this->dtoValidationAttributes($column, $isUpdate);
+      if ($validation !== []) {
+         $lines[] = '#[' . implode(', ', $validation) . ']';
+      }
+
+      $name = (string) ($column['name'] ?? '');
+      if ($name !== '' && $this->camel($name) !== $name) {
+         $lines[] = "#[MapFrom('" . $this->escapeSingleQuoted($name) . "')]";
+      }
+
+      return $lines;
+   }
+
+   /**
+    * @param array<string, mixed> $column
+    * @return array<int, string>
+    */
+   private function dtoValidationAttributes(array $column, bool $isUpdate): array
+   {
+      $attributes = [];
+      $rawType = strtolower((string) ($column['type'] ?? ''));
+      $nullable = (bool) ($column['nullable'] ?? false);
+      $primary = (bool) ($column['primary'] ?? false);
+      $hasDefault = $this->defaultLiteral($column['default'] ?? null) !== null;
+
+      if (!$isUpdate && !$nullable && !$primary && !$hasDefault) {
+         $attributes[] = 'Required';
+      }
+
+      if ($this->isStringColumnType($rawType)) {
+         $attributes[] = 'StringType';
+         $length = $this->columnStringLength($column);
+         if ($length !== null && $length > 0) {
+            $attributes[] = 'Length(max: ' . $length . ')';
+         }
+
+         $name = strtolower((string) ($column['name'] ?? ''));
+         if (str_contains($name, 'email')) {
+            $attributes[] = 'Email';
+         }
+      }
+
+      if ($this->isNumericColumnType($rawType)) {
+         $attributes[] = str_contains($rawType, 'unsigned') ? 'Range(min: 0)' : 'Range';
+      }
+
+      return $attributes;
+   }
+
+   /**
+    * @param array<string, mixed> $column
+    */
+   private function columnStringLength(array $column): ?int
+   {
+      $length = $column['length'] ?? null;
+      if (is_numeric($length)) {
+         return (int) $length;
+      }
+
+      $rawType = strtolower((string) ($column['type'] ?? ''));
+      if (preg_match('/\((\d+)\)/', $rawType, $matches) === 1) {
+         return (int) $matches[1];
+      }
+
+      return null;
+   }
+
+   private function isStringColumnType(string $rawType): bool
+   {
+      return str_contains($rawType, 'char')
+         || str_contains($rawType, 'text')
+         || str_contains($rawType, 'uuid')
+         || str_contains($rawType, 'enum')
+         || str_contains($rawType, 'date')
+         || str_contains($rawType, 'time');
+   }
+
+   private function isNumericColumnType(string $rawType): bool
+   {
+      return str_contains($rawType, 'bigint')
+         || str_contains($rawType, 'smallint')
+         || str_contains($rawType, 'int')
+         || str_contains($rawType, 'decimal')
+         || str_contains($rawType, 'double')
+         || str_contains($rawType, 'float')
+         || str_contains($rawType, 'numeric')
+         || str_contains($rawType, 'real');
+   }
+
+   /**
+    * @param array<int, array<string, mixed>> $columns
+    */
+   private function dtoPropertyLines(array $columns, bool $includeValidation = true): string
    {
       $lines = [];
       foreach ($columns as $column) {
@@ -5500,7 +5719,12 @@ PHP;
 
          $property = $this->camel($name);
          $nullable = (bool) ($column['nullable'] ?? false);
-         $type = $nullable ? '?string' : 'string';
+         $type = $this->columnPhpTypeWithNullable($column, $nullable);
+         if ($includeValidation) {
+            foreach ($this->dtoPropertyAttributeLines($column, false) as $attribute) {
+               $lines[] = '   ' . $attribute;
+            }
+         }
          $lines[] = sprintf('   public %s $%s;', $type, $property);
       }
 
@@ -5509,6 +5733,15 @@ PHP;
       }
 
       return implode("\n", $lines);
+   }
+
+   /**
+    * @param array<string, mixed> $column
+    */
+   private function columnPhpTypeWithNullable(array $column, bool $nullable): string
+   {
+      $type = ltrim($this->columnPhpType([...$column, 'nullable' => false]), '?');
+      return $nullable ? '?' . $type : $type;
    }
 
    /**

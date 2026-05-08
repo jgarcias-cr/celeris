@@ -40,6 +40,7 @@ function runUxTesting(): void
 
    $tmpRoot = '/tmp/celeris-phase10-ui-' . bin2hex(random_bytes(6));
    mkdir($tmpRoot, 0777, true);
+   file_put_contents($tmpRoot . '/.env', "APP_NAME=\"Phase 10 Demo\"\n");
 
    $generator = new GeneratorEngine();
    $graphBuilder = new DependencyGraphBuilder(__DIR__ . '/../src');
@@ -73,6 +74,11 @@ function runUxTesting(): void
    assertTrue(
       str_contains($dashboardResponse->getBody(), 'Celeris Tooling Platform'),
       'Dashboard should include tooling platform heading.'
+   );
+   assertTrue(
+      str_contains($dashboardResponse->getBody(), '<title>Celeris Tooling Platform - Phase 10 Demo</title>')
+      && str_contains($dashboardResponse->getBody(), '<h1>Celeris Tooling Platform - Phase 10 Demo</h1>'),
+      'Dashboard should include APP_NAME from .env in the title and heading.'
    );
    assertTrue(
       str_contains($dashboardResponse->getBody(), 'Generate APP_KEY'),

@@ -133,6 +133,7 @@ final class DeveloperUiController
       $apiBase = rtrim($this->routePrefix, '/') . '/api/' . self::API_VERSION;
       $apiBaseJson = (string) json_encode($apiBase, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
       $requestId = $this->escape($ctx->getRequestId());
+      $toolingTitle = $this->escape($this->toolingDisplayTitle());
 
       $html = <<<HTML
 <!doctype html>
@@ -140,7 +141,7 @@ final class DeveloperUiController
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Celeris Tooling</title>
+<title>{$toolingTitle}</title>
 <style>
 :root {
   --surface: #f4eee2;
@@ -630,7 +631,7 @@ pre {
 <body>
 <main>
   <section class="card">
-    <h1>Celeris Tooling Platform</h1>
+    <h1>{$toolingTitle}</h1>
     <div style="margin-top:0.5rem;">
       <span class="badge ok">DB-FIRST</span>
     </div>
@@ -3486,6 +3487,29 @@ HTML;
       );
 
       return $this->config;
+   }
+
+   /**
+    * Return the browser/page title for the tooling dashboard.
+    */
+   private function toolingDisplayTitle(): string
+   {
+      $appName = '';
+
+      try {
+         $meta = $this->readEnvironmentMap();
+         $appName = trim($meta['map']['APP_NAME'] ?? '');
+      } catch (ToolingException) {
+         $appName = '';
+      }
+
+      if ($appName === '') {
+         $appName = trim((string) $this->config()->get('app.name', ''));
+      }
+
+      return $appName === ''
+         ? 'Celeris Tooling Platform'
+         : 'Celeris Tooling Platform - ' . $appName;
    }
 
    /**

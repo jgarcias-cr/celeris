@@ -2336,6 +2336,7 @@ mvc-app/
     security.php
   scripts/
     view-smoke.php
+    build-assets.mjs
   resources/
     css/
       app.css
@@ -2440,8 +2441,8 @@ What each folder/file is for:
 - Alternative content templates for Twig/Latte when `VIEW_ENGINE` is switched.
 - `scripts/view-smoke.php`
 - Quick renderer smoke check for configured engine (or all engines with `--all`).
-- `vite.config.js`
-- Vite build configuration (bundles Alpine.js + CSS and copies `resources/images` to `public/assets/images`).
+- `scripts/build-assets.mjs`
+- Asset compiler entrypoint (bundles + minifies JS/CSS and copies `resources/images` to `public/assets/images`).
 - `package.json`
 - Frontend toolchain metadata (`npm run dev`, `npm run build`, `npm run watch`).
 - `resources/css`, `resources/js`, `resources/images`
@@ -2654,44 +2655,18 @@ Bundle/compile files at will:
 - `resources/css/*.css`
 - `resources/images/*`
 
-2. Add entries in `vite.config.js` under `build.rollupOptions.input`, and extend the output naming rules so each source maps to the intended file in `public/assets/*`.
+2. Add entries in `scripts/build-assets.mjs` (`entries` array), mapping each source to its output file in `public/assets/*`.
 
 Example (additional admin bundle):
 
-Sample location/type: Vite configuration snippet shown inline in this manual.
+Sample location/type: frontend JavaScript module snippet shown inline in this manual.
 ```js
-rollupOptions: {
-  input: {
-    app: path.join(resourcesDir, 'js', 'app.js'),
-    styles: path.join(resourcesDir, 'css', 'app.css'),
-    admin: path.join(resourcesDir, 'js', 'admin.js'),
-    adminStyles: path.join(resourcesDir, 'css', 'admin.css'),
-  },
-  output: {
-    entryFileNames: (chunk) => {
-      if (chunk.name === 'app') {
-        return 'js/app.min.js';
-      }
-
-      if (chunk.name === 'admin') {
-        return 'js/admin.min.js';
-      }
-
-      return 'js/[name].min.js';
-    },
-    assetFileNames: (asset) => {
-      if (asset.name === 'styles.css') {
-        return 'css/app.min.css';
-      }
-
-      if (asset.name === 'adminStyles.css') {
-        return 'css/admin.min.css';
-      }
-
-      return 'assets/[name]-[hash][extname]';
-    },
-  },
-},
+const entries = [
+  { entry: path.join(sourceRoot, 'js', 'app.js'), outfile: path.join(outputRoot, 'js', 'app.min.js') },
+  { entry: path.join(sourceRoot, 'css', 'app.css'), outfile: path.join(outputRoot, 'css', 'app.min.css') },
+  { entry: path.join(sourceRoot, 'js', 'admin.js'), outfile: path.join(outputRoot, 'js', 'admin.min.js') },
+  { entry: path.join(sourceRoot, 'css', 'admin.css'), outfile: path.join(outputRoot, 'css', 'admin.min.css') },
+];
 ```
 
 3. Rebuild:
@@ -2714,60 +2689,7 @@ Recommended pattern:
 - Emit a small number of intentional output bundles.
 - Load only bundles needed by each page.
 
-### 8.5.1 Alpine.js interaction pattern
-
-The MVC stub uses Alpine.js as its default client-side interaction layer.
-
-The intended model is:
-- render complete HTML on the server first
-- keep interactivity local to the fragment that needs it
-- use Alpine directives in templates instead of imperative DOM queries spread across the page
-- reserve heavier frontend architecture for cases where the application actually needs it
-
-Current entrypoint:
-- `resources/js/app.js`
-- Starts Alpine and registers reusable components with `Alpine.data(...)`.
-
-Current sample component:
-- `contactsTable(totalRows)`
-- Handles contacts pagination state (`currentPage`, `pageSize`, `totalPages`)
-- Exposes derived labels such as `pageLabel`
-- Provides small UI actions such as `previousPage()`, `nextPage()`, `resetPage()`, and `confirmDelete(...)`
-
-Typical usage in the stub views:
-
-Sample location/type: view/template fragment shown inline in this manual.
-```html
-<section class="contacts-table-card" x-data="contactsTable(42)">
-  <tr x-show="isVisible(0)">
-    ...
-  </tr>
-
-  <select x-model.number="pageSize" x-on:change="resetPage()">
-    <option value="10">10</option>
-    <option value="25">25</option>
-  </select>
-
-  <button type="button" x-on:click="previousPage()" x-bind:disabled="currentPage <= 1">
-    Previous
-  </button>
-
-  <span x-text="pageLabel">Page 1 of 1</span>
-
-  <form method="post" x-on:submit.prevent="confirmDelete($event, 'Delete this contact?')">
-    <button type="submit">Delete</button>
-  </form>
-</section>
-```
-
-Guidance for extending Alpine usage:
-1. Register shared behavior in `resources/js/app.js` with `Alpine.data(...)`.
-2. Keep component state scoped to the smallest sensible container with `x-data`.
-3. Prefer `x-text`, `x-show`, `x-model`, and `x-on:*` over manual `querySelector(...)` wiring.
-4. Keep business rules on the server; use Alpine for presentation state and small interaction flows.
-5. Add `x-cloak` when hidden content should stay invisible until Alpine has initialized.
-
-### 8.5.2 Install a CSS framework (Bootstrap, Tailwind, etc.)
+### 8.5.1 Install a CSS framework (Bootstrap, Tailwind, etc.)
 
 You can use any frontend CSS framework in Celeris MVC. The framework is frontend-agnostic.
 
@@ -2803,11 +2725,7 @@ Sample location/type: stylesheet snippet, typically in your frontend entry CSS f
 Sample location/type: frontend JavaScript module snippet shown inline in this manual.
 ```js
 // resources/js/app.js
-import Alpine from "alpinejs";
 import "bootstrap";
-
-window.Alpine = Alpine;
-Alpine.start();
 ```
 
 3. Build:
@@ -2819,9 +2737,9 @@ npm run build
 
 4. Use framework classes in your view fragments/layout/partials as needed.
 
-### 8.5.3 Install a CSS preprocessor (Sass/Less/Stylus)
+### 8.5.2 Install a CSS preprocessor (Sass/Less/Stylus)
 
-The default stub builds plain CSS with Vite. For preprocessors, either let Vite compile them directly or add a pre-build step that writes a normal CSS file inside `resources/css/`, then run the normal asset build.
+The default stub builds plain CSS with esbuild. For preprocessors, add a pre-build step that compiles to a normal CSS file inside `resources/css/`, then run the normal asset build.
 
 Sass example:
 
@@ -2840,8 +2758,9 @@ Sample location/type: JSON manifest/config file shown inline in this manual.
 ```json
 {
   "scripts": {
-    "build": "vite build",
-    "dev": "vite build --mode development"
+    "css:compile": "sass resources/scss/app.scss resources/css/app.css --no-source-map",
+    "build": "npm run css:compile && node ./scripts/build-assets.mjs --prod",
+    "dev": "npm run css:compile && node ./scripts/build-assets.mjs --dev"
   }
 }
 ```
@@ -3866,55 +3785,40 @@ In scaffolded `mvc` and `api` projects, the simplest place to wire event listene
 
 If you want the listener to run automatically at bootstrap time, make your provider implement `BootableServiceProviderInterface` and register listeners in `boot()`.
 
-Sample location/type: file `app/Listeners/ContactCreatedListener.php`.
+Sample location/type: bootstrap code, typically in `public/index.php`.
 ```php
 use App\Events\ContactCreatedEvent;
-use Celeris\Framework\Domain\Event\DomainEventInterface;
-use Celeris\Framework\Domain\Event\DomainEventListenerInterface;
-
-final class ContactCreatedListener implements DomainEventListenerInterface
-{
-    public function handle(DomainEventInterface $event): void
-    {
-        if (!$event instanceof ContactCreatedEvent) {
-            return;
-        }
-
-        // Trigger follow-up application work here:
-        // send a notification, sync a CRM, enqueue a job, or write an audit entry.
-    }
-}
-```
-
-Sample location/type: file `app/AppServiceProvider.php`.
-```php
-use App\Events\ContactCreatedEvent;
-use App\Listeners\ContactCreatedListener;
 use Celeris\Framework\Container\BootableServiceProviderInterface;
 use Celeris\Framework\Container\ContainerInterface;
 use Celeris\Framework\Container\ServiceRegistry;
 use Celeris\Framework\Domain\Event\DomainEventDispatcher;
+use Celeris\Framework\Notification\EmailMessage;
+use Celeris\Framework\Notification\NotificationManager;
 
 final class AppServiceProvider implements BootableServiceProviderInterface
 {
     public function register(ServiceRegistry $services): void
     {
-        // existing service bindings...
-
-        $services->singleton(
-            ContactCreatedListener::class,
-            static fn (ContainerInterface $container): ContactCreatedListener => new ContactCreatedListener(),
-        );
+        // existing service bindings
     }
 
     public function boot(ContainerInterface $container): void
     {
         $events = $container->get(DomainEventDispatcher::class);
 
-        $events->listen(
-            ContactCreatedEvent::class,
-            $container->get(ContactCreatedListener::class),
-        );
+        $events->listen(ContactCreatedEvent::class, function (ContactCreatedEvent $event) use ($container): void {
+            $notifications = $container->get(NotificationManager::class);
+
+            $notifications->sendEmail(new EmailMessage(
+                to: ['ops@example.com'],
+                subject: 'New contact created',
+                text: sprintf('Contact #%d was created.', $event->contactId),
+            ));
+
+            // You can also trigger any other application action here:
+            // $container->get(CrmSyncService::class)->pushContact($event->contactId);
+            // $container->get(AuditService::class)->record('contact.created', ['id' => $event->contactId]);
+        });
     }
 }
 ```
@@ -3934,57 +3838,7 @@ This pattern is a good default when the event represents a business action such 
 
 It keeps your controllers and repositories small while letting you attach notifications, audit logs, integrations, or follow-up processes in one place.
 
-### 14.3 Scaffolded model lifecycle autodiscovery
-
-Generated MVC/API service scaffolds also support application-level model lifecycle events for common CRUD flows.
-
-The generated base services fire these events after the application action succeeds:
-- `ModelEvent::CREATE` / `onCreate` after create
-- `ModelEvent::UPDATE` / `onUpdate` after update
-- `ModelEvent::DELETE` / `onDelete` after delete
-- `ModelEvent::SHOW` / `onShow` when an explicit show/details action is used
-
-Listeners live in `app/Listeners/Models` and are autodiscovered by `AppServiceProvider` through `ModelEventManager::autodiscover()`.
-
-Sample location/type: file `app/Listeners/Models/ContactLifecycleListener.php`.
-```php
-namespace App\Listeners\Models;
-
-use App\Models\Contact;
-use Celeris\Framework\Events\ModelEvent;
-use Celeris\Framework\Events\ModelEventSubscriberInterface;
-
-final class ContactLifecycleListener implements ModelEventSubscriberInterface
-{
-    public static function subscribedEvents(): array
-    {
-        return [ModelEvent::CREATE];
-    }
-
-    public static function subscribedModels(): array
-    {
-        return [Contact::class];
-    }
-
-    public function handle(ModelEvent $event): void
-    {
-        /** @var Contact $contact */
-        $contact = $event->model();
-
-        // Run follow-up work for a newly created contact here:
-        // send a notification, write an audit entry, clear cache,
-        // dispatch a queue job, or enqueue an outbox message.
-    }
-}
-```
-
-`subscribedEvents()` selects which event names this listener handles.
-`subscribedModels()` selects which model classes it handles.
-The `handle()` method is where you place the action that should run when the event happens.
-
-Use this flow for scaffolded CRUD behavior when you want a quick, convention-based hook without hand-registering each listener.
-
-### 14.4 When you need insert/update hooks from the ORM
+### 14.3 When you need insert/update hooks from the ORM
 
 If your goal is specifically "run something when a row is inserted or updated", use ORM persistence events.
 
@@ -4028,10 +3882,9 @@ Use this approach when the database lifecycle itself is what matters, for exampl
 - update a search index after a model changes
 - write an audit trail after an ORM update
 
-### 14.5 Which event style should you choose?
+### 14.4 Which event style should you choose?
 
 - Use domain events when you want to express a business fact with a clear meaning.
-- Use scaffolded model lifecycle events when you want `onCreate`, `onUpdate`, `onDelete`, or `onShow` hooks for generated MVC/API service flows.
 - Use persistence events when you want to react to ORM lifecycle changes like insert, update, or delete.
 - If the follow-up work is slow or external, prefer handing it off to a queue, outbox, or worker instead of doing everything inline during the request.
 - For notification examples, see also section [23. Notification Subsystem (Step-by-Step)](#23-notification-subsystem-step-by-step).

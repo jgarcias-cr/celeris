@@ -74,8 +74,9 @@ If you are working inside the Celeris monorepo, the scaffold can also fall back 
 
 ## Project Structure
 
-- `public/index.php` boots the HTTP kernel and registers API controllers
-- `app/Http/Controllers/Api` contains your API controllers
+- `public/index.php` boots the HTTP kernel and loads route files
+- `routes/api.php` registers API controllers and direct API routes
+- `app/Http/Controllers/v1` contains your versioned API controllers
 - `app/Http/DTOs` contains request DTOs
 - `app/Services` holds application use cases
 - `app/Repositories` contains persistence-facing code

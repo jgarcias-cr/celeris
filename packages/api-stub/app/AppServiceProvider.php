@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App;
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\v1\AuthController;
+use App\Http\Controllers\v1\ContactController;
 use App\Repositories\ContactRepository;
 use App\Services\AuthService;
 use App\Services\ContactService;

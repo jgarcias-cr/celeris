@@ -4,16 +4,223 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Base\ContactPageControllerBase;
+use App\Http\Requests\CreateContactRequest;
+use App\Http\Requests\DeleteContactRequest;
+use App\Http\Requests\EditContactRequest;
+use App\Http\Requests\ShowContactRequest;
+use App\Http\Requests\StoreContactRequest;
+use App\Http\Requests\UpdateContactRequest;
+use App\Services\ContactService;
+use Celeris\Framework\Http\Request;
+use Celeris\Framework\Http\RequestContext;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Framework\Security\Authorization\AuthorizationException;
+use Celeris\Framework\Validation\ValidationException;
+use Celeris\Framework\View\TemplateRendererInterface;
+use RuntimeException;
 
 /**
  * User-editable contacts page controller.
- *
- * Keep route-group metadata and custom endpoints/actions here.
- * Regeneration updates only `Controllers\Base\ContactPageControllerBase`.
  */
 #[RouteGroup(prefix: '/contacts', tags: ['Contacts UI'])]
-final class ContactPageController extends ContactPageControllerBase
+final class ContactPageController
 {
+   public function __construct(
+      protected ContactService $service,
+      protected TemplateRendererInterface $views,
+      protected CreateContactRequest $createRequest,
+      protected StoreContactRequest $storeRequest,
+      protected EditContactRequest $editRequest,
+      protected UpdateContactRequest $updateRequest,
+      protected ShowContactRequest $showRequest,
+      protected DeleteContactRequest $deleteRequest,
+   ) {}
+
+   #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]
+   public function index(Request $request): Response
+   {
+      $html = $this->renderPage('Contacts', 'contacts/index', [
+         'contacts' => $this->service->list(),
+         'notice' => (string) ($request->getQueryParam('notice', '')),
+      ]);
+
+      return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+   }
+
+   #[Route(methods: ['GET'], path: '/create', summary: 'Create contact form')]
+   public function createForm(RequestContext $ctx): Response
+   {
+      $this->createRequest->authorizeOrFail($ctx);
+
+      $html = $this->renderPage('Add Contact', 'contacts/form', [
+         'mode' => 'create',
+         'submitLabel' => 'Create Contact',
+         'action' => '/contacts/create',
+         'values' => [
+            'first_name' => '',
+            'last_name' => '',
+            'phone' => '',
+            'address' => '',
+            'age' => '',
+         ],
+         'error' => '',
+      ]);
+
+      return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+   }
+
+   #[Route(methods: ['POST'], path: '/create', summary: 'Create contact')]
+   public function store(RequestContext $ctx, Request $request): Response
+   {
+      $values = $this->storeRequest->values($request);
+
+      try {
+         $this->service->create($this->servicePayload($this->storeRequest->validateRequest($ctx, $request)));
+      } catch (ValidationException $exception) {
+         return $this->renderFormError('Add Contact', '/contacts/create', 'Create Contact', $values, $this->firstValidationMessage($exception));
+      } catch (AuthorizationException $exception) {
+         throw $exception;
+      } catch (RuntimeException $exception) {
+         return $this->renderFormError('Add Contact', '/contacts/create', 'Create Contact', $values, $exception->getMessage());
+      }
+
+      return $this->redirect('/contacts?notice=' . rawurlencode('Contact created.'));
+   }
+
+   #[Route(methods: ['GET'], path: '/{id}/edit', summary: 'Edit contact form')]
+   public function editForm(RequestContext $ctx, int $id): Response
+   {
+      $contact = $this->service->getOrFail($id);
+      $this->editRequest->authorizeOrFail($ctx, $contact);
+
+      $html = $this->renderPage('Edit Contact', 'contacts/form', [
+         'mode' => 'edit',
+         'submitLabel' => 'Save Changes',
+         'action' => '/contacts/' . $id . '/edit',
+         'values' => [
+            'first_name' => $contact->firstName,
+            'last_name' => $contact->lastName,
+            'phone' => $contact->phone,
+            'address' => $contact->address,
+            'age' => (string) $contact->age,
+         ],
+         'error' => '',
+      ]);
+
+      return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+   }
+
+   #[Route(methods: ['POST'], path: '/{id}/edit', summary: 'Update contact')]
+   public function update(RequestContext $ctx, int $id, Request $request): Response
+   {
+      $values = $this->updateRequest->values($request);
+
+      try {
+         $contact = $this->service->getOrFail($id);
+         $this->service->update($id, $this->servicePayload($this->updateRequest->validateRequest($ctx, $request, $contact)));
+      } catch (ValidationException $exception) {
+         return $this->renderFormError('Edit Contact', '/contacts/' . $id . '/edit', 'Save Changes', $values, $this->firstValidationMessage($exception));
+      } catch (AuthorizationException $exception) {
+         throw $exception;
+      } catch (RuntimeException $exception) {
+         if ($exception->getMessage() === 'Contact not found.') {
+            return new Response(404, ['content-type' => 'text/plain; charset=utf-8'], $exception->getMessage());
+         }
+
+         return $this->renderFormError('Edit Contact', '/contacts/' . $id . '/edit', 'Save Changes', $values, $exception->getMessage());
+      }
+
+      return $this->redirect('/contacts?notice=' . rawurlencode('Contact updated.'));
+   }
+
+   #[Route(methods: ['POST'], path: '/{id}/delete', summary: 'Delete contact')]
+   public function delete(RequestContext $ctx, int $id): Response
+   {
+      try {
+         $contact = $this->service->getOrFail($id);
+         $this->deleteRequest->authorizeOrFail($ctx, $contact);
+         $deleted = $this->service->delete($id);
+      } catch (AuthorizationException $exception) {
+         throw $exception;
+      } catch (RuntimeException $exception) {
+         return $this->redirect('/contacts?notice=' . rawurlencode($exception->getMessage()));
+      }
+
+      return $this->redirect('/contacts?notice=' . rawurlencode($deleted ? 'Contact deleted.' : 'Contact not found.'));
+   }
+
+   #[Route(methods: ['GET'], path: '/{id}', summary: 'Contact details page')]
+   public function show(RequestContext $ctx, int $id): Response
+   {
+      $contact = $this->service->show($id);
+      $this->showRequest->authorizeOrFail($ctx, $contact);
+
+      $html = $this->renderPage('Contact', 'contacts/show', [
+         'contact' => $contact,
+      ]);
+
+      return new Response(200, ['content-type' => 'text/html; charset=utf-8'], $html);
+   }
+
+   /**
+    * @param array<string, mixed> $data
+    */
+   protected function renderPage(string $title, string $template, array $data = []): string
+   {
+      $content = $this->views->render($template, $data);
+
+      return $this->views->render('layout', [
+         'title' => $title,
+         'content' => $content,
+         'username' => $data['username'] ?? 'Guest',
+      ]);
+   }
+
+   /**
+    * @param array{first_name:string,last_name:string,phone:string,address:string,age:string} $values
+    */
+   protected function renderFormError(string $title, string $action, string $submitLabel, array $values, string $error): Response
+   {
+      $html = $this->renderPage($title, 'contacts/form', [
+         'mode' => $action === '/contacts/create' ? 'create' : 'edit',
+         'submitLabel' => $submitLabel,
+         'action' => $action,
+         'values' => $values,
+         'error' => $error,
+      ]);
+
+      return new Response(422, ['content-type' => 'text/html; charset=utf-8'], $html);
+   }
+
+   protected function redirect(string $location): Response
+   {
+      return new Response(302, ['location' => $location], '');
+   }
+
+   /**
+    * @param array<string, string> $values
+    * @return array{firstName:string,lastName:string,phone:string,address:string,age:int}
+    */
+   protected function servicePayload(array $values): array
+   {
+      return [
+         'firstName' => (string) ($values['first_name'] ?? ''),
+         'lastName' => (string) ($values['last_name'] ?? ''),
+         'phone' => (string) ($values['phone'] ?? ''),
+         'address' => (string) ($values['address'] ?? ''),
+         'age' => (int) ($values['age'] ?? 0),
+      ];
+   }
+
+   protected function firstValidationMessage(ValidationException $exception): string
+   {
+      $errors = $exception->errors();
+      if ($errors === []) {
+         return $exception->getMessage();
+      }
+
+      return (string) ($errors[0]['message'] ?? $exception->getMessage());
+   }
 }

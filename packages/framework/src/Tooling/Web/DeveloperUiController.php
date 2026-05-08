@@ -2896,7 +2896,7 @@ HTML;
    private function apiSaveEnvironmentResponse(RequestContext $ctx, Request $request): Response
    {
       $input = $this->requestInput($request);
-      $isMvc = $this->environmentHasViewEngine();
+      $isMvc = $this->projectType() === 'mvc';
       $allowedKeys = $this->envAllowedKeys($isMvc);
       $updates = [];
 
@@ -3014,8 +3014,8 @@ HTML;
    {
       $meta = $this->readEnvironmentMap();
       $map = $meta['map'];
-      $isMvc = $this->environmentHasViewEngine();
-      $appType = $isMvc ? 'mvc' : 'api';
+      $appType = $this->projectType();
+      $isMvc = $appType === 'mvc';
 
       $appName = $this->environmentMapValue($map, 'APP_NAME', (string) $this->config()->get('app.name', ''));
       $appUrl = $this->environmentMapValue($map, 'APP_URL', (string) $this->config()->get('app.url', ''));
@@ -3065,6 +3065,58 @@ HTML;
 
       $value = $this->config()->get('app.view.engine');
       return is_string($value) && trim($value) !== '';
+   }
+
+   /**
+    * Resolve whether this installation is an API or MVC Celeris project.
+    */
+   private function projectType(): string
+   {
+      $composerType = $this->composerProjectType();
+      if ($composerType !== null) {
+         return $composerType;
+      }
+
+      return $this->environmentHasViewEngine() ? 'mvc' : 'api';
+   }
+
+   private function composerProjectType(): ?string
+   {
+      $path = rtrim($this->projectRoot, '/\\') . '/composer.json';
+      if (!is_file($path)) {
+         return null;
+      }
+
+      $contents = @file_get_contents($path);
+      if (!is_string($contents)) {
+         return null;
+      }
+
+      $data = json_decode($contents, true);
+      if (!is_array($data)) {
+         return null;
+      }
+
+      $name = strtolower((string) ($data['name'] ?? ''));
+      if ($name === 'celeris/api' || str_ends_with($name, '/api')) {
+         return 'api';
+      }
+      if ($name === 'celeris/mvc' || str_ends_with($name, '/mvc')) {
+         return 'mvc';
+      }
+
+      $keywords = $data['keywords'] ?? [];
+      if (is_array($keywords)) {
+         $normalized = array_map(static fn(mixed $keyword): string => strtolower((string) $keyword), $keywords);
+         if (in_array('api', $normalized, true)) {
+            return 'api';
+         }
+         if (in_array('mvc', $normalized, true)) {
+            return 'mvc';
+         }
+      }
+
+      return null;
    }
 
    /**
@@ -4100,6 +4152,15 @@ HTML;
       $required = $this->requiredColumns($columns);
       $rows = [];
       $resolvedRoutingType = $routingType === 'php' ? 'php' : 'attribute';
+      $projectType = $this->projectType();
+      $isApiProject = $projectType === 'api';
+      $apiControllerPathPrefix = $isApiProject ? 'app/Http/Controllers/v1/' : 'app/Http/Controllers/api/v1/';
+      $apiControllerNamespace = $isApiProject
+         ? $this->namespaceRoot . '\\Http\\Controllers\\v1'
+         : $this->namespaceRoot . '\\Http\\Controllers\\api\\v1';
+      $apiRoutesNamespace = $isApiProject
+         ? $this->namespaceRoot . '\\Http\\Routes\\v1'
+         : $this->namespaceRoot . '\\Http\\Routes\\api\\v1';
 
       $modelPath = 'app/Models/' . $entity . '.php';
       $modelBasePath = 'app/Models/Base/' . $entity . 'Base.php';
@@ -4107,9 +4168,11 @@ HTML;
       $repositoryBasePath = 'app/Repositories/Base/' . $entity . 'RepositoryBase.php';
       $servicePath = 'app/Services/' . $entity . 'Service.php';
       $serviceBasePath = 'app/Services/Base/' . $entity . 'ServiceBase.php';
-      $controllerPath = 'app/Http/Controllers/' . $entity . 'Controller.php';
+      $controllerPath = $apiControllerPathPrefix . $entity . 'Controller.php';
       $controllerBasePath = 'app/Http/Controllers/Base/' . $entity . 'ControllerBase.php';
-      $routesPath = 'app/Http/Routes/' . $entity . 'Routes.php';
+      $routesPath = $isApiProject
+         ? 'app/Http/Routes/v1/' . $entity . 'Routes.php'
+         : 'app/Http/Routes/api/v1/' . $entity . 'Routes.php';
       $routesBasePath = 'app/Http/Routes/Base/' . $entity . 'RoutesBase.php';
 
       $tableLiteral = $this->escapeSingleQuoted($tableName);
@@ -4389,7 +4452,7 @@ use Celeris\\Framework\\Routing\\Attribute\\Route;
  */
 class {$entity}ControllerBase
 {
-   #[Route(methods: ['GET'], path: '/api/{$entityLower}', summary: '{$entity} collection')]
+   #[Route(methods: ['GET'], path: '/', summary: '{$entity} collection')]
    public function index(RequestContext \$ctx, Request \$request): Response
    {
       return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '{"resource":"{$entityLower}","status":"ok"}');
@@ -4427,15 +4490,17 @@ PHP;
 
 declare(strict_types=1);
 
-namespace {$this->namespaceRoot}\\Http\\Controllers;
+namespace {$apiControllerNamespace};
 
 use {$this->namespaceRoot}\\Http\\Controllers\\Base\\{$entity}ControllerBase;
+use Celeris\\Framework\\Routing\\Attribute\\RouteGroup;
 
 /**
- * User-editable controller wrapper.
+ * User-editable API controller wrapper.
  *
  * @method \\Celeris\\Framework\\Http\\Response index(\\Celeris\\Framework\\Http\\RequestContext \$ctx, \\Celeris\\Framework\\Http\\Request \$request)
  */
+#[RouteGroup(prefix: '/{$entityLower}', version: 'v1', tags: ['{$entity}'])]
 final class {$entity}Controller extends {$entity}ControllerBase
 {
 }
@@ -4450,12 +4515,12 @@ declare(strict_types=1);
 
 namespace {$this->namespaceRoot}\\Http\\Routes\\Base;
 
-use {$this->namespaceRoot}\\Http\\Controllers\\{$entity}Controller;
+use {$apiControllerNamespace}\\{$entity}Controller;
 use Celeris\\Framework\\Routing\\RouteCollector;
 
 /**
  * @generated by Celeris Tooling. Do not edit this file directly.
- * Register from bootstrap: {$this->namespaceRoot}\\Http\\Routes\\{$entity}Routes::register(\$kernel->routes());
+ * Register from bootstrap: {$apiRoutesNamespace}\\{$entity}Routes::register(\$kernel->routes());
  */
 class {$entity}RoutesBase
 {
@@ -4463,7 +4528,7 @@ class {$entity}RoutesBase
    {
       \$routes
          ->controller({$entity}Controller::class)
-         ->get('/api/{$entityLower}', 'index');
+         ->get('/api/v1/{$entityLower}', 'index');
    }
 }
 PHP;
@@ -4475,7 +4540,7 @@ PHP;
 
 declare(strict_types=1);
 
-namespace {$this->namespaceRoot}\\Http\\Routes;
+namespace {$apiRoutesNamespace};
 
 use {$this->namespaceRoot}\\Http\\Routes\\Base\\{$entity}RoutesBase;
 

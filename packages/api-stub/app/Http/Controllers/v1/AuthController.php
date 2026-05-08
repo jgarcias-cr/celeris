@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\v1;
 
 use App\Services\AuthService;
 use Celeris\Framework\Http\Request;

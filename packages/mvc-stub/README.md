@@ -118,7 +118,9 @@ The intended pattern is server-rendered HTML first, with Alpine directives layer
 
 ## Project Structure
 
-- `public/index.php` boots the HTTP kernel and registers page controllers
+- `public/index.php` boots the HTTP kernel and loads route files
+- `routes/web.php` registers page controllers and browser routes
+- `routes/api.php` is ready for optional MVC/API hybrid routes
 - `app/Http/Controllers` contains page controllers
 - `app/Http/Requests` contains form request classes with `authorize()` and `rules()`
 - `app/Services` holds application use cases

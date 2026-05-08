@@ -32,17 +32,11 @@ if (is_file($autoload)) {
 }
 
 use App\AppServiceProvider;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ContactController;
 use Celeris\Framework\Config\ConfigLoader;
-use Celeris\Framework\Config\ConfigRepository;
 use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Http\Cors\CorsPreflightMiddleware;
 use Celeris\Framework\Http\Cors\CorsResponseFinalizer;
-use Celeris\Framework\Http\Response;
 use Celeris\Framework\Kernel\Kernel;
-use Celeris\Framework\Routing\RouteGroup;
-use Celeris\Framework\Routing\RouteMetadata;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
 use Celeris\Framework\Tooling\ToolingBootstrap;
@@ -81,41 +75,10 @@ if (class_exists(\Celeris\Notification\RealtimeGateway\RealtimeGatewayServicePro
 if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider::class)) {
    $kernel->registerProvider(new \Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider());
 }
-$kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
-$kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
+
+require $basePath . '/routes/api.php';
+
 ToolingBootstrap::mountIfEnabled($kernel, $basePath);
-$kernel->routes()->get(
-   '/',
-   static function (ConfigRepository $config): Response {
-      $frameworkVersion = 'unknown';
-      $installedVersionsClass = 'Composer\\InstalledVersions';
-      if (class_exists($installedVersionsClass) && $installedVersionsClass::isInstalled('celeris/framework')) {
-         $frameworkVersion = $installedVersionsClass::getPrettyVersion('celeris/framework') ?? 'unknown';
-      }
-
-      $payload = [
-         'name' => (string) $config->get('app.name', 'Celeris API'),
-         'api_version' => (string) $config->get('app.version', '1.0.0'),
-         'framework' => [
-            'name' => 'celeris/framework',
-            'version' => $frameworkVersion,
-         ],
-         'endpoints' => [
-            'auth' => '/api/auth',
-            'contacts' => '/api/contacts',
-            'health' => '/health',
-         ],
-      ];
-
-      return new Response(
-         200,
-         ['content-type' => 'application/json; charset=utf-8'],
-         (string) json_encode($payload, JSON_UNESCAPED_SLASHES),
-      );
-   },
-   [],
-   new RouteMetadata(name: 'api.info', summary: 'API info', tags: ['API']),
-);
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());
 $runner->run();

@@ -32,8 +32,6 @@ if (is_file($autoload)) {
 }
 
 use App\AppServiceProvider;
-use App\Http\Controllers\ContactPageController;
-use App\Http\Controllers\HomePageController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Http\Cors\CorsPreflightMiddleware;
@@ -77,8 +75,11 @@ if (class_exists(\Celeris\Notification\RealtimeGateway\RealtimeGatewayServicePro
 if (class_exists(\Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider::class)) {
    $kernel->registerProvider(new \Celeris\Notification\DispatchWorker\NotificationDispatchWorkerServiceProvider());
 }
-$kernel->registerController(ContactPageController::class);
-$kernel->registerController(HomePageController::class);
+
+require $basePath . '/routes/web.php';
+if (is_file($basePath . '/routes/api.php')) {
+   require $basePath . '/routes/api.php';
+}
 
 ToolingBootstrap::mountIfEnabled($kernel, $basePath);
 

@@ -1212,6 +1212,22 @@ Celeris does not have a config toggle for “attribute vs PHP routes”. The rou
 
 You can use either approach or mix both in the same app.
 
+#### API controllers in MVC/API hybrid projects
+
+Both API and MVC projects can expose API routes. Keep API controllers separated from page controllers:
+
+- API-only project controllers live in `app/Http/Controllers/v1`.
+- MVC projects that also expose API routes use `app/Http/Controllers/api/v1`.
+- Generated controller base classes, when created by CLI/Web scaffolding, live in `app/Http/Controllers/Base`.
+- Fresh project installations do not need `app/Http/Controllers/Base`; scaffold commands create it only when they generate base files.
+
+For MVC hybrid projects, API URLs must still use the `/api` prefix:
+
+- Attribute routes: include `/api` in the controller route group prefix, such as `#[RouteGroup(prefix: '/api/contacts', version: 'v1')]`.
+- PHP routes: put API route registration in `/routes/api.php` or an equivalent API route file, and use paths such as `/api/v1/contacts`.
+
+This keeps browser/page controllers in `app/Http/Controllers` and API controllers in `app/Http/Controllers/api/v1`.
+
 #### Attribute route example
 
 In bootstrap (`public/index.php`):
@@ -1354,6 +1370,31 @@ In bootstrap (`public/index.php`):
 Sample location/type: bootstrap at `public/index.php`.
 ```php
 $kernel->registerController(\App\Contacts\Http\ContactController::class, new \Celeris\Framework\Routing\RouteGroup(prefix: '/api'));
+```
+
+In an MVC/API hybrid project, a manually created API controller would instead live in `app/Http/Controllers/api/v1`, and the controller attribute should include the API prefix directly:
+
+Sample location/type: controller class at `app/Http/Controllers/api/v1/ContactController.php`.
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\api\v1;
+
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
+use Celeris\Framework\Routing\Attribute\RouteGroup;
+
+#[RouteGroup(prefix: '/api/contacts', version: 'v1', tags: ['Contacts API'])]
+final class ContactController
+{
+    #[Route(methods: ['GET'], path: '/', summary: 'List contacts')]
+    public function index(): Response
+    {
+        return new Response(200, ['content-type' => 'application/json; charset=utf-8'], '[]');
+    }
+}
 ```
 
 ### 6.3 Handler argument resolution
@@ -1643,6 +1684,8 @@ api-app/
   .env.example
   public/
     index.php
+  routes/
+    api.php
   config/
     app.php
     database.php
@@ -1665,9 +1708,9 @@ api-app/
       ContactRepository.php
     Http/
       Controllers/
-        Api/
-          Base/
-            ContactControllerBase.php
+        Base/
+          ContactControllerBase.php
+        v1/
           ContactController.php
       Middleware/
         RequireAuthMiddleware.php
@@ -1684,10 +1727,13 @@ Generated code convention in stubs:
 - `app/**/Base/*Base.php` contains generated scaffolding.
 - Non-base classes (`app/Models/*`, `app/Services/*`, `app/Repositories/*`, `app/Http/Controllers/*`) are user-editable wrappers.
 - Wrappers extend base classes so regeneration can update base files without overwriting handwritten code.
+- Fresh API/MVC installations do not ship controller base folders by default. `app/Http/Controllers/Base` is created only by CLI/Web scaffolding when controller base classes are generated.
 
 What each folder/file is for:
 - `public/index.php`
-- Front controller entrypoint. Boots kernel + runtime adapter and handles requests.
+- Front controller entrypoint. Boots kernel + runtime adapter, then loads route files.
+- `routes/api.php`
+- API route registration file. Registers versioned API controllers and direct API routes.
 - `config/app.php`
 - Application metadata and app-level settings.
 - `config/database.php`
@@ -1704,9 +1750,11 @@ What each folder/file is for:
 - Input contract for create operations. Used for request mapping + validation.
 - `app/Http/DTOs/UpdateContactDto.php`
 - Input contract for update operations.
-- `app/Http/Controllers/Api/ContactController.php`
-- User-editable HTTP transport layer. Typically keeps route-group metadata and custom endpoints.
-- `app/Http/Controllers/Api/Base/*Base.php`
+- `app/Http/Controllers/v1/ContactController.php`
+- User-editable API transport layer for API-only projects. Typically keeps route-group metadata and custom endpoints.
+- `app/Http/Controllers/api/v1/ContactController.php`
+- User-editable API transport layer for MVC/API hybrid projects. Keep API controllers here so they do not mix with MVC page controllers.
+- `app/Http/Controllers/Base/*Base.php`
 - Generated controller actions. Safe to regenerate; do not edit manually.
 - `app/Repositories/ContactRepository.php` (optional)
 - User-editable persistence access layer.
@@ -2058,15 +2106,15 @@ If you want real persistence immediately, you can replace the repository impleme
 
 ### 7.5 Controller (generated base + wrapper)
 
-`app/Http/Controllers/Api/Base/ContactControllerBase.php`:
+`app/Http/Controllers/Base/ContactControllerBase.php`:
 
-Sample location/type: file `app/Http/Controllers/Api/Base/ContactControllerBase.php`.
+Sample location/type: file `app/Http/Controllers/Base/ContactControllerBase.php`.
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api\Base;
+namespace App\Http\Controllers\Base;
 
 use App\Http\DTOs\CreateContactDto;
 use App\Http\DTOs\UpdateContactDto;
@@ -2076,7 +2124,7 @@ use Celeris\Framework\Routing\Attribute\Route;
 
 /**
  * @generated by Celeris scaffolding. Do not edit directly.
- * Extend this class in `App\Http\Controllers\Api\ContactController`.
+ * Extend this class from the project-specific API controller wrapper.
  */
 class ContactControllerBase
 {
@@ -2121,17 +2169,17 @@ class ContactControllerBase
 }
 ```
 
-`app/Http/Controllers/Api/ContactController.php`:
+`app/Http/Controllers/v1/ContactController.php` in API-only projects:
 
-Sample location/type: file `app/Http/Controllers/Api/ContactController.php`.
+Sample location/type: file `app/Http/Controllers/v1/ContactController.php`.
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\v1;
 
-use App\Http\Controllers\Api\Base\ContactControllerBase;
+use App\Http\Controllers\Base\ContactControllerBase;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
 use Celeris\Framework\Security\Authorization\Authorize;
 
@@ -2139,7 +2187,7 @@ use Celeris\Framework\Security\Authorization\Authorize;
  * User-editable contacts API controller.
  *
  * Keep route-group level metadata and custom endpoints here.
- * Regeneration updates only `Api\Base\ContactControllerBase`.
+ * Regeneration updates only `Controllers\Base\ContactControllerBase`.
  */
 #[Authorize]
 #[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts'])]
@@ -2147,6 +2195,35 @@ final class ContactController extends ContactControllerBase
 {
 }
 ```
+
+`app/Http/Controllers/api/v1/ContactController.php` in MVC/API hybrid projects:
+
+Sample location/type: file `app/Http/Controllers/api/v1/ContactController.php`.
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\api\v1;
+
+use App\Http\Controllers\Base\ContactControllerBase;
+use Celeris\Framework\Routing\Attribute\RouteGroup;
+use Celeris\Framework\Security\Authorization\Authorize;
+
+/**
+ * User-editable contacts API controller for an MVC/API hybrid project.
+ *
+ * Keep API controllers under `Controllers\api\v1` so they do not mix
+ * with MVC page controllers in `Controllers`.
+ */
+#[Authorize]
+#[RouteGroup(prefix: '/api/contacts', version: 'v1', tags: ['Contacts API'])]
+final class ContactController extends ContactControllerBase
+{
+}
+```
+
+For PHP routes in an MVC/API hybrid project, place equivalent route registrations in `/routes/api.php` and use explicit API paths such as `/api/v1/contacts`.
 
 HTTP verb convention note:
 - API stub routes follow REST-oriented verbs by default (`GET`, `POST`, `PUT`, `DELETE`).
@@ -2166,12 +2243,9 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\AppServiceProvider;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ContactController;
 use Celeris\Framework\Config\ConfigLoader;
 use Celeris\Framework\Config\EnvironmentLoader;
 use Celeris\Framework\Kernel\Kernel;
-use Celeris\Framework\Routing\RouteGroup;
 use Celeris\Framework\Runtime\FPMAdapter;
 use Celeris\Framework\Runtime\WorkerRunner;
 
@@ -2189,18 +2263,29 @@ $kernel = new Kernel(
     ),
 );
 $kernel->registerProvider(new AppServiceProvider());
-$kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
-$kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
-
-// Export OpenAPI at boot time (optional)
-$openApi = $kernel->generateOpenApi('Contacts API', '1.0.0');
-$errors = $kernel->validateOpenApi($openApi);
-if ($errors !== []) {
-    throw new RuntimeException('OpenAPI validation failed: ' . implode('; ', $errors));
-}
+require $basePath . '/routes/api.php';
 
 $runner = new WorkerRunner($kernel, new FPMAdapter());
 $runner->run();
+```
+
+`routes/api.php`:
+
+Sample location/type: file `routes/api.php`.
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Http\Controllers\v1\AuthController;
+use App\Http\Controllers\v1\ContactController;
+use Celeris\Framework\Kernel\Kernel;
+use Celeris\Framework\Routing\RouteGroup;
+
+/** @var Kernel $kernel */
+
+$kernel->registerController(AuthController::class, new RouteGroup(prefix: '/api'));
+$kernel->registerController(ContactController::class, new RouteGroup(prefix: '/api'));
 ```
 
 ## 8. MVC Project: End-to-End Example
@@ -2242,6 +2327,9 @@ mvc-app/
       js/
         app.min.js
       images/
+  routes/
+    web.php
+    api.php
   config/
     app.php
     database.php
@@ -2270,8 +2358,6 @@ mvc-app/
       ContactRepository.php
     Http/
       Controllers/
-        Base/
-          ContactPageControllerBase.php
         ContactPageController.php
       Middleware/
         RequireAuthMiddleware.php
@@ -2299,12 +2385,17 @@ In this MVC layout, model/entity classes live in `app/Models/` (for example `Con
 
 Generated code convention in stubs:
 - `app/**/Base/*Base.php` contains generated scaffolding.
-- Non-base classes stay user-editable and extend base classes.
-- Regeneration updates base files while preserving handwritten wrapper code.
+- Non-base classes stay user-editable.
+- Regeneration updates base files while preserving handwritten wrapper code when a scaffolded base/wrapper pair exists.
+- Fresh MVC installations do not ship `app/Http/Controllers/Base`. That folder is created only if CLI/Web scaffolding generates controller base classes.
 
 What each folder/file is for:
 - `public/index.php`
-- Front controller entrypoint. Boots kernel + runtime adapter and serves MVC routes.
+- Front controller entrypoint. Boots kernel + runtime adapter, then loads route files.
+- `routes/web.php`
+- Web route registration file. Registers MVC page controllers and direct browser routes.
+- `routes/api.php`
+- Optional API route registration file for MVC/API hybrid projects.
 - `public/assets/*`
 - Compiled/minified frontend output served directly by web server (`css`, `js`, and copied images).
 - `config/app.php`
@@ -2330,7 +2421,9 @@ What each folder/file is for:
 - `app/Http/Controllers/ContactPageController.php`
 - User-editable MVC controller. Typically keeps route-group metadata and custom endpoints/actions.
 - `app/Http/Controllers/Base/*Base.php`
-- Generated controller actions. Safe to regenerate; do not edit manually.
+- Generated controller actions created by scaffold commands. Safe to regenerate; do not edit manually.
+- `app/Http/Controllers/api/v1/*Controller.php`
+- User-editable API controllers for MVC/API hybrid projects. Keep API controllers here so they do not mix with MVC page controllers.
 - `app/Http/Middleware/RequireAuthMiddleware.php`
 - Middleware layer for auth/session checks and request-level guards.
 - `app/Views/layout.php`
@@ -2412,23 +2505,30 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Base\ContactPageControllerBase;
+use Celeris\Framework\Http\Response;
+use Celeris\Framework\Routing\Attribute\Route;
 use Celeris\Framework\Routing\Attribute\RouteGroup;
 
-#[RouteGroup(prefix: '/contacts', version: 'v1', tags: ['Contacts UI'])]
-final class ContactPageController extends ContactPageControllerBase
+#[RouteGroup(prefix: '/contacts', tags: ['Contacts UI'])]
+final class ContactPageController
 {
+    #[Route(methods: ['GET'], path: '/', summary: 'Contacts page')]
+    public function index(): Response
+    {
+        return new Response(200, ['content-type' => 'text/html; charset=utf-8'], '<h1>Contacts</h1>');
+    }
 }
 ```
 
-The generated implementation lives in `app/Http/Controllers/Base/ContactPageControllerBase.php`.
-Regeneration updates the base class only, preserving custom code in `ContactPageController.php`.
+In a fresh MVC installation, page controllers are ordinary user-editable controllers. If you later use CLI/Web scaffolding to generate a controller base, the generated implementation lives in `app/Http/Controllers/Base/*Base.php`, and the wrapper remains user-editable.
+
+For MVC/API hybrid projects, manually created API controllers belong in `app/Http/Controllers/api/v1`. Their attribute route groups must include the API URL prefix, for example `#[RouteGroup(prefix: '/api/contacts', version: 'v1')]`. If you use PHP routes instead, place them in `/routes/api.php` and use paths such as `/api/v1/contacts`.
 
 ### 8.4 MVC views, layouts, and partials
 
 In the MVC stub, page templates are content fragments, not full HTML documents.
-The generated base controller renders page content first, then wraps it with a shared layout.
-Your user controller extends that base class and remains safe from regeneration.
+The MVC controller renders page content first, then wraps it with a shared layout.
+When a generated base controller exists, your user controller can extend that base class and remains safe from regeneration.
 
 `app/Views/contacts/index.php` (content fragment):
 
@@ -4871,15 +4971,15 @@ final class WelcomeNotificationService
 
 ### 23.5 Step 5: Expose an API endpoint that uses the service
 
-In controller class (`app/Http/Controllers/Api/NotificationDemoController.php`):
+In controller class (`app/Http/Controllers/v1/NotificationDemoController.php`):
 
-Sample location/type: controller class at `app/Http/Controllers/Api/NotificationDemoController.php`.
+Sample location/type: controller class at `app/Http/Controllers/v1/NotificationDemoController.php`.
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\v1;
 
 use App\Services\WelcomeNotificationService;
 use Celeris\Framework\Http\Request;
@@ -4934,12 +5034,14 @@ final class NotificationDemoController
 
 ### 23.6 Step 6: Register controller route group
 
-In API bootstrap (`packages/api-stub/public/index.php`):
+In API routes (`packages/api-stub/routes/api.php`):
 
-Sample location/type: API bootstrap at `packages/api-stub/public/index.php`.
+Sample location/type: API route file at `packages/api-stub/routes/api.php`.
 ```php
 $kernel->registerController(NotificationDemoController::class, new RouteGroup(prefix: '/api'));
 ```
+
+In an MVC/API hybrid project, put this controller in `app/Http/Controllers/api/v1` and use `#[RouteGroup(prefix: '/api/notifications', version: 'v1', tags: ['Notifications'])]` instead of relying on the bootstrap prefix.
 
 Call endpoint:
 
@@ -5242,15 +5344,15 @@ final class TransactionNotificationService
 
 Step 4: Expose notification read endpoints (API sample)
 
-In controller class (`app/Http/Controllers/Api/MeNotificationsController.php`):
+In controller class (`app/Http/Controllers/v1/MeNotificationsController.php`):
 
-Sample location/type: controller class at `app/Http/Controllers/Api/MeNotificationsController.php`.
+Sample location/type: controller class at `app/Http/Controllers/v1/MeNotificationsController.php`.
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\v1;
 
 use Celeris\Framework\Http\Request;
 use Celeris\Framework\Http\RequestContext;
